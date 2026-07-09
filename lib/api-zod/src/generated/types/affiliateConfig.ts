@@ -6,9 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AffiliateConfigAmazon } from './affiliateConfigAmazon';
+import type { AffiliateConfigBestbuy } from './affiliateConfigBestbuy';
 import type { AffiliateConfigEbay } from './affiliateConfigEbay';
+import type { AffiliateConfigGamestop } from './affiliateConfigGamestop';
 
 export interface AffiliateConfig {
   ebay: AffiliateConfigEbay;
   amazon: AffiliateConfigAmazon;
+  gamestop: AffiliateConfigGamestop;
+  bestbuy: AffiliateConfigBestbuy;
 }

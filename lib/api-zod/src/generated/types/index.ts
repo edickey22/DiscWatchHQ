@@ -8,7 +8,9 @@
 
 export * from './affiliateConfig';
 export * from './affiliateConfigAmazon';
+export * from './affiliateConfigBestbuy';
 export * from './affiliateConfigEbay';
+export * from './affiliateConfigGamestop';
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './listAvailableReleasesParams';
@@ -22,6 +24,7 @@ export * from './release';
 export * from './releaseListResponse';
 export * from './releaseStats';
 export * from './releaseStatus';
+export * from './retailerSearchUrls';
 export * from './scrapeInput';
 export * from './scrapeResult';
 export * from './scrapeStatus';

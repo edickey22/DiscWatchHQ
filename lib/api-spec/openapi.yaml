@@ -299,7 +299,7 @@ components:
 
     Release:
       type: object
-      required: [id, title, publisherId, publisherName, status, productUrl, createdAt, updatedAt]
+      required: [id, title, publisherId, publisherName, status, productUrl, createdAt, updatedAt, retailerSearchUrls]
       properties:
         id:
           type: integer
@@ -334,8 +334,8 @@ components:
           type: ["string", "null"]
         amazonUrl:
           type: ["string", "null"]
-        ebaySearchUrl:
-          type: ["string", "null"]
+        retailerSearchUrls:
+          $ref: "#/components/schemas/RetailerSearchUrls"
         firstSeenAt:
           type: string
         createdAt:
@@ -449,9 +449,23 @@ components:
         publishersTriggered:
           type: integer
 
+    RetailerSearchUrls:
+      type: object
+      description: Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.
+      required: [ebay, amazon, gamestop, bestbuy]
+      properties:
+        ebay:
+          type: string
+        amazon:
+          type: string
+        gamestop:
+          type: string
+        bestbuy:
+          type: string
+
     AffiliateConfig:
       type: object
-      required: [ebay, amazon]
+      required: [ebay, amazon, gamestop, bestbuy]
       properties:
         ebay:
           type: object
@@ -460,6 +474,18 @@ components:
             configured:
               type: boolean
         amazon:
+          type: object
+          required: [configured]
+          properties:
+            configured:
+              type: boolean
+        gamestop:
+          type: object
+          required: [configured]
+          properties:
+            configured:
+              type: boolean
+        bestbuy:
           type: object
           required: [configured]
           properties:

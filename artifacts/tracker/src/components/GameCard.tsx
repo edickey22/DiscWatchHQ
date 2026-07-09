@@ -2,8 +2,9 @@ import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { Release, ReleaseStatus } from "@workspace/api-client-react"
 import { daysUntil } from "@/lib/utils"
-import { Clock, Disc3, Search } from "lucide-react"
+import { Clock, Disc3 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { RetailerLinks } from "@/components/RetailerLinks"
 
 interface GameCardProps {
   release: Release
@@ -26,8 +27,8 @@ export function GameCard({ release }: GameCardProps) {
       <Link href={`/releases/${release.id}`} className="block">
         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
           {release.coverImageUrl ? (
-            <img 
-              src={release.coverImageUrl} 
+            <img
+              src={release.coverImageUrl}
               alt={`${release.title} cover`}
               className={cn(
                 "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
@@ -40,7 +41,7 @@ export function GameCard({ release }: GameCardProps) {
               <Disc3 className="h-12 w-12 text-muted-foreground opacity-50" />
             </div>
           )}
-          
+
           {/* Overlays */}
           {isSoldOut && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
@@ -49,7 +50,6 @@ export function GameCard({ release }: GameCardProps) {
               </span>
             </div>
           )}
-
           {isComingSoon && (
             <div className="absolute top-2 right-2">
               <Badge variant="secondary" className="bg-black/80 text-white backdrop-blur-md border-transparent">
@@ -57,7 +57,6 @@ export function GameCard({ release }: GameCardProps) {
               </Badge>
             </div>
           )}
-
           {isAvailable && isClosingSoon && (
             <div className="absolute top-2 right-2">
               <Badge variant="destructive" className="animate-pulse shadow-md">
@@ -83,13 +82,13 @@ export function GameCard({ release }: GameCardProps) {
             </span>
           )}
         </div>
-        
+
         <Link href={`/releases/${release.id}`} className="block">
           <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
             {release.title}
           </h3>
         </Link>
-        
+
         <p className="text-xs text-muted-foreground font-medium truncate">
           {release.publisherName}
         </p>
@@ -98,28 +97,18 @@ export function GameCard({ release }: GameCardProps) {
           <span className="font-mono text-sm font-semibold text-foreground/90 shrink-0">
             {release.price || "TBA"}
           </span>
-
-          {/* Available: "Order Now" — navigates to detail page for the publisher link */}
           {isAvailable && (
-            <Link href={`/releases/${release.id}`} className="text-xs font-semibold text-primary uppercase tracking-wider hover:underline underline-offset-4">
+            <Link
+              href={`/releases/${release.id}`}
+              className="text-xs font-semibold text-primary uppercase tracking-wider hover:underline underline-offset-4 shrink-0"
+            >
               Order Now →
             </Link>
           )}
-
-          {/* Sold Out: direct eBay search link — the main monetization action */}
-          {isSoldOut && release.ebaySearchUrl && (
-            <a
-              href={release.ebaySearchUrl}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              onClick={e => e.stopPropagation()}
-              className="flex items-center gap-1 text-[11px] font-semibold text-[#e53238] uppercase tracking-wider hover:underline underline-offset-4 shrink-0"
-            >
-              <Search className="h-3 w-3" />
-              eBay
-            </a>
-          )}
         </div>
+
+        {/* Compact retailer search row — every card, every status */}
+        <RetailerLinks urls={release.retailerSearchUrls} variant="card" />
       </div>
     </div>
   )
@@ -139,6 +128,7 @@ export function GameCardSkeleton() {
         <div className="flex justify-between pt-2">
           <div className="h-4 w-16 animate-pulse rounded bg-muted/60" />
         </div>
+        <div className="h-8 w-full animate-pulse rounded bg-muted/40 mt-2" />
       </div>
     </div>
   )

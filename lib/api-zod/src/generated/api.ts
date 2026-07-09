@@ -48,7 +48,12 @@ export const ListReleasesResponse = zod.object({
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
   "amazonUrl": zod.string().nullish(),
-  "ebaySearchUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -82,7 +87,12 @@ export const ListAvailableReleasesResponse = zod.object({
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
   "amazonUrl": zod.string().nullish(),
-  "ebaySearchUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -119,7 +129,12 @@ export const ListSoldOutReleasesResponse = zod.object({
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
   "amazonUrl": zod.string().nullish(),
-  "ebaySearchUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -153,7 +168,12 @@ export const ListComingSoonReleasesResponse = zod.object({
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
   "amazonUrl": zod.string().nullish(),
-  "ebaySearchUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -197,7 +217,12 @@ export const GetReleaseResponse = zod.object({
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
   "amazonUrl": zod.string().nullish(),
-  "ebaySearchUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -265,6 +290,12 @@ export const GetAffiliateConfigResponse = zod.object({
   "configured": zod.boolean()
 }),
   "amazon": zod.object({
+  "configured": zod.boolean()
+}),
+  "gamestop": zod.object({
+  "configured": zod.boolean()
+}),
+  "bestbuy": zod.object({
   "configured": zod.boolean()
 })
 })

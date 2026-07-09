@@ -8,7 +8,13 @@ import {
   ListComingSoonReleasesQueryParams,
   GetReleaseParams,
 } from "@workspace/api-zod";
-import { buildEbaySearchUrl, buildAmazonUrl } from "../lib/affiliateConfig";
+import {
+  buildEbaySearchUrl,
+  buildAmazonSearchUrl,
+  buildGameStopSearchUrl,
+  buildBestBuySearchUrl,
+  buildAmazonProductUrl,
+} from "../lib/affiliateConfig";
 
 const router: IRouter = Router();
 
@@ -100,9 +106,15 @@ function formatRelease(row: RawRow) {
     preorderCloseDate: row.preorderCloseDate ?? null,
     releaseDate: row.releaseDate ?? null,
     soldOutAt: row.soldOutAt?.toISOString() ?? null,
-    // Affiliate URLs — built with configured IDs (or plain URLs if IDs not yet set)
-    amazonUrl: row.amazonUrl ? buildAmazonUrl(row.amazonUrl) : null,
-    ebaySearchUrl: row.status === "sold_out" ? buildEbaySearchUrl(row.title) : null,
+    // Direct Amazon product link (scraped, affiliate-tagged if configured)
+    amazonUrl: row.amazonUrl ? buildAmazonProductUrl(row.amazonUrl) : null,
+    // Retailer search URLs — present for every release, affiliate-tagged when IDs are configured
+    retailerSearchUrls: {
+      ebay: buildEbaySearchUrl(row.title),
+      amazon: buildAmazonSearchUrl(row.title),
+      gamestop: buildGameStopSearchUrl(row.title),
+      bestbuy: buildBestBuySearchUrl(row.title),
+    },
     firstSeenAt: row.firstSeenAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

@@ -2,91 +2,144 @@
  * Affiliate Link Configuration
  * ─────────────────────────────────────────────────────────────────
  * Set the environment variables below to activate affiliate revenue.
- * Until an ID is provided the site falls back to plain, unmonetized links.
+ * Until an ID is provided the site falls back to a plain, unmonetized
+ * search link. No UI breaks — links just don't earn until IDs are set.
  *
- * HOW TO SET:
- *   In the Replit Secrets panel (or a .env file for local dev) add:
- *
- *   EBAY_CAMPAIGN_ID        — Your eBay Partner Network Campaign ID
- *                             Sign up / find it at: https://partnernetwork.ebay.com/
- *                             Example value:  "5339099999"
- *
- *   AMAZON_ASSOCIATES_TAG   — Your Amazon Associates tracking tag (Store ID)
- *                             Sign up / find it at: https://affiliate-program.amazon.com/
- *                             Example value:  "pressrun-20"
- *
- * Leave either variable unset (or empty) to disable that affiliate channel.
- * The site will silently fall back to plain links with no broken UI.
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  SECRET NAME              WHERE TO GET IT                       │
+ * ├─────────────────────────────────────────────────────────────────┤
+ * │  EBAY_CAMPAIGN_ID         https://partnernetwork.ebay.com/      │
+ * │                           Format: numeric string "5339099999"   │
+ * ├─────────────────────────────────────────────────────────────────┤
+ * │  AMAZON_ASSOCIATES_TAG    https://affiliate-program.amazon.com/ │
+ * │                           Format: "pressrun-20"                 │
+ * ├─────────────────────────────────────────────────────────────────┤
+ * │  GAMESTOP_RAKUTEN_ID      https://rakutenadvertising.com/       │
+ * │                           (Publisher/Affiliate ID from Rakuten) │
+ * │                           Format: numeric string "1234567"      │
+ * ├─────────────────────────────────────────────────────────────────┤
+ * │  BESTBUY_IMPACT_ID        https://partners.bestbuy.com/         │
+ * │                           (SID / Affiliate ID from Impact)      │
+ * │                           Format: numeric string "1234567"      │
+ * └─────────────────────────────────────────────────────────────────┘
  */
 
 export const affiliateConfig = {
   ebay: {
-    /**
-     * eBay Partner Network Campaign ID.
-     * Paste your Campaign ID into the EBAY_CAMPAIGN_ID secret.
-     * Format: numeric string, e.g. "5339099999"
-     */
+    /** eBay Partner Network Campaign ID → EBAY_CAMPAIGN_ID secret */
     campaignId: (process.env.EBAY_CAMPAIGN_ID ?? "").trim(),
-
-    /** Standard eBay US rotation ID — do not change unless eBay instructs otherwise. */
+    /** Standard eBay US rotation ID — do not change */
     rotationId: "711-53200-19255-0",
-
-    /** eBay tool ID for link-level tracking (standard web affiliate value). */
     toolId: "10001",
   },
 
   amazon: {
-    /**
-     * Amazon Associates tracking tag (your Store ID).
-     * Paste your tag into the AMAZON_ASSOCIATES_TAG secret.
-     * Format: lowercase-string-XX, e.g. "pressrun-20"
-     */
+    /** Amazon Associates tracking tag → AMAZON_ASSOCIATES_TAG secret */
     associatesTag: (process.env.AMAZON_ASSOCIATES_TAG ?? "").trim(),
+  },
+
+  gamestop: {
+    /**
+     * Rakuten Advertising (formerly LinkShare) Publisher/Affiliate ID.
+     * Sign up at https://rakutenadvertising.com/ and join the GameStop program.
+     * → GAMESTOP_RAKUTEN_ID secret
+     * GameStop's fixed Rakuten merchant ID is 35864 — do not change.
+     */
+    affiliateId: (process.env.GAMESTOP_RAKUTEN_ID ?? "").trim(),
+    merchantId: "35864",
+  },
+
+  bestbuy: {
+    /**
+     * Impact (formerly Impact Radius) Affiliate/SID.
+     * Sign up at https://partners.bestbuy.com/ (powered by Impact).
+     * → BESTBUY_IMPACT_ID secret
+     * Best Buy's fixed Impact program ID is 1706643 — do not change.
+     */
+    affiliateId: (process.env.BESTBUY_IMPACT_ID ?? "").trim(),
+    programId: "1706643",
   },
 } as const;
 
+// ─── URL builders ────────────────────────────────────────────────────────────
+
 /**
- * Build an eBay search URL for a sold-out title.
- * Appends Partner Network affiliate parameters when EBAY_CAMPAIGN_ID is set.
+ * eBay video-game category search.
+ * Appends EPN affiliate params when EBAY_CAMPAIGN_ID is set.
  */
 export function buildEbaySearchUrl(title: string): string {
-  const query = encodeURIComponent(title);
-  const base = `https://www.ebay.com/sch/i.html?_nkw=${query}&_sacat=139973`; // 139973 = Video Games category
+  const q = encodeURIComponent(title);
+  const base = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=139973`;
   if (!affiliateConfig.ebay.campaignId) return base;
   const { campaignId, rotationId, toolId } = affiliateConfig.ebay;
   return `${base}&mkcid=1&mkrid=${rotationId}&siteid=0&campid=${campaignId}&toolid=${toolId}&mkevt=1`;
 }
 
 /**
- * Add an Amazon Associates tag to an existing Amazon product URL.
- * Handles both full amazon.com URLs and amzn.to short links.
- * Returns the original URL unchanged when AMAZON_ASSOCIATES_TAG is not set.
+ * Amazon search URL.
+ * Appends Associates tag when AMAZON_ASSOCIATES_TAG is set.
  */
-/** Allowlisted Amazon hostnames — rejects any non-Amazon URL that may have slipped through scraping */
+export function buildAmazonSearchUrl(title: string): string {
+  const q = encodeURIComponent(title);
+  const base = `https://www.amazon.com/s?k=${q}`;
+  if (!affiliateConfig.amazon.associatesTag) return base;
+  return `${base}&tag=${affiliateConfig.amazon.associatesTag}`;
+}
+
+/**
+ * GameStop search URL via Rakuten deep-link wrapper.
+ * Falls back to direct search when GAMESTOP_RAKUTEN_ID is not set.
+ */
+export function buildGameStopSearchUrl(title: string): string {
+  const directUrl = `https://www.gamestop.com/search/?searchTerm=${encodeURIComponent(title)}`;
+  if (!affiliateConfig.gamestop.affiliateId) return directUrl;
+  const { affiliateId, merchantId } = affiliateConfig.gamestop;
+  return `https://click.linksynergy.com/deeplink?id=${affiliateId}&mid=${merchantId}&murl=${encodeURIComponent(directUrl)}`;
+}
+
+/**
+ * Best Buy search URL via Impact deep-link wrapper.
+ * Falls back to direct search when BESTBUY_IMPACT_ID is not set.
+ */
+export function buildBestBuySearchUrl(title: string): string {
+  const directUrl = `https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(title)}`;
+  if (!affiliateConfig.bestbuy.affiliateId) return directUrl;
+  const { affiliateId, programId } = affiliateConfig.bestbuy;
+  return `https://bestbuy.7eer.net/c/${affiliateId}/${programId}?url=${encodeURIComponent(directUrl)}`;
+}
+
+/**
+ * Add an Amazon Associates tag to a known Amazon product URL.
+ * Used when the scraper found a direct ASIN link.
+ */
 const AMAZON_HOSTNAME_RE = /^(www\.)?amazon\.(com|co\.uk|ca|de|fr|es|it|co\.jp|com\.au)$/i;
 const AMZN_SHORT_RE = /^amzn\.to$/i;
 
-export function buildAmazonUrl(amazonUrl: string): string {
+export function buildAmazonProductUrl(amazonUrl: string): string {
   if (!affiliateConfig.amazon.associatesTag || !amazonUrl) return amazonUrl;
   try {
     const url = new URL(amazonUrl);
-    // Only inject the tag on verified Amazon domains — reject anything else
-    if (url.protocol !== "https:" ||
-        (!AMAZON_HOSTNAME_RE.test(url.hostname) && !AMZN_SHORT_RE.test(url.hostname))) {
+    if (
+      url.protocol !== "https:" ||
+      (!AMAZON_HOSTNAME_RE.test(url.hostname) && !AMZN_SHORT_RE.test(url.hostname))
+    ) {
       return amazonUrl;
     }
     url.searchParams.set("tag", affiliateConfig.amazon.associatesTag);
-    // Remove existing affiliate parameters to avoid conflicts
     url.searchParams.delete("linkCode");
     url.searchParams.delete("linkId");
     return url.toString();
   } catch {
-    // Unparseable URL — return as-is rather than silently corrupting it
     return amazonUrl;
   }
 }
 
-/** Returns true if any affiliate channel is active (used by the API status endpoint). */
+/** Returns true if any affiliate channel is active. */
 export function isAnyAffiliateConfigured(): boolean {
-  return !!(affiliateConfig.ebay.campaignId || affiliateConfig.amazon.associatesTag);
+  return !!(
+    affiliateConfig.ebay.campaignId ||
+    affiliateConfig.amazon.associatesTag ||
+    affiliateConfig.gamestop.affiliateId ||
+    affiliateConfig.bestbuy.affiliateId
+  );
 }

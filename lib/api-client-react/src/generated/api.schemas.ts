@@ -18,6 +18,16 @@ export const ReleaseStatus = {
   coming_soon: 'coming_soon',
 } as const;
 
+/**
+ * Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.
+ */
+export interface RetailerSearchUrls {
+  ebay: string;
+  amazon: string;
+  gamestop: string;
+  bestbuy: string;
+}
+
 export interface Release {
   id: number;
   title: string;
@@ -41,8 +51,7 @@ export interface Release {
   soldOutAt?: string | null;
   /** @nullable */
   amazonUrl?: string | null;
-  /** @nullable */
-  ebaySearchUrl?: string | null;
+  retailerSearchUrls: RetailerSearchUrls;
   firstSeenAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -135,9 +144,19 @@ export type AffiliateConfigAmazon = {
   configured: boolean;
 };
 
+export type AffiliateConfigGamestop = {
+  configured: boolean;
+};
+
+export type AffiliateConfigBestbuy = {
+  configured: boolean;
+};
+
 export interface AffiliateConfig {
   ebay: AffiliateConfigEbay;
   amazon: AffiliateConfigAmazon;
+  gamestop: AffiliateConfigGamestop;
+  bestbuy: AffiliateConfigBestbuy;
 }
 
 export interface ErrorResponse {
