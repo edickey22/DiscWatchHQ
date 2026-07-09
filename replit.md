@@ -1,6 +1,6 @@
-# [Project name]
+# Press Run
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Automated tracker for limited-run physical video game releases — shows live preorder availability, recent sell-outs, and coming-soon titles with email newsletter signup.
 
 ## Run & Operate
 

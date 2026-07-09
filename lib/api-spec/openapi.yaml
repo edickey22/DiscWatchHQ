@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Limited-run physical game tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: releases
+    description: Game release tracking
+  - name: publishers
+    description: Publisher registry
+  - name: platforms
+    description: Platform list
+  - name: subscribers
+    description: Newsletter email signups
+  - name: scrape
+    description: Scraping control and status
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,246 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /releases:
+    get:
+      operationId: listReleases
+      tags: [releases]
+      summary: List all releases with optional filters
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [available, sold_out, coming_soon]
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: publisher
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of releases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseListResponse"
+
+  /releases/available:
+    get:
+      operationId: listAvailableReleases
+      tags: [releases]
+      summary: Currently available open preorders
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: publisher
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available releases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseListResponse"
+
+  /releases/sold-out:
+    get:
+      operationId: listSoldOutReleases
+      tags: [releases]
+      summary: Recently sold-out releases, most recent first
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: publisher
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Sold out releases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseListResponse"
+
+  /releases/coming-soon:
+    get:
+      operationId: listComingSoonReleases
+      tags: [releases]
+      summary: Announced but not yet open for preorder
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: publisher
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Coming soon releases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseListResponse"
+
+  /releases/stats:
+    get:
+      operationId: getReleaseStats
+      tags: [releases]
+      summary: Summary stats for the dashboard header
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseStats"
+
+  /releases/{id}:
+    get:
+      operationId: getRelease
+      tags: [releases]
+      summary: Get a single release by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Release detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Release"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /publishers:
+    get:
+      operationId: listPublishers
+      tags: [publishers]
+      summary: All registered publishers with scraper status
+      responses:
+        "200":
+          description: Publisher list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Publisher"
+
+  /platforms:
+    get:
+      operationId: listPlatforms
+      tags: [platforms]
+      summary: All platforms seen in the dataset
+      responses:
+        "200":
+          description: Platform list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Platform"
+
+  /subscribers:
+    post:
+      operationId: createSubscriber
+      tags: [subscribers]
+      summary: Sign up for the newsletter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriberInput"
+      responses:
+        "201":
+          description: Subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscribeResult"
+        "409":
+          description: Already subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /scrape/status:
+    get:
+      operationId: getScrapeStatus
+      tags: [scrape]
+      summary: Last scrape run info per publisher
+      responses:
+        "200":
+          description: Scrape status list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScrapeStatus"
+
+  /scrape/trigger:
+    post:
+      operationId: triggerScrape
+      tags: [scrape]
+      summary: Manually trigger a scrape for one or all publishers
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrapeInput"
+      responses:
+        "202":
+          description: Scrape started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeResult"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +280,159 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Release:
+      type: object
+      required: [id, title, publisherId, publisherName, status, productUrl, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        publisherId:
+          type: integer
+        publisherName:
+          type: string
+        publisherSlug:
+          type: string
+        platforms:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [available, sold_out, coming_soon]
+        coverImageUrl:
+          type: ["string", "null"]
+        productUrl:
+          type: string
+        price:
+          type: ["string", "null"]
+        editionType:
+          type: ["string", "null"]
+        preorderCloseDate:
+          type: ["string", "null"]
+        releaseDate:
+          type: ["string", "null"]
+        soldOutAt:
+          type: ["string", "null"]
+        firstSeenAt:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ReleaseListResponse:
+      type: object
+      required: [releases, total]
+      properties:
+        releases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Release"
+        total:
+          type: integer
+
+    ReleaseStats:
+      type: object
+      required: [available, soldOut, comingSoon, totalTracked, lastUpdated]
+      properties:
+        available:
+          type: integer
+        soldOut:
+          type: integer
+        comingSoon:
+          type: integer
+        totalTracked:
+          type: integer
+        lastUpdated:
+          type: ["string", "null"]
+
+    Publisher:
+      type: object
+      required: [id, name, slug, websiteUrl, enabled, releaseCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        websiteUrl:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        releaseCount:
+          type: integer
+        lastScrapedAt:
+          type: ["string", "null"]
+
+    Platform:
+      type: object
+      required: [name, releaseCount]
+      properties:
+        name:
+          type: string
+        releaseCount:
+          type: integer
+
+    SubscriberInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    SubscribeResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ScrapeStatus:
+      type: object
+      required: [publisherId, publisherName, publisherSlug]
+      properties:
+        publisherId:
+          type: integer
+        publisherName:
+          type: string
+        publisherSlug:
+          type: string
+        lastRunAt:
+          type: ["string", "null"]
+        lastRunStatus:
+          type: ["string", "null"]
+          enum: [running, success, error, null]
+        releasesFound:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+
+    ScrapeInput:
+      type: object
+      properties:
+        publisherSlug:
+          type: ["string", "null"]
+          description: If omitted, scrape all enabled publishers
+
+    ScrapeResult:
+      type: object
+      required: [message, publishersTriggered]
+      properties:
+        message:
+          type: string
+        publishersTriggered:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
