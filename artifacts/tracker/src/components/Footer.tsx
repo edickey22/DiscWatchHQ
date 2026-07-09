@@ -1,10 +1,9 @@
 import { useGetScrapeStatus } from "@workspace/api-client-react"
-import { DiscWatchIcon } from "@/components/DiscWatchIcon"
+import { ControllerIcon } from "@/components/ControllerIcon"
 
 export function Footer() {
   const { data: status } = useGetScrapeStatus()
 
-  // Find the most recent scrape time across all publishers
   const lastScraped = status?.reduce((latest, current) => {
     if (!current.lastRunAt) return latest
     const t = new Date(current.lastRunAt).getTime()
@@ -15,9 +14,8 @@ export function Footer() {
     <footer className="border-t bg-card/30 mt-auto">
       <div className="container mx-auto max-w-6xl px-4 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
 
-        {/* Brand + disclaimer */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <DiscWatchIcon size={18} />
+          <ControllerIcon size={18} />
           <span>
             © {new Date().getFullYear()}{" "}
             <span className="font-semibold text-foreground/70">DiscWatchHQ</span>
@@ -25,7 +23,6 @@ export function Footer() {
           </span>
         </div>
 
-        {/* Last index time */}
         {lastScraped ? (
           <p className="text-xs font-mono text-muted-foreground/60 flex items-center gap-2">
             <span className="relative flex h-2 w-2">

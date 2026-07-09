@@ -1,11 +1,9 @@
 import { Link } from "wouter"
-import { DiscWatchIcon } from "@/components/DiscWatchIcon"
+import { ControllerIcon } from "@/components/ControllerIcon"
 import { useGetReleaseStats } from "@workspace/api-client-react"
-import { useTheme } from "@/context/ThemeContext"
 
 export function Header() {
   const { data: stats } = useGetReleaseStats()
-  const { accent, setAccent } = useTheme()
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -13,75 +11,41 @@ export function Header() {
 
         {/* ── Wordmark ─────────────────────────────────────────────────── */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <DiscWatchIcon size={30} />
+          <ControllerIcon size={30} />
           <span className="flex items-center gap-1.5 leading-none">
             <span className="font-display text-[1.2rem] font-bold tracking-tight">
               <span className="text-foreground">Disc</span>
               <span className="text-primary">Watch</span>
             </span>
-            <span
-              className="
-                text-[10px] font-bold tracking-wide leading-none
-                text-primary border border-primary/40 bg-primary/15
-                rounded px-1.5 py-0.5 select-none
-              "
-            >
+            <span className="
+              text-[10px] font-bold tracking-wide leading-none
+              text-primary border border-primary/40 bg-primary/10
+              rounded px-1.5 py-0.5 select-none
+            ">
               HQ
             </span>
           </span>
         </Link>
 
-        {/* ── Right side ───────────────────────────────────────────────── */}
-        <div className="flex items-center gap-5">
-
-          {/* Live stats — hidden on small screens */}
-          {stats && (
-            <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight">
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Available</span>
-                <span className="text-primary font-bold">{stats.available}</span>
-              </div>
-              <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
-                <span className="text-foreground font-semibold">{stats.comingSoon}</span>
-              </div>
-              <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Tracked</span>
-                <span className="text-foreground/80">{stats.totalTracked}</span>
-              </div>
+        {/* ── Live stats (desktop) ──────────────────────────────────────── */}
+        {stats && (
+          <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight">
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-[10px] uppercase">Available</span>
+              <span className="text-primary font-bold">{stats.available}</span>
             </div>
-          )}
-
-          {/* Theme toggle — two accent-colour dots */}
-          <div
-            className="flex items-center gap-1.5 bg-secondary/60 border border-border/50 rounded-full px-2 py-1.5"
-            title="Switch accent colour"
-            aria-label="Switch colour theme"
-          >
-            <button
-              onClick={() => setAccent("red")}
-              aria-label="Red theme"
-              className={`
-                w-3.5 h-3.5 rounded-full bg-[hsl(348,83%,47%)] transition-all duration-200
-                ${accent === "red"
-                  ? "ring-2 ring-offset-1 ring-offset-secondary ring-[hsl(348,83%,47%)] scale-110"
-                  : "opacity-50 hover:opacity-80"}
-              `}
-            />
-            <button
-              onClick={() => setAccent("green")}
-              aria-label="Green theme"
-              className={`
-                w-3.5 h-3.5 rounded-full bg-[hsl(142,69%,42%)] transition-all duration-200
-                ${accent === "green"
-                  ? "ring-2 ring-offset-1 ring-offset-secondary ring-[hsl(142,69%,42%)] scale-110"
-                  : "opacity-50 hover:opacity-80"}
-              `}
-            />
+            <div className="w-px h-6 bg-border" />
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
+              <span className="text-foreground font-semibold">{stats.comingSoon}</span>
+            </div>
+            <div className="w-px h-6 bg-border" />
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-[10px] uppercase">Tracked</span>
+              <span className="text-foreground/80">{stats.totalTracked}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   )

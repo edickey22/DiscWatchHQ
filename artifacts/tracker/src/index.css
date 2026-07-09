@@ -51,6 +51,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Light-mode base (unused in practice — app always runs dark) ── */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
@@ -58,33 +59,33 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 0 0% 98%;
-  --foreground: 240 10% 4%;
-  --border: 240 5% 90%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 4%;
-  --card-border: 240 5% 90%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 4%;
-  --popover-border: 240 5% 90%;
-  --primary: 348 83% 47%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 96%;
-  --secondary-foreground: 240 10% 4%;
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 5% 40%;
-  --accent: 348 83% 47%;
-  --accent-foreground: 0 0% 100%;
+  --background: 0 0% 5%;
+  --foreground: 0 0% 98%;
+  --border: 120 15% 13%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 120 20% 12%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 98%;
+  --popover-border: 120 20% 12%;
+  --primary: 142 69% 42%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 120 8% 13%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 120 6% 11%;
+  --muted-foreground: 120 5% 60%;
+  --accent: 142 69% 42%;
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --input: 240 5% 90%;
-  --ring: 348 83% 47%;
+  --input: 120 8% 13%;
+  --ring: 142 69% 42%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'Space Mono', monospace;
   --app-font-display: 'Space Grotesk', sans-serif;
-  --radius: 0.25rem; 
+  --radius: 0.25rem;
 
   --primary-border: hsl(var(--primary));
   --secondary-border: hsl(var(--secondary));
@@ -93,60 +94,42 @@
   --destructive-border: hsl(var(--destructive));
 }
 
+/* ── Dark mode = black + green (the only theme) ── */
 .dark {
-  --button-outline: rgba(255, 255, 255, 0.1);
+  --button-outline: rgba(255, 255, 255, 0.08);
   --badge-outline: rgba(255, 255, 255, 0.05);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
+  --elevate-1: rgba(255, 255, 255, 0.03);
+  --elevate-2: rgba(255, 255, 255, 0.08);
 
-  /* Deep charcoal/slate vibe for collector aesthetic */
-  --background: 240 6% 8%;
-  --foreground: 0 0% 98%;
-  --border: 240 6% 16%;
-  
-  --card: 240 6% 10%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 240 6% 16%;
-  
-  --popover: 240 6% 10%;
-  --popover-foreground: 0 0% 98%;
-  --popover-border: 240 6% 16%;
-  
-  --primary: 348 83% 47%;
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 240 6% 16%;
-  --secondary-foreground: 0 0% 98%;
-  
-  --muted: 240 6% 14%;
-  --muted-foreground: 240 5% 65%;
-  
-  --accent: 348 83% 47%;
-  --accent-foreground: 0 0% 100%;
-  
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  
-  --input: 240 6% 16%;
-  --ring: 348 83% 47%;
-}
-
-/* ── Black & Green theme — swaps accent to terminal green, deepens background ── */
-.dark.theme-green {
   --background: 0 0% 5%;
-  --card: 0 0% 7%;
-  --card-border: 120 20% 12%;
-  --popover: 0 0% 7%;
-  --popover-border: 120 20% 12%;
+  --foreground: 0 0% 98%;
   --border: 120 15% 13%;
+
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 120 20% 12%;
+
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 98%;
+  --popover-border: 120 20% 12%;
 
   --primary: 142 69% 42%;
   --primary-foreground: 0 0% 0%;
 
+  --secondary: 120 8% 13%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 120 6% 11%;
+  --muted-foreground: 120 5% 60%;
+
   --accent: 142 69% 42%;
   --accent-foreground: 0 0% 0%;
 
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 120 8% 13%;
   --ring: 142 69% 42%;
 
   --primary-border: hsl(142 69% 42%);

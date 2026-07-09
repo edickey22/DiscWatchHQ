@@ -216,7 +216,11 @@ export default function ReleaseDetail() {
                     )}
 
                     {/* ── Secondary: retailer search row (affiliate-tagged when IDs configured) ── */}
-                    <RetailerLinks urls={release.retailerSearchUrls} variant="detail" />
+                    <RetailerLinks
+                      urls={release.retailerSearchUrls}
+                      prices={release.retailerPrices}
+                      variant="detail"
+                    />
                   </div>
                 </>
               )}

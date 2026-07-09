@@ -28,6 +28,22 @@ export interface RetailerSearchUrls {
   bestbuy: string;
 }
 
+/**
+ * Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.
+ */
+export interface RetailerPrices {
+  /**
+     * Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.
+     * @nullable
+     */
+  ebay?: number | null;
+  /**
+     * Reserved for Amazon Product Advertising API integration — always null until credentials are configured.
+     * @nullable
+     */
+  amazon?: number | null;
+}
+
 export interface Release {
   id: number;
   title: string;
@@ -52,6 +68,7 @@ export interface Release {
   /** @nullable */
   amazonUrl?: string | null;
   retailerSearchUrls: RetailerSearchUrls;
+  retailerPrices?: RetailerPrices;
   firstSeenAt?: string;
   createdAt: string;
   updatedAt: string;

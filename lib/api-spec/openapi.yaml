@@ -366,6 +366,8 @@ components:
           type: ["string", "null"]
         retailerSearchUrls:
           $ref: "#/components/schemas/RetailerSearchUrls"
+        retailerPrices:
+          $ref: "#/components/schemas/RetailerPrices"
         firstSeenAt:
           type: string
         createdAt:
@@ -492,6 +494,17 @@ components:
           type: string
         bestbuy:
           type: string
+
+    RetailerPrices:
+      type: object
+      description: Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.
+      properties:
+        ebay:
+          type: ["number", "null"]
+          description: Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.
+        amazon:
+          type: ["number", "null"]
+          description: Reserved for Amazon Product Advertising API integration — always null until credentials are configured.
 
     AffiliateConfig:
       type: object

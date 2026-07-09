@@ -1,11 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-
-// Import pages
 import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
-import { ThemeProvider } from '@/context/ThemeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,13 +25,11 @@ function AppRouter() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <AppRouter />
-        </WouterRouter>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        <AppRouter />
+      </WouterRouter>
+    </QueryClientProvider>
   );
 }
 

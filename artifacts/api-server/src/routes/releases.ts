@@ -15,6 +15,7 @@ import {
   buildBestBuySearchUrl,
   buildAmazonProductUrl,
 } from "../lib/affiliateConfig";
+import { getEbayLowestPrice } from "../lib/ebayBrowseClient";
 
 const router: IRouter = Router();
 
@@ -112,8 +113,11 @@ async function queryReleases(opts: {
 
 type RawRow = Awaited<ReturnType<typeof queryReleases>>["releases"][number];
 
-/** Enrich a DB row with affiliate-aware URLs before sending to the client */
-function formatRelease(row: RawRow) {
+/**
+ * Enrich a DB row with affiliate-aware URLs and live prices.
+ * ebayPrice comes from a pre-fetched parallel lookup (may be null).
+ */
+function formatRelease(row: RawRow, ebayPrice: number | null = null) {
   return {
     id: row.id,
     title: row.title,
@@ -138,10 +142,20 @@ function formatRelease(row: RawRow) {
       gamestop: buildGameStopSearchUrl(row.title),
       bestbuy: buildBestBuySearchUrl(row.title),
     },
+    // Live pricing — only populated when Browse API credentials are configured
+    retailerPrices: {
+      ebay: ebayPrice,
+      amazon: null, // reserved: Amazon PA API integration pending
+    },
     firstSeenAt: row.firstSeenAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+/** Batch-fetch eBay prices for a list of rows (all in parallel, cached). */
+async function fetchEbayPrices(rows: RawRow[]): Promise<(number | null)[]> {
+  return Promise.all(rows.map(r => getEbayLowestPrice(r.title)));
 }
 
 router.get("/releases", async (req, res): Promise<void> => {
@@ -153,7 +167,8 @@ router.get("/releases", async (req, res): Promise<void> => {
 
   const { status, platform, publisher, search, limit, offset } = parsed.data;
   const { releases, total } = await queryReleases({ status, platform, publisher, search, limit, offset });
-  res.json({ releases: releases.map(formatRelease), total });
+  const ebayPrices = await fetchEbayPrices(releases);
+  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
 });
 
 router.get("/releases/available", async (req, res): Promise<void> => {
@@ -164,7 +179,8 @@ router.get("/releases/available", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort } = parsed.data;
   const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort });
-  res.json({ releases: releases.map(formatRelease), total });
+  const ebayPrices = await fetchEbayPrices(releases);
+  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
 });
 
 router.get("/releases/sold-out", async (req, res): Promise<void> => {
@@ -175,7 +191,8 @@ router.get("/releases/sold-out", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort, limit } = parsed.data;
   const { releases, total } = await queryReleases({ status: "sold_out", platform, publisher, search, sort, limit });
-  res.json({ releases: releases.map(formatRelease), total });
+  const ebayPrices = await fetchEbayPrices(releases);
+  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
 });
 
 router.get("/releases/coming-soon", async (req, res): Promise<void> => {
@@ -186,7 +203,8 @@ router.get("/releases/coming-soon", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort } = parsed.data;
   const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort });
-  res.json({ releases: releases.map(formatRelease), total });
+  const ebayPrices = await fetchEbayPrices(releases);
+  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
 });
 
 router.get("/releases/stats", async (_req, res): Promise<void> => {
@@ -252,7 +270,8 @@ router.get("/releases/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(formatRelease(row));
+  const ebayPrice = await getEbayLowestPrice(row.title);
+  res.json(formatRelease(row, ebayPrice));
 });
 
 export default router;

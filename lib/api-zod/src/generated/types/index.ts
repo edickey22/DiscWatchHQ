@@ -27,6 +27,7 @@ export * from './release';
 export * from './releaseListResponse';
 export * from './releaseStats';
 export * from './releaseStatus';
+export * from './retailerPrices';
 export * from './retailerSearchUrls';
 export * from './scrapeInput';
 export * from './scrapeResult';

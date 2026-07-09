@@ -54,6 +54,10 @@ export const ListReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -97,6 +101,10 @@ export const ListAvailableReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -142,6 +150,10 @@ export const ListSoldOutReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -185,6 +197,10 @@ export const ListComingSoonReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -234,6 +250,10 @@ export const GetReleaseResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ReleaseStatus } from './releaseStatus';
+import type { RetailerPrices } from './retailerPrices';
 import type { RetailerSearchUrls } from './retailerSearchUrls';
 
 export interface Release {
@@ -32,6 +33,7 @@ export interface Release {
   /** @nullable */
   amazonUrl?: string | null;
   retailerSearchUrls: RetailerSearchUrls;
+  retailerPrices?: RetailerPrices;
   firstSeenAt?: string;
   createdAt: string;
   updatedAt: string;

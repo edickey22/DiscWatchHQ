@@ -5,23 +5,32 @@
  * Until an ID is provided the site falls back to a plain, unmonetized
  * search link. No UI breaks — links just don't earn until IDs are set.
  *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  SECRET NAME              WHERE TO GET IT                       │
- * ├─────────────────────────────────────────────────────────────────┤
- * │  EBAY_CAMPAIGN_ID         https://partnernetwork.ebay.com/      │
- * │                           Format: numeric string "5339099999"   │
- * ├─────────────────────────────────────────────────────────────────┤
- * │  AMAZON_ASSOCIATES_TAG    https://affiliate-program.amazon.com/ │
- * │                           Format: "pressrun-20"                 │
- * ├─────────────────────────────────────────────────────────────────┤
- * │  GAMESTOP_RAKUTEN_ID      https://rakutenadvertising.com/       │
- * │                           (Publisher/Affiliate ID from Rakuten) │
- * │                           Format: numeric string "1234567"      │
- * ├─────────────────────────────────────────────────────────────────┤
- * │  BESTBUY_IMPACT_ID        https://partners.bestbuy.com/         │
- * │                           (SID / Affiliate ID from Impact)      │
- * │                           Format: numeric string "1234567"      │
- * └─────────────────────────────────────────────────────────────────┘
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │  SECRET NAME              WHERE TO GET IT                              │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  EBAY_CAMPAIGN_ID         https://partnernetwork.ebay.com/             │
+ * │                           Format: numeric string "5339099999"          │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  EBAY_APP_ID              https://developer.ebay.com/                  │
+ * │  EBAY_CLIENT_SECRET       OAuth Client ID + Secret for Browse API      │
+ * │                           (distinct from Partner Network above)        │
+ * │                           Enables live "From $X" pricing on eBay cards │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  AMAZON_ASSOCIATES_TAG    https://affiliate-program.amazon.com/        │
+ * │                           Format: "discwatch-20"                       │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  AMAZON_PA_API_KEY        https://webservices.amazon.com/paapi5/       │
+ * │  AMAZON_PA_API_SECRET     Product Advertising API v5 credentials       │
+ * │                           Reserved — enables live Amazon pricing later  │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  GAMESTOP_RAKUTEN_ID      https://rakutenadvertising.com/              │
+ * │                           (Publisher/Affiliate ID from Rakuten)        │
+ * │                           Format: numeric string "1234567"             │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  BESTBUY_IMPACT_ID        https://partners.bestbuy.com/                │
+ * │                           (SID / Affiliate ID from Impact)             │
+ * │                           Format: numeric string "1234567"             │
+ * └──────────────────────────────────────────────────────────────────────────┘
  */
 
 export const affiliateConfig = {

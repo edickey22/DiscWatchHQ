@@ -2,9 +2,10 @@ import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { Release, ReleaseStatus } from "@workspace/api-client-react"
 import { daysUntil } from "@/lib/utils"
-import { Clock, Disc3 } from "lucide-react"
+import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RetailerLinks } from "@/components/RetailerLinks"
+import { ControllerIcon } from "@/components/ControllerIcon"
 
 interface GameCardProps {
   release: Release
@@ -38,7 +39,7 @@ export function GameCard({ release }: GameCardProps) {
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary">
-              <Disc3 className="h-12 w-12 text-muted-foreground opacity-50" />
+              <ControllerIcon size={48} className="opacity-20" />
             </div>
           )}
 
@@ -107,8 +108,12 @@ export function GameCard({ release }: GameCardProps) {
           )}
         </div>
 
-        {/* Compact retailer search row — every card, every status */}
-        <RetailerLinks urls={release.retailerSearchUrls} variant="card" />
+        {/* Retailer search buttons — every card, every status */}
+        <RetailerLinks
+          urls={release.retailerSearchUrls}
+          prices={release.retailerPrices}
+          variant="card"
+        />
       </div>
     </div>
   )
@@ -128,7 +133,12 @@ export function GameCardSkeleton() {
         <div className="flex justify-between pt-2">
           <div className="h-4 w-16 animate-pulse rounded bg-muted/60" />
         </div>
-        <div className="h-8 w-full animate-pulse rounded bg-muted/40 mt-2" />
+        {/* Skeleton for the 2×2 button grid */}
+        <div className="grid grid-cols-2 gap-1.5 mt-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-9 animate-pulse rounded bg-muted/40" />
+          ))}
+        </div>
       </div>
     </div>
   )
