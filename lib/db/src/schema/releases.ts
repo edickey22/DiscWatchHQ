@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { publishersTable } from "./publishers";
@@ -18,6 +18,14 @@ export const releasesTable = pgTable("releases", {
   releaseDate: text("release_date"),              // ISO date string YYYY-MM-DD
   soldOutAt: timestamp("sold_out_at", { withTimezone: true }),
   amazonUrl: text("amazon_url"),  // direct Amazon product link if known (for affiliate linking)
+  /**
+   * eBay lowest Buy-It-Now price (USD) — written exclusively by the eBay price
+   * scheduler job. Never populated from visitor requests. null = no data yet or
+   * no active listings found.
+   */
+  ebayPrice: real("ebay_price"),
+  /** Timestamp of the last successful eBay price fetch for this title. */
+  ebayPriceUpdatedAt: timestamp("ebay_price_updated_at", { withTimezone: true }),
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

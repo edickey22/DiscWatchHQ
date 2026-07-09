@@ -15,14 +15,19 @@ import {
   buildBestBuySearchUrl,
   buildAmazonProductUrl,
 } from "../lib/affiliateConfig";
-import { getEbayLowestPrice } from "../lib/ebayBrowseClient";
 
 const router: IRouter = Router();
 
 type ReleaseStatus = "available" | "sold_out" | "coming_soon";
 type SortOption = "updated" | "title" | "publisher" | "newest";
 
-/** Build a type-safe condition list and run the releases query */
+/**
+ * Build a type-safe condition list and run the releases query.
+ *
+ * eBay prices are read directly from the `ebay_price` DB column, which is
+ * populated exclusively by the background eBay price scheduler job. No live
+ * eBay API calls are made from any visitor-facing request handler.
+ */
 async function queryReleases(opts: {
   status?: ReleaseStatus;
   platform?: string;
@@ -89,6 +94,7 @@ async function queryReleases(opts: {
       releaseDate: releasesTable.releaseDate,
       soldOutAt: releasesTable.soldOutAt,
       amazonUrl: releasesTable.amazonUrl,
+      ebayPrice: releasesTable.ebayPrice,
       firstSeenAt: releasesTable.firstSeenAt,
       createdAt: releasesTable.createdAt,
       updatedAt: releasesTable.updatedAt,
@@ -114,10 +120,11 @@ async function queryReleases(opts: {
 type RawRow = Awaited<ReturnType<typeof queryReleases>>["releases"][number];
 
 /**
- * Enrich a DB row with affiliate-aware URLs and live prices.
- * ebayPrice comes from a pre-fetched parallel lookup (may be null).
+ * Enrich a DB row with affiliate-aware URLs and DB-cached prices.
+ * No live third-party API calls are made here — ebayPrice comes from the
+ * scheduled background job that wrote it into the DB.
  */
-function formatRelease(row: RawRow, ebayPrice: number | null = null) {
+function formatRelease(row: RawRow) {
   return {
     id: row.id,
     title: row.title,
@@ -135,27 +142,25 @@ function formatRelease(row: RawRow, ebayPrice: number | null = null) {
     soldOutAt: row.soldOutAt?.toISOString() ?? null,
     // Direct Amazon product link (scraped, affiliate-tagged if configured)
     amazonUrl: row.amazonUrl ? buildAmazonProductUrl(row.amazonUrl) : null,
-    // Retailer search URLs — present for every release, affiliate-tagged when IDs are configured
+    // Retailer search URLs — affiliate-tagged when IDs are configured
     retailerSearchUrls: {
       ebay: buildEbaySearchUrl(row.title),
       amazon: buildAmazonSearchUrl(row.title),
       gamestop: buildGameStopSearchUrl(row.title),
       bestbuy: buildBestBuySearchUrl(row.title),
     },
-    // Live pricing — only populated when Browse API credentials are configured
+    // Prices are DB-cached; written by the eBay price scheduler background job.
+    // null = scheduler hasn't run yet, no active listings found, or item is
+    // not in the sold-out catalog (available/coming-soon titles are intentionally
+    // not priced — the publisher's own price is already shown).
     retailerPrices: {
-      ebay: ebayPrice,
+      ebay: row.ebayPrice ?? null,
       amazon: null, // reserved: Amazon PA API integration pending
     },
     firstSeenAt: row.firstSeenAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
-}
-
-/** Batch-fetch eBay prices for a list of rows (all in parallel, cached). */
-async function fetchEbayPrices(rows: RawRow[]): Promise<(number | null)[]> {
-  return Promise.all(rows.map(r => getEbayLowestPrice(r.title)));
 }
 
 router.get("/releases", async (req, res): Promise<void> => {
@@ -167,8 +172,7 @@ router.get("/releases", async (req, res): Promise<void> => {
 
   const { status, platform, publisher, search, limit, offset } = parsed.data;
   const { releases, total } = await queryReleases({ status, platform, publisher, search, limit, offset });
-  const ebayPrices = await fetchEbayPrices(releases);
-  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
+  res.json({ releases: releases.map(formatRelease), total });
 });
 
 router.get("/releases/available", async (req, res): Promise<void> => {
@@ -179,8 +183,7 @@ router.get("/releases/available", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort } = parsed.data;
   const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort });
-  const ebayPrices = await fetchEbayPrices(releases);
-  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
+  res.json({ releases: releases.map(formatRelease), total });
 });
 
 router.get("/releases/sold-out", async (req, res): Promise<void> => {
@@ -191,8 +194,7 @@ router.get("/releases/sold-out", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort, limit } = parsed.data;
   const { releases, total } = await queryReleases({ status: "sold_out", platform, publisher, search, sort, limit });
-  const ebayPrices = await fetchEbayPrices(releases);
-  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
+  res.json({ releases: releases.map(formatRelease), total });
 });
 
 router.get("/releases/coming-soon", async (req, res): Promise<void> => {
@@ -203,8 +205,7 @@ router.get("/releases/coming-soon", async (req, res): Promise<void> => {
   }
   const { platform, publisher, search, sort } = parsed.data;
   const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort });
-  const ebayPrices = await fetchEbayPrices(releases);
-  res.json({ releases: releases.map((r, i) => formatRelease(r, ebayPrices[i])), total });
+  res.json({ releases: releases.map(formatRelease), total });
 });
 
 router.get("/releases/stats", async (_req, res): Promise<void> => {
@@ -256,6 +257,7 @@ router.get("/releases/:id", async (req, res): Promise<void> => {
       releaseDate: releasesTable.releaseDate,
       soldOutAt: releasesTable.soldOutAt,
       amazonUrl: releasesTable.amazonUrl,
+      ebayPrice: releasesTable.ebayPrice,
       firstSeenAt: releasesTable.firstSeenAt,
       createdAt: releasesTable.createdAt,
       updatedAt: releasesTable.updatedAt,
@@ -270,8 +272,7 @@ router.get("/releases/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const ebayPrice = await getEbayLowestPrice(row.title);
-  res.json(formatRelease(row, ebayPrice));
+  res.json(formatRelease(row));
 });
 
 export default router;

@@ -1,5 +1,5 @@
 /**
- * eBay Browse API client — real-time lowest-price lookup.
+ * eBay Browse API client — fetches lowest Buy-It-Now price for a title.
  *
  * Separate from the eBay Partner Network affiliate config.
  * Requires two env vars:
@@ -9,9 +9,14 @@
  * When either is absent the module returns null for every lookup (silent
  * no-op — retailer buttons stay as plain "Search on eBay" with no price).
  *
+ * IMPORTANT — quota management:
+ *   This client is ONLY called by the eBay price scheduler background job.
+ *   It must never be called from visitor-facing request handlers. The
+ *   scheduler writes results into the DB; all visitor traffic reads from there.
+ *
  * Token lifecycle: OAuth tokens are cached in-process for their full
- * lifetime (typically 2 h). Price lookups are cached for 30 min per
- * title to stay well within eBay's API rate limits.
+ * lifetime (typically 2 h). No per-title price caching here — that is
+ * handled at the DB layer by the scheduler's 72-hour refresh interval.
  */
 
 const APP_ID     = (process.env.EBAY_APP_ID     ?? "").trim();
@@ -59,17 +64,6 @@ async function getAccessToken(): Promise<string | null> {
   }
 }
 
-// ── Price cache ───────────────────────────────────────────────────────────────
-
-const PRICE_TTL_MS = 30 * 60 * 1_000; // 30 min
-
-interface PriceEntry {
-  price: number | null;
-  cachedAt: number;
-}
-
-const priceCache = new Map<string, PriceEntry>();
-
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -79,25 +73,15 @@ const priceCache = new Map<string, PriceEntry>();
  *   - no active listings found
  *   - the API call fails
  *
- * Results are cached for 30 min; successive calls for the same title within
- * that window are free (no API hit).
+ * This function is intentionally uncached — call-frequency management is
+ * the caller's responsibility (i.e. the scheduled batch job).
  */
 export async function getEbayLowestPrice(title: string): Promise<number | null> {
   if (!ebayBrowseConfigured) return null;
 
-  const cached = priceCache.get(title);
-  if (cached && Date.now() - cached.cachedAt < PRICE_TTL_MS) {
-    return cached.price;
-  }
-
-  const store = (price: number | null) => {
-    priceCache.set(title, { price, cachedAt: Date.now() });
-    return price;
-  };
-
   try {
     const token = await getAccessToken();
-    if (!token) return store(null);
+    if (!token) return null;
 
     // category_ids=139973 = Video Games on eBay US
     // sort=price          = lowest price first
@@ -119,7 +103,7 @@ export async function getEbayLowestPrice(title: string): Promise<number | null> 
 
     if (!res.ok) {
       console.warn("[eBay Browse] Search failed", res.status, title);
-      return store(null);
+      return null;
     }
 
     const data = (await res.json()) as {
@@ -130,15 +114,14 @@ export async function getEbayLowestPrice(title: string): Promise<number | null> 
       .map(item => parseFloat(item.price?.value ?? ""))
       .filter(n => !isNaN(n) && n > 0);
 
-    return store(prices.length > 0 ? Math.min(...prices) : null);
+    return prices.length > 0 ? Math.min(...prices) : null;
   } catch (err) {
     console.warn("[eBay Browse] Lookup error:", err);
-    return store(null);
+    return null;
   }
 }
 
-/** Wipe the in-process caches (used by tests / manual refresh). */
-export function clearEbayPriceCache(): void {
-  priceCache.clear();
+/** Reset OAuth token cache (used in tests / forced re-auth). */
+export function clearEbayTokenCache(): void {
   tokenCache = null;
 }

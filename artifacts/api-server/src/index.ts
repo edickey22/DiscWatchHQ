@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
+import { startEbayPriceScheduler } from "./lib/ebayPriceScheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -23,5 +24,12 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Publisher scraper scheduler — runs every ~2 hours, no quota concerns
   startScheduler();
+
+  // eBay price scheduler — runs every 72 hours, only for sold-out titles.
+  // See ebayPriceScheduler.ts for quota documentation.
+  // Only active when EBAY_APP_ID + EBAY_CLIENT_SECRET secrets are set.
+  startEbayPriceScheduler();
 });
