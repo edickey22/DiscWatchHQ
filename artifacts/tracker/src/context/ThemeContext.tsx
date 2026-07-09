@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextValue>({
   setAccent: () => {},
 })
 
-const STORAGE_KEY = "pressrun-accent"
+const STORAGE_KEY = "discwatchhq-accent"
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [accent, setAccentState] = useState<AccentTheme>(() => {

@@ -1,5 +1,5 @@
 import { Link } from "wouter"
-import { Disc3 } from "lucide-react"
+import { DiscWatchIcon } from "@/components/DiscWatchIcon"
 import { useGetReleaseStats } from "@workspace/api-client-react"
 import { useTheme } from "@/context/ThemeContext"
 
@@ -10,16 +10,31 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="bg-primary/10 p-1.5 rounded-md group-hover:bg-primary/20 transition-colors">
-            <Disc3 className="h-5 w-5 text-primary" />
-          </div>
-          <span className="font-display text-xl font-bold tracking-tight text-foreground">
-            PRESS<span className="text-primary">RUN</span>
+
+        {/* ── Wordmark ─────────────────────────────────────────────────── */}
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <DiscWatchIcon size={30} />
+          <span className="flex items-center gap-1.5 leading-none">
+            <span className="font-display text-[1.2rem] font-bold tracking-tight">
+              <span className="text-foreground">Disc</span>
+              <span className="text-primary">Watch</span>
+            </span>
+            <span
+              className="
+                text-[10px] font-bold tracking-wide leading-none
+                text-primary border border-primary/40 bg-primary/15
+                rounded px-1.5 py-0.5 select-none
+              "
+            >
+              HQ
+            </span>
           </span>
         </Link>
 
+        {/* ── Right side ───────────────────────────────────────────────── */}
         <div className="flex items-center gap-5">
+
+          {/* Live stats — hidden on small screens */}
           {stats && (
             <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight">
               <div className="flex flex-col items-center">
