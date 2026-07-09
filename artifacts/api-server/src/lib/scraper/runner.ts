@@ -47,6 +47,7 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
           preorderCloseDate: item.preorderCloseDate,
           releaseDate: item.releaseDate,
           soldOutAt,
+          amazonUrl: item.amazonUrl ?? null,
         })
         .where(eq(releasesTable.id, existing.id));
     } else {
@@ -63,6 +64,7 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         preorderCloseDate: item.preorderCloseDate,
         releaseDate: item.releaseDate,
         soldOutAt,
+        amazonUrl: item.amazonUrl ?? null,
         firstSeenAt: new Date(),
       });
     }

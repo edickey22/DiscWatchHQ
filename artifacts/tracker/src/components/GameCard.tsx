@@ -2,7 +2,7 @@ import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { Release, ReleaseStatus } from "@workspace/api-client-react"
 import { daysUntil } from "@/lib/utils"
-import { Clock, Disc3 } from "lucide-react"
+import { Clock, Disc3, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface GameCardProps {
@@ -18,51 +18,56 @@ export function GameCard({ release }: GameCardProps) {
   const isClosingSoon = daysLeft !== null && daysLeft <= 7 && daysLeft >= 0
 
   return (
-    <Link href={`/releases/${release.id}`} className={cn(
+    <div className={cn(
       "group relative flex flex-col space-y-3 rounded-lg p-3 transition-all hover:bg-card/50",
-      isSoldOut && "opacity-70 grayscale-[50%]"
+      isSoldOut && "opacity-75"
     )}>
-      {/* Cover Image */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
-        {release.coverImageUrl ? (
-          <img 
-            src={release.coverImageUrl} 
-            alt={`${release.title} cover`}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-secondary">
-            <Disc3 className="h-12 w-12 text-muted-foreground opacity-50" />
-          </div>
-        )}
-        
-        {/* Overlays */}
-        {isSoldOut && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
-            <span className="font-display text-lg font-bold tracking-widest text-white border-y-2 border-white/50 py-1 px-4 rotate-[-12deg]">
-              SOLD OUT
-            </span>
-          </div>
-        )}
+      {/* Cover Image — navigates to detail page */}
+      <Link href={`/releases/${release.id}`} className="block">
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
+          {release.coverImageUrl ? (
+            <img 
+              src={release.coverImageUrl} 
+              alt={`${release.title} cover`}
+              className={cn(
+                "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
+                isSoldOut && "grayscale-[50%]"
+              )}
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-secondary">
+              <Disc3 className="h-12 w-12 text-muted-foreground opacity-50" />
+            </div>
+          )}
+          
+          {/* Overlays */}
+          {isSoldOut && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+              <span className="font-display text-lg font-bold tracking-widest text-white border-y-2 border-white/50 py-1 px-4 rotate-[-12deg]">
+                SOLD OUT
+              </span>
+            </div>
+          )}
 
-        {isComingSoon && (
-          <div className="absolute top-2 right-2">
-            <Badge variant="secondary" className="bg-black/80 text-white backdrop-blur-md border-transparent">
-              Coming Soon
-            </Badge>
-          </div>
-        )}
+          {isComingSoon && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="bg-black/80 text-white backdrop-blur-md border-transparent">
+                Coming Soon
+              </Badge>
+            </div>
+          )}
 
-        {isAvailable && isClosingSoon && (
-          <div className="absolute top-2 right-2">
-            <Badge variant="destructive" className="animate-pulse shadow-md">
-              <Clock className="mr-1 h-3 w-3" />
-              {daysLeft === 0 ? "Closes Today" : `${daysLeft} Days Left`}
-            </Badge>
-          </div>
-        )}
-      </div>
+          {isAvailable && isClosingSoon && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="destructive" className="animate-pulse shadow-md">
+                <Clock className="mr-1 h-3 w-3" />
+                {daysLeft === 0 ? "Closes Today" : `${daysLeft} Days Left`}
+              </Badge>
+            </div>
+          )}
+        </div>
+      </Link>
 
       {/* Details */}
       <div className="flex flex-col flex-1 space-y-1">
@@ -79,26 +84,44 @@ export function GameCard({ release }: GameCardProps) {
           )}
         </div>
         
-        <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
-          {release.title}
-        </h3>
+        <Link href={`/releases/${release.id}`} className="block">
+          <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
+            {release.title}
+          </h3>
+        </Link>
         
         <p className="text-xs text-muted-foreground font-medium truncate">
           {release.publisherName}
         </p>
 
-        <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="font-mono text-sm font-semibold text-foreground/90">
+        <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+          <span className="font-mono text-sm font-semibold text-foreground/90 shrink-0">
             {release.price || "TBA"}
           </span>
+
+          {/* Available: "Order Now" — navigates to detail page for the publisher link */}
           {isAvailable && (
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider group-hover:underline underline-offset-4">
+            <Link href={`/releases/${release.id}`} className="text-xs font-semibold text-primary uppercase tracking-wider hover:underline underline-offset-4">
               Order Now →
-            </span>
+            </Link>
+          )}
+
+          {/* Sold Out: direct eBay search link — the main monetization action */}
+          {isSoldOut && release.ebaySearchUrl && (
+            <a
+              href={release.ebaySearchUrl}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={e => e.stopPropagation()}
+              className="flex items-center gap-1 text-[11px] font-semibold text-[#e53238] uppercase tracking-wider hover:underline underline-offset-4 shrink-0"
+            >
+              <Search className="h-3 w-3" />
+              eBay
+            </a>
           )}
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 

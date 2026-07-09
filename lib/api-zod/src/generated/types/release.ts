@@ -28,6 +28,10 @@ export interface Release {
   releaseDate?: string | null;
   /** @nullable */
   soldOutAt?: string | null;
+  /** @nullable */
+  amazonUrl?: string | null;
+  /** @nullable */
+  ebaySearchUrl?: string | null;
   firstSeenAt?: string;
   createdAt: string;
   updatedAt: string;

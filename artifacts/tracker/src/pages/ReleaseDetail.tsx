@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter"
 import { useGetRelease, ReleaseStatus } from "@workspace/api-client-react"
-import { ArrowLeft, Clock, ExternalLink, Calendar, Package } from "lucide-react"
+import { ArrowLeft, Clock, ExternalLink, Calendar, Package, ShoppingCart, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,11 +13,7 @@ export default function ReleaseDetail() {
   const [, params] = useRoute("/releases/:id")
   const id = params?.id ? parseInt(params.id, 10) : 0
 
-  const { data: release, isLoading, isError } = useGetRelease(id, {
-    query: {
-      enabled: !!id,
-    }
-  })
+  const { data: release, isLoading, isError } = useGetRelease(id)
 
   if (isError) {
     return (
@@ -166,7 +162,8 @@ export default function ReleaseDetail() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 bg-card border shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
+                  {/* Purchase / Action Panel */}
+                  <div className="space-y-3 bg-card border shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
                     {isAvailable && isClosingSoon && (
                       <div className="absolute top-0 right-0 left-0 h-1 bg-destructive animate-pulse" />
                     )}
@@ -199,6 +196,7 @@ export default function ReleaseDetail() {
                       )}
                     </div>
 
+                    {/* Available: direct publisher link (no affiliate — boutique publishers have no public program) */}
                     {isAvailable && (
                       <Button asChild size="lg" className="w-full text-base font-bold shadow-lg h-14 bg-primary hover:bg-primary/90">
                         <a href={release.productUrl} target="_blank" rel="noopener noreferrer">
@@ -206,7 +204,19 @@ export default function ReleaseDetail() {
                         </a>
                       </Button>
                     )}
+
+                    {/* Available: Amazon secondary link where known */}
+                    {isAvailable && release.amazonUrl && (
+                      <Button asChild size="lg" variant="outline" className="w-full text-base font-bold h-12 border-[#FF9900]/40 text-foreground hover:border-[#FF9900] hover:bg-[#FF9900]/5">
+                        <a href={release.amazonUrl} target="_blank" rel="noopener noreferrer sponsored">
+                          <ShoppingCart className="mr-2 w-4 h-4 text-[#FF9900]" />
+                          Also on Amazon
+                          <ExternalLink className="ml-2 w-4 h-4 opacity-50" />
+                        </a>
+                      </Button>
+                    )}
                     
+                    {/* Coming Soon: notify nudge */}
                     {isComingSoon && (
                       <Button size="lg" variant="outline" className="w-full text-base font-bold h-14 border-primary/20 text-foreground" onClick={() => {
                         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
@@ -215,15 +225,37 @@ export default function ReleaseDetail() {
                       </Button>
                     )}
 
-                    {isSoldOut && (
-                      <Button asChild size="lg" variant="secondary" className="w-full text-base font-bold h-14 opacity-50 cursor-not-allowed">
-                        <span className="flex items-center justify-center">
-                          Sold Out <ExternalLink className="ml-2 w-5 h-5 opacity-50" />
-                        </span>
+                    {/* Sold Out: eBay search (primary CTA — publisher no longer sells it) */}
+                    {isSoldOut && release.ebaySearchUrl && (
+                      <Button asChild size="lg" className="w-full text-base font-bold h-14 bg-[#e53238] hover:bg-[#c0272d] text-white shadow-lg">
+                        <a href={release.ebaySearchUrl} target="_blank" rel="noopener noreferrer sponsored">
+                          <Search className="mr-2 w-5 h-5" />
+                          Find on eBay
+                          <ExternalLink className="ml-2 w-5 h-5 opacity-70" />
+                        </a>
                       </Button>
+                    )}
+
+                    {/* Sold Out: Amazon secondary if known */}
+                    {isSoldOut && release.amazonUrl && (
+                      <Button asChild size="lg" variant="outline" className="w-full text-base font-bold h-12 border-[#FF9900]/40 text-foreground hover:border-[#FF9900] hover:bg-[#FF9900]/5">
+                        <a href={release.amazonUrl} target="_blank" rel="noopener noreferrer sponsored">
+                          <ShoppingCart className="mr-2 w-4 h-4 text-[#FF9900]" />
+                          Check Amazon
+                          <ExternalLink className="ml-2 w-4 h-4 opacity-50" />
+                        </a>
+                      </Button>
+                    )}
+
+                    {/* Sold Out: fallback if neither eBay nor Amazon — shouldn't happen in practice */}
+                    {isSoldOut && !release.ebaySearchUrl && !release.amazonUrl && (
+                      <div className="text-center py-2">
+                        <span className="text-sm font-mono text-muted-foreground">No secondary market links available</span>
+                      </div>
                     )}
                   </div>
                   
+                  {/* Sold Out: quiet link back to the original publisher page for reference */}
                   {isSoldOut && release.productUrl && (
                     <div className="text-center">
                       <a href={release.productUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-muted-foreground hover:text-foreground underline underline-offset-4">

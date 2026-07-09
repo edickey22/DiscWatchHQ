@@ -17,6 +17,7 @@ export const releasesTable = pgTable("releases", {
   preorderCloseDate: text("preorder_close_date"), // ISO date string YYYY-MM-DD
   releaseDate: text("release_date"),              // ISO date string YYYY-MM-DD
   soldOutAt: timestamp("sold_out_at", { withTimezone: true }),
+  amazonUrl: text("amazon_url"),  // direct Amazon product link if known (for affiliate linking)
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

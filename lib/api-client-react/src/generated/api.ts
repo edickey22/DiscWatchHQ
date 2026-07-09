@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AffiliateConfig,
   ErrorResponse,
   HealthStatus,
   ListAvailableReleasesParams,
@@ -922,6 +923,83 @@ export function useGetScrapeStatus<TData = Awaited<ReturnType<typeof getScrapeSt
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetScrapeStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAffiliateConfigUrl = () => {
+
+
+
+
+  return `/api/affiliate/config`
+}
+
+/**
+ * @summary Returns which affiliate channels are configured (without exposing IDs)
+ */
+export const getAffiliateConfig = async ( options?: RequestInit): Promise<AffiliateConfig> => {
+
+  return customFetch<AffiliateConfig>(getGetAffiliateConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAffiliateConfigQueryKey = () => {
+    return [
+    `/api/affiliate/config`
+    ] as const;
+    }
+
+
+export const getGetAffiliateConfigQueryOptions = <TData = Awaited<ReturnType<typeof getAffiliateConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAffiliateConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAffiliateConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAffiliateConfig>>> = ({ signal }) => getAffiliateConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAffiliateConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAffiliateConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getAffiliateConfig>>>
+export type GetAffiliateConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Returns which affiliate channels are configured (without exposing IDs)
+ */
+
+export function useGetAffiliateConfig<TData = Awaited<ReturnType<typeof getAffiliateConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAffiliateConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAffiliateConfigQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

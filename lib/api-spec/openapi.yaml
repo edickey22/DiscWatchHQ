@@ -20,6 +20,8 @@ tags:
     description: Newsletter email signups
   - name: scrape
     description: Scraping control and status
+  - name: affiliate
+    description: Affiliate link configuration status
 paths:
   /healthz:
     get:
@@ -254,6 +256,19 @@ paths:
                 items:
                   $ref: "#/components/schemas/ScrapeStatus"
 
+  /affiliate/config:
+    get:
+      operationId: getAffiliateConfig
+      tags: [affiliate]
+      summary: Returns which affiliate channels are configured (without exposing IDs)
+      responses:
+        "200":
+          description: Affiliate config status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AffiliateConfig"
+
   /scrape/trigger:
     post:
       operationId: triggerScrape
@@ -316,6 +331,10 @@ components:
         releaseDate:
           type: ["string", "null"]
         soldOutAt:
+          type: ["string", "null"]
+        amazonUrl:
+          type: ["string", "null"]
+        ebaySearchUrl:
           type: ["string", "null"]
         firstSeenAt:
           type: string
@@ -429,6 +448,23 @@ components:
           type: string
         publishersTriggered:
           type: integer
+
+    AffiliateConfig:
+      type: object
+      required: [ebay, amazon]
+      properties:
+        ebay:
+          type: object
+          required: [configured]
+          properties:
+            configured:
+              type: boolean
+        amazon:
+          type: object
+          required: [configured]
+          properties:
+            configured:
+              type: boolean
 
     ErrorResponse:
       type: object

@@ -122,6 +122,22 @@ function isAllSoldOut(product: LRGProduct): boolean {
   return product.variants.every((v) => !v.available);
 }
 
+/**
+ * Extract an Amazon product URL from LRG's body_html.
+ * LRG occasionally embeds Amazon buy links in their product descriptions.
+ */
+function extractAmazonUrl(bodyHtml: string): string | null {
+  // Match full amazon.com product URLs (dp/ASIN or gp/product/ASIN patterns)
+  const match = bodyHtml.match(/https?:\/\/(?:www\.)?amazon\.com\/(?:[^"'\s<>]*\/)?(?:dp|gp\/product)\/([A-Z0-9]{10})[^"'\s<>]*/i);
+  if (match) {
+    // Return a clean canonical URL — affiliate tag applied later by the API layer
+    return `https://www.amazon.com/dp/${match[1]}`;
+  }
+  // Also catch amzn.to short links
+  const shortMatch = bodyHtml.match(/https?:\/\/amzn\.to\/[A-Za-z0-9]+/);
+  return shortMatch ? shortMatch[0] : null;
+}
+
 function productToRelease(product: LRGProduct, status: ScrapedRelease["status"]): ScrapedRelease {
   return {
     externalId: product.handle,
@@ -134,6 +150,7 @@ function productToRelease(product: LRGProduct, status: ScrapedRelease["status"])
     editionType: null,
     preorderCloseDate: null,
     releaseDate: null,
+    amazonUrl: extractAmazonUrl(product.body_html),
   };
 }
 

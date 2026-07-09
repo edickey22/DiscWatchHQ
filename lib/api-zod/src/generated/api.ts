@@ -47,6 +47,8 @@ export const ListReleasesResponse = zod.object({
   "preorderCloseDate": zod.string().nullish(),
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "ebaySearchUrl": zod.string().nullish(),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -79,6 +81,8 @@ export const ListAvailableReleasesResponse = zod.object({
   "preorderCloseDate": zod.string().nullish(),
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "ebaySearchUrl": zod.string().nullish(),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -114,6 +118,8 @@ export const ListSoldOutReleasesResponse = zod.object({
   "preorderCloseDate": zod.string().nullish(),
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "ebaySearchUrl": zod.string().nullish(),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -146,6 +152,8 @@ export const ListComingSoonReleasesResponse = zod.object({
   "preorderCloseDate": zod.string().nullish(),
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "ebaySearchUrl": zod.string().nullish(),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -188,6 +196,8 @@ export const GetReleaseResponse = zod.object({
   "preorderCloseDate": zod.string().nullish(),
   "releaseDate": zod.string().nullish(),
   "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "ebaySearchUrl": zod.string().nullish(),
   "firstSeenAt": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -245,6 +255,19 @@ export const GetScrapeStatusResponseItem = zod.object({
   "errorMessage": zod.string().nullish()
 })
 export const GetScrapeStatusResponse = zod.array(GetScrapeStatusResponseItem)
+
+
+/**
+ * @summary Returns which affiliate channels are configured (without exposing IDs)
+ */
+export const GetAffiliateConfigResponse = zod.object({
+  "ebay": zod.object({
+  "configured": zod.boolean()
+}),
+  "amazon": zod.object({
+  "configured": zod.boolean()
+})
+})
 
 
 /**

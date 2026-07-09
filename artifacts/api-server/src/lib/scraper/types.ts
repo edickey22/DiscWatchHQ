@@ -14,6 +14,8 @@ export interface ScrapedRelease {
   preorderCloseDate?: string | null;
   /** YYYY-MM-DD */
   releaseDate?: string | null;
+  /** Direct Amazon product URL, if the publisher links to one (used for affiliate links) */
+  amazonUrl?: string | null;
 }
 
 export interface PublisherScraper {

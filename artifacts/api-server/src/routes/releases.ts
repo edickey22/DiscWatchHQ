@@ -8,6 +8,7 @@ import {
   ListComingSoonReleasesQueryParams,
   GetReleaseParams,
 } from "@workspace/api-zod";
+import { buildEbaySearchUrl, buildAmazonUrl } from "../lib/affiliateConfig";
 
 const router: IRouter = Router();
 
@@ -29,7 +30,6 @@ async function queryReleases(opts: {
   if (status) conditions.push(eq(releasesTable.status, status));
   if (search) conditions.push(ilike(releasesTable.title, `%${search}%`));
   if (publisher) conditions.push(eq(publishersTable.slug, publisher));
-  // Platform: SQL array containment — avoids in-memory filtering issues
   if (platform) {
     conditions.push(
       sql`${releasesTable.platforms} @> ARRAY[${platform}]::text[]`
@@ -54,6 +54,7 @@ async function queryReleases(opts: {
       preorderCloseDate: releasesTable.preorderCloseDate,
       releaseDate: releasesTable.releaseDate,
       soldOutAt: releasesTable.soldOutAt,
+      amazonUrl: releasesTable.amazonUrl,
       firstSeenAt: releasesTable.firstSeenAt,
       createdAt: releasesTable.createdAt,
       updatedAt: releasesTable.updatedAt,
@@ -67,7 +68,6 @@ async function queryReleases(opts: {
       : desc(releasesTable.updatedAt)
   );
 
-  // Count + paginated fetch in parallel
   const countBase = db
     .select({ count: sql<number>`count(*)::int` })
     .from(releasesTable)
@@ -81,10 +81,28 @@ async function queryReleases(opts: {
   return { releases, total };
 }
 
-function formatRelease(row: Awaited<ReturnType<typeof queryReleases>>["releases"][number]) {
+type RawRow = Awaited<ReturnType<typeof queryReleases>>["releases"][number];
+
+/** Enrich a DB row with affiliate-aware URLs before sending to the client */
+function formatRelease(row: RawRow) {
   return {
-    ...row,
+    id: row.id,
+    title: row.title,
+    publisherId: row.publisherId,
+    publisherName: row.publisherName,
+    publisherSlug: row.publisherSlug,
+    platforms: row.platforms,
+    status: row.status,
+    coverImageUrl: row.coverImageUrl ?? null,
+    productUrl: row.productUrl,
+    price: row.price ?? null,
+    editionType: row.editionType ?? null,
+    preorderCloseDate: row.preorderCloseDate ?? null,
+    releaseDate: row.releaseDate ?? null,
     soldOutAt: row.soldOutAt?.toISOString() ?? null,
+    // Affiliate URLs — built with configured IDs (or plain URLs if IDs not yet set)
+    amazonUrl: row.amazonUrl ? buildAmazonUrl(row.amazonUrl) : null,
+    ebaySearchUrl: row.status === "sold_out" ? buildEbaySearchUrl(row.title) : null,
     firstSeenAt: row.firstSeenAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -184,6 +202,7 @@ router.get("/releases/:id", async (req, res): Promise<void> => {
       preorderCloseDate: releasesTable.preorderCloseDate,
       releaseDate: releasesTable.releaseDate,
       soldOutAt: releasesTable.soldOutAt,
+      amazonUrl: releasesTable.amazonUrl,
       firstSeenAt: releasesTable.firstSeenAt,
       createdAt: releasesTable.createdAt,
       updatedAt: releasesTable.updatedAt,

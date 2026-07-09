@@ -1,0 +1,4 @@
+- [Affiliate config pattern](affiliate-config.md) — env-var-driven, no IDs hardcoded; two secrets: EBAY_CAMPAIGN_ID + AMAZON_ASSOCIATES_TAG
+- [Publisher scraper registry](scraper-registry.md) — 5 live scrapers; SRG defunct (Devolver 2024); correct SLG domain is strictlylimitedgames.com not strictly-limited.com
+- [Amazon URL injection](affiliate-config.md) — only injected on https amazon.*/amzn.to hostnames; tag added by API layer, not stored in DB
+- [eBay search URLs](affiliate-config.md) — computed per-request in formatRelease, only for sold_out status, category 139973 (Video Games)
