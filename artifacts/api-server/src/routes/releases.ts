@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, ilike, and, sql } from "drizzle-orm";
+import { eq, desc, asc, ilike, and, or, sql } from "drizzle-orm";
 import { db, releasesTable, publishersTable } from "@workspace/db";
 import {
   ListReleasesQueryParams,
@@ -19,6 +19,7 @@ import {
 const router: IRouter = Router();
 
 type ReleaseStatus = "available" | "sold_out" | "coming_soon";
+type SortOption = "updated" | "title" | "publisher" | "newest";
 
 /** Build a type-safe condition list and run the releases query */
 async function queryReleases(opts: {
@@ -26,15 +27,27 @@ async function queryReleases(opts: {
   platform?: string;
   publisher?: string;
   search?: string;
+  sort?: SortOption;
   limit?: number;
   offset?: number;
 }) {
-  const { status, platform, publisher, search, limit = 50, offset = 0 } = opts;
+  const { status, platform, publisher, search, sort = "updated", limit = 50, offset = 0 } = opts;
 
   const conditions = [];
 
   if (status) conditions.push(eq(releasesTable.status, status));
-  if (search) conditions.push(ilike(releasesTable.title, `%${search}%`));
+
+  // Search: match title OR publisher name
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      or(
+        ilike(releasesTable.title, pattern),
+        ilike(publishersTable.name, pattern)
+      )
+    );
+  }
+
   if (publisher) conditions.push(eq(publishersTable.slug, publisher));
   if (platform) {
     conditions.push(
@@ -43,6 +56,20 @@ async function queryReleases(opts: {
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Resolve sort order
+  const orderExpr = (() => {
+    switch (sort) {
+      case "title":     return asc(releasesTable.title);
+      case "publisher": return asc(publishersTable.name);
+      case "newest":    return desc(releasesTable.firstSeenAt);
+      case "updated":
+      default:
+        return status === "sold_out"
+          ? desc(releasesTable.soldOutAt)
+          : desc(releasesTable.updatedAt);
+    }
+  })();
 
   const base = db
     .select({
@@ -68,11 +95,7 @@ async function queryReleases(opts: {
     .from(releasesTable)
     .innerJoin(publishersTable, eq(releasesTable.publisherId, publishersTable.id));
 
-  const ordered = (where ? base.where(where) : base).orderBy(
-    status === "sold_out"
-      ? desc(releasesTable.soldOutAt)
-      : desc(releasesTable.updatedAt)
-  );
+  const ordered = (where ? base.where(where) : base).orderBy(orderExpr);
 
   const countBase = db
     .select({ count: sql<number>`count(*)::int` })
@@ -139,8 +162,8 @@ router.get("/releases/available", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "available", platform, publisher });
+  const { platform, publisher, search, sort } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
@@ -150,8 +173,8 @@ router.get("/releases/sold-out", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, limit } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "sold_out", platform, publisher, limit });
+  const { platform, publisher, search, sort, limit } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "sold_out", platform, publisher, search, sort, limit });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
@@ -161,8 +184,8 @@ router.get("/releases/coming-soon", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher });
+  const { platform, publisher, search, sort } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort });
   res.json({ releases: releases.map(formatRelease), total });
 });
 

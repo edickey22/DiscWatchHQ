@@ -91,6 +91,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [updated, title, publisher, newest]
+            default: updated
       responses:
         "200":
           description: Available releases
@@ -113,6 +123,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [updated, title, publisher, newest]
+            default: updated
         - name: limit
           in: query
           schema:
@@ -140,6 +160,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [updated, title, publisher, newest]
+            default: updated
       responses:
         "200":
           description: Coming soon releases

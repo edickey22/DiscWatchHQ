@@ -65,9 +65,13 @@ export const ListReleasesResponse = zod.object({
 /**
  * @summary Currently available open preorders
  */
+export const listAvailableReleasesQuerySortDefault = `updated`;
+
 export const ListAvailableReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
-  "publisher": zod.coerce.string().optional()
+  "publisher": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional(),
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listAvailableReleasesQuerySortDefault)
 })
 
 export const ListAvailableReleasesResponse = zod.object({
@@ -104,11 +108,14 @@ export const ListAvailableReleasesResponse = zod.object({
 /**
  * @summary Recently sold-out releases, most recent first
  */
+export const listSoldOutReleasesQuerySortDefault = `updated`;
 export const listSoldOutReleasesQueryLimitDefault = 30;
 
 export const ListSoldOutReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional(),
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listSoldOutReleasesQuerySortDefault),
   "limit": zod.coerce.number().default(listSoldOutReleasesQueryLimitDefault)
 })
 
@@ -146,9 +153,13 @@ export const ListSoldOutReleasesResponse = zod.object({
 /**
  * @summary Announced but not yet open for preorder
  */
+export const listComingSoonReleasesQuerySortDefault = `updated`;
+
 export const ListComingSoonReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
-  "publisher": zod.coerce.string().optional()
+  "publisher": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional(),
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listComingSoonReleasesQuerySortDefault)
 })
 
 export const ListComingSoonReleasesResponse = zod.object({

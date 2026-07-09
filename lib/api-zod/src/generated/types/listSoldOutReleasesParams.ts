@@ -5,9 +5,12 @@
  * Limited-run physical game tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListSoldOutReleasesSort } from './listSoldOutReleasesSort';
 
 export type ListSoldOutReleasesParams = {
 platform?: string;
 publisher?: string;
+search?: string;
+sort?: ListSoldOutReleasesSort;
 limit?: number;
 };

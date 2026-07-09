@@ -5,8 +5,11 @@
  * Limited-run physical game tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListComingSoonReleasesSort } from './listComingSoonReleasesSort';
 
 export type ListComingSoonReleasesParams = {
 platform?: string;
 publisher?: string;
+search?: string;
+sort?: ListComingSoonReleasesSort;
 };

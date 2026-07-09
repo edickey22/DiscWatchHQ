@@ -132,6 +132,27 @@
   --ring: 348 83% 47%;
 }
 
+/* ── Black & Green theme — swaps accent to terminal green, deepens background ── */
+.dark.theme-green {
+  --background: 0 0% 5%;
+  --card: 0 0% 7%;
+  --card-border: 120 20% 12%;
+  --popover: 0 0% 7%;
+  --popover-border: 120 20% 12%;
+  --border: 120 15% 13%;
+
+  --primary: 142 69% 42%;
+  --primary-foreground: 0 0% 0%;
+
+  --accent: 142 69% 42%;
+  --accent-foreground: 0 0% 0%;
+
+  --ring: 142 69% 42%;
+
+  --primary-border: hsl(142 69% 42%);
+  --accent-border: hsl(142 69% 42%);
+}
+
 @layer base {
   * {
     @apply border-border;

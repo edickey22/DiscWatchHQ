@@ -184,16 +184,52 @@ export const ListReleasesStatus = {
 export type ListAvailableReleasesParams = {
 platform?: string;
 publisher?: string;
+search?: string;
+sort?: ListAvailableReleasesSort;
 };
+
+export type ListAvailableReleasesSort = typeof ListAvailableReleasesSort[keyof typeof ListAvailableReleasesSort];
+
+
+export const ListAvailableReleasesSort = {
+  updated: 'updated',
+  title: 'title',
+  publisher: 'publisher',
+  newest: 'newest',
+} as const;
 
 export type ListSoldOutReleasesParams = {
 platform?: string;
 publisher?: string;
+search?: string;
+sort?: ListSoldOutReleasesSort;
 limit?: number;
 };
+
+export type ListSoldOutReleasesSort = typeof ListSoldOutReleasesSort[keyof typeof ListSoldOutReleasesSort];
+
+
+export const ListSoldOutReleasesSort = {
+  updated: 'updated',
+  title: 'title',
+  publisher: 'publisher',
+  newest: 'newest',
+} as const;
 
 export type ListComingSoonReleasesParams = {
 platform?: string;
 publisher?: string;
+search?: string;
+sort?: ListComingSoonReleasesSort;
 };
+
+export type ListComingSoonReleasesSort = typeof ListComingSoonReleasesSort[keyof typeof ListComingSoonReleasesSort];
+
+
+export const ListComingSoonReleasesSort = {
+  updated: 'updated',
+  title: 'title',
+  publisher: 'publisher',
+  newest: 'newest',
+} as const;
 
