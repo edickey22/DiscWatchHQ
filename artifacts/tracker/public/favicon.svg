@@ -1,27 +1,37 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Dark rounded-square tile -->
+  <!--
+    DiscWatchHQ favicon — matches the Lucide gamepad-2 ControllerIcon component
+    used in the site header exactly. Strokes use the site's primary green
+    hsl(142 69% 42%) = #21b557. Background tile matches page dark chrome.
+  -->
   <rect width="32" height="32" rx="7" fill="#0a0c0a"/>
 
-  <!-- Scale controller to fit 32×32: offset ~2px each side -->
-  <!-- Using viewBox 0 0 28 28 geometry scaled by 32/28 ≈ 1.143 -->
-  <!-- Equivalent: translate(2,2) scale(1) on a 28×28 sub-area -->
-
-  <!-- Body -->
-  <rect x="3" y="9" width="26" height="11" rx="5.5" fill="#21b557"/>
-
-  <!-- Left grip -->
-  <rect x="4" y="16" width="10" height="12" rx="5" fill="#21b557"/>
-
-  <!-- Right grip -->
-  <rect x="18" y="16" width="10" height="12" rx="5" fill="#21b557"/>
-
-  <!-- D-pad horizontal -->
-  <rect x="7" y="13.5" width="6" height="2" rx="0.6" fill="#0a0c0a"/>
-  <!-- D-pad vertical -->
-  <rect x="9.5" y="11" width="2" height="7" rx="0.6" fill="#0a0c0a"/>
-
-  <!-- Face button 1 -->
-  <circle cx="21.5" cy="13" r="1.4" fill="#0a0c0a"/>
-  <!-- Face button 2 -->
-  <circle cx="24.5" cy="15" r="1.4" fill="#0a0c0a"/>
+  <!--
+    Lucide gamepad-2 paths, viewBox 0 0 24 24, translated 4px right+down
+    so the 24×24 icon sits centred inside the 32×32 tile with 4px padding.
+    strokeWidth=2 in the 24×24 coord space → rendered as 2px in the tile.
+  -->
+  <g transform="translate(4,4)" stroke="#21b557" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- D-pad: horizontal bar -->
+    <line x1="6" y1="11" x2="10" y2="11"/>
+    <!-- D-pad: vertical bar -->
+    <line x1="8" y1="9" x2="8" y2="13"/>
+    <!-- Controller body outline -->
+    <path fill="none"
+      d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152
+         C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1
+         l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586
+         L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3
+         c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151
+         A4 4 0 0 0 17.32 5z"/>
+    <!--
+      Face buttons — the Lucide icon uses zero-length round-capped lines
+      (x1=15,y1=12 → x2=15.01,y2=12) to render as dots. We use filled
+      circles instead: visually identical but guaranteed to render at any
+      pixel size including 16×16 favicon.ico frames.
+    -->
+    <circle cx="15" cy="12" r="1" fill="#21b557" stroke="none"/>
+    <circle cx="18" cy="10" r="1" fill="#21b557" stroke="none"/>
+  </g>
 </svg>
