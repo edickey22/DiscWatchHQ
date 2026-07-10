@@ -5,6 +5,7 @@ import LandingPage from '@/pages/LandingPage';
 import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
+import CatalogListPage from '@/pages/CatalogListPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +23,13 @@ function AppRouter() {
       <Route path="/" component={LandingPage} />
       {/* Browse Games — full RAWG + TGDB catalog with pre-populated sections */}
       <Route path="/games" component={GamesSearch} />
+      {/* "View all" listings — full paginated versions of the homepage sections */}
+      <Route path="/games/popular">
+        {() => <CatalogListPage kind="popular" />}
+      </Route>
+      <Route path="/games/new-releases">
+        {() => <CatalogListPage kind="new-releases" />}
+      </Route>
       {/* Boutique Tracker — scarcity-tracking for limited-run physical releases */}
       <Route path="/boutique" component={Home} />
       {/* Release detail pages */}

@@ -35,6 +35,11 @@ import { logger } from "../lib/logger";
 const router = Router();
 const PAGE_SIZE = 20;
 
+// ── Detail response cache (30 min in-process) ─────────────────────────────────
+// Avoids re-hitting RAWG on every re-open of the same game popup within a session.
+const _detailCache = new Map<string, { data: unknown; expiresAt: number }>();
+const DETAIL_CACHE_TTL_MS = 30 * 60 * 1_000;
+
 // ── Response formatter ────────────────────────────────────────────────────────
 
 /**
@@ -242,7 +247,11 @@ router.get("/games/search", async (req, res): Promise<void> => {
  * "trending on DiscWatchHQ" (no on-site usage data exists yet to support that).
  */
 router.get("/games/popular", async (req, res): Promise<void> => {
-  const page   = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const page  = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  // ?limit caps at 24 for the homepage preview; full paginated view uses PAGE_SIZE
+  const limit = page === 1
+    ? Math.min(24, Math.max(1, parseInt(String(req.query.limit ?? String(PAGE_SIZE))) || PAGE_SIZE))
+    : PAGE_SIZE;
   const offset = (page - 1) * PAGE_SIZE;
 
   const metacriticFilter = sql`${catalogGamesTable.metacritic} IS NOT NULL`;
@@ -251,7 +260,7 @@ router.get("/games/popular", async (req, res): Promise<void> => {
     db.select().from(catalogGamesTable)
       .where(metacriticFilter)
       .orderBy(sql`${catalogGamesTable.metacritic} DESC NULLS LAST`)
-      .limit(PAGE_SIZE)
+      .limit(limit)
       .offset(offset),
     db.select({ total: sql<number>`count(*)::int` })
       .from(catalogGamesTable)
@@ -259,9 +268,6 @@ router.get("/games/popular", async (req, res): Promise<void> => {
   ]);
 
   // Cold cache: only try RAWG on page 1 when the DB has very few rated games.
-  // Checking `dbRows.length < PAGE_SIZE` is wrong — it fires on every last page
-  // even when the DB is fully warm.  `total < PAGE_SIZE` on page 1 is the only
-  // reliable signal that the catalog is genuinely sparse.
   if (page === 1 && total < PAGE_SIZE && rawgReady) {
     const { rows } = await fetchPopularFromRawg(1);
     if (rows.length > 0) {
@@ -270,7 +276,7 @@ router.get("/games/popular", async (req, res): Promise<void> => {
         db.select().from(catalogGamesTable)
           .where(metacriticFilter)
           .orderBy(sql`${catalogGamesTable.metacritic} DESC NULLS LAST`)
-          .limit(PAGE_SIZE)
+          .limit(limit)
           .offset(0),
         db.select({ freshTotal: sql<number>`count(*)::int` })
           .from(catalogGamesTable)
@@ -286,10 +292,14 @@ router.get("/games/popular", async (req, res): Promise<void> => {
     }
   }
 
+  // When ?limit overrides the page size (preview-only mode), suppress `next`
+  // so callers don't follow into a paginated continuation with wrong offsets.
+  // Full pagination is handled by the view-all pages, which never pass ?limit.
+  const effectiveNext = limit === PAGE_SIZE && total > page * PAGE_SIZE ? page + 1 : null;
   res.json({
     results:  dbRows.map(formatRow),
     count:    total,
-    next:     total > page * PAGE_SIZE ? page + 1 : null,
+    next:     effectiveNext,
     previous: page > 1 ? page - 1 : null,
   });
 });
@@ -302,9 +312,12 @@ router.get("/games/popular", async (req, res): Promise<void> => {
  * Cold cache: fetches from RAWG ordering=-released with date range, upserts, re-queries.
  */
 router.get("/games/new-releases", async (req, res): Promise<void> => {
-  const page       = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
-  const offset     = (page - 1) * PAGE_SIZE;
-  const prevYear   = new Date().getFullYear() - 1;
+  const page  = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = page === 1
+    ? Math.min(24, Math.max(1, parseInt(String(req.query.limit ?? String(PAGE_SIZE))) || PAGE_SIZE))
+    : PAGE_SIZE;
+  const offset   = (page - 1) * PAGE_SIZE;
+  const prevYear = new Date().getFullYear() - 1;
 
   const recentFilter = sql`${catalogGamesTable.releaseYear} >= ${prevYear}`;
 
@@ -315,15 +328,14 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
         sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
         sql`${catalogGamesTable.updatedAt} DESC`,
       )
-      .limit(PAGE_SIZE)
+      .limit(limit)
       .offset(offset),
     db.select({ total: sql<number>`count(*)::int` })
       .from(catalogGamesTable)
       .where(recentFilter),
   ]);
 
-  // Cold cache: only seed from RAWG on page 1 when the DB has very few recent
-  // games.  Checking `dbRows.length < PAGE_SIZE` misfires on every last page.
+  // Cold cache: only seed from RAWG on page 1 when the DB has very few recent games.
   if (page === 1 && total < PAGE_SIZE && rawgReady) {
     const { rows } = await fetchNewReleasesFromRawg(1);
     if (rows.length > 0) {
@@ -335,7 +347,7 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
             sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
             sql`${catalogGamesTable.updatedAt} DESC`,
           )
-          .limit(PAGE_SIZE)
+          .limit(limit)
           .offset(0),
         db.select({ freshTotal: sql<number>`count(*)::int` })
           .from(catalogGamesTable)
@@ -351,10 +363,11 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
     }
   }
 
+  const effectiveNextNew = limit === PAGE_SIZE && total > page * PAGE_SIZE ? page + 1 : null;
   res.json({
     results:  dbRows.map(formatRow),
     count:    total,
-    next:     total > page * PAGE_SIZE ? page + 1 : null,
+    next:     effectiveNextNew,
     previous: page > 1 ? page - 1 : null,
   });
 });
@@ -612,6 +625,14 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
 router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
   const sourceId = decodeURIComponent(req.params.sourceId);
 
+  // Serve from in-process cache if fresh (avoids redundant RAWG calls for
+  // the same popup being opened multiple times in a session).
+  const _cached = _detailCache.get(sourceId);
+  if (_cached && _cached.expiresAt > Date.now()) {
+    res.json(_cached.data);
+    return;
+  }
+
   // Load base row from DB
   const stored = await db.select()
     .from(catalogGamesTable)
@@ -673,10 +694,17 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       const detail = (await detailRes.value.json()) as RawgDetailResp;
       description = detail.description_raw?.trim() ?? null;
 
-      // Some games have a clip field (YouTube redirect)
+      // clip.video is a full YouTube URL ("https://youtube.com/watch?v=ID"),
+      // NOT a bare ID — extract the 11-char ID before using it in an embed.
       if (detail.clip?.video) {
-        trailerYoutubeId = detail.clip.video;
-        trailerUrl = `https://www.youtube.com/watch?v=${trailerYoutubeId}`;
+        const ytId =
+          detail.clip.video.match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] ??
+          detail.clip.video.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)?.[1] ??
+          detail.clip.video.match(/embed\/([A-Za-z0-9_-]{11})/)?.[1];
+        if (ytId) {
+          trailerYoutubeId = ytId;
+          trailerUrl = `https://www.youtube.com/watch?v=${ytId}`;
+        }
       }
     } else if (detailRes.status === "rejected") {
       logger.warn({ err: detailRes.reason, sourceId }, "RAWG game detail fetch failed");
@@ -716,7 +744,9 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       },
     };
 
-    res.json({ ...base, description, screenshots, trailerYoutubeId, trailerUrl, attribution: "rawg" });
+    const _payload = { ...base, description, screenshots, trailerYoutubeId, trailerUrl, attribution: "rawg" };
+    _detailCache.set(sourceId, { data: _payload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
+    res.json(_payload);
     return;
   }
 
@@ -726,14 +756,17 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json({
+  const _tgdbPayload = {
     ...baseRow,
     description:      null,
     screenshots:      [],
     trailerYoutubeId: null,
     trailerUrl:       null,
     attribution:      baseRow.source,
-  });
+  };
+  // Cache TGDB responses too — the DB row doesn't change between requests
+  _detailCache.set(sourceId, { data: _tgdbPayload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
+  res.json(_tgdbPayload);
 });
 
 export default router;

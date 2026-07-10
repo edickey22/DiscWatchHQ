@@ -27,9 +27,11 @@
 
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "wouter"
 import {
   Search, ChevronLeft, ChevronRight,
   ExternalLink, AlertCircle, Star, CalendarDays,
+  ChevronDown, ArrowRight,
 } from "lucide-react"
 
 import { Header } from "@/components/Header"
@@ -83,13 +85,14 @@ async function fetchGames(q: string, page: number, platform: string): Promise<Ga
 }
 
 async function fetchPopular(): Promise<PopularResponse> {
-  const res = await fetch("/api/games/popular")
+  // Always request 24 so show-more works without a second network call
+  const res = await fetch("/api/games/popular?limit=24")
   if (!res.ok) return { results: [], count: 0, next: null, previous: null }
   return res.json()
 }
 
 async function fetchNewReleases(): Promise<PopularResponse> {
-  const res = await fetch("/api/games/new-releases")
+  const res = await fetch("/api/games/new-releases?limit=24")
   if (!res.ok) return { results: [], count: 0, next: null, previous: null }
   return res.json()
 }
@@ -176,12 +179,15 @@ function CatalogAttribution({ sources }: { sources?: { rawg: boolean; tgdb: bool
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GamesSearch() {
-  const [search, setSearch]           = useState("")
-  const [platform, setPlatform]       = useState("all")
-  const [page, setPage]               = useState(1)
+  const [search, setSearch]             = useState("")
+  const [platform, setPlatform]         = useState("all")
+  const [page, setPage]                 = useState(1)
   const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null)
-  const debouncedSearch               = useDebounce(search, 400)
-  const isSearching                   = debouncedSearch.trim().length > 0
+  // Show-more state for pre-populated sections (12 → 24)
+  const [popularShown, setPopularShown] = useState(12)
+  const [newShown,     setNewShown]     = useState(12)
+  const debouncedSearch                 = useDebounce(search, 400)
+  const isSearching                     = debouncedSearch.trim().length > 0
 
   useDocumentHead({
     title:       "Browse Games — Physical Releases Across All Platforms | DiscWatchHQ",
@@ -224,9 +230,14 @@ export default function GamesSearch() {
   const totalPages   = searchData?.count ? Math.ceil(searchData.count / 20) : 0
   const neitherReady = searchData && !searchData.sources?.rawg && !searchData.sources?.tgdb
 
-  // Limit pre-populated sections to 10 cards — readable without overwhelming
-  const popularCards    = (popularData?.results ?? []).slice(0, 10)
-  const newReleasesCards = (newData?.results ?? []).slice(0, 10)
+  // Pre-populated sections: slice to `shown` count (12 or 24).
+  // Grid is max 4 cols so both 12 and 24 always produce complete rows.
+  const allPopular       = popularData?.results    ?? []
+  const allNew           = newData?.results        ?? []
+  const popularCards     = allPopular.slice(0, popularShown)
+  const newReleasesCards = allNew.slice(0, newShown)
+  const popularTotal     = popularData?.count ?? 0
+  const newTotal         = newData?.count     ?? 0
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -299,15 +310,43 @@ export default function GamesSearch() {
               />
 
               {isPopularLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {Array.from({ length: 10 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : popularCards.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {popularCards.map(game => (
-                    <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {popularCards.map(game => (
+                      <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
+                    ))}
+                  </div>
+
+                  {/* Show-more / View-all controls */}
+                  <div className="flex items-center justify-between mt-5">
+                    {/* "Show 12 more" — only while shown < 24 and more data exists */}
+                    {popularShown < 24 && allPopular.length > popularShown ? (
+                      <button
+                        onClick={() => setPopularShown(Math.min(24, allPopular.length))}
+                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ChevronDown size={15} />
+                        Show {Math.min(12, allPopular.length - popularShown)} more
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+
+                    {/* "View all →" — once at 24 or when there are many more in the DB */}
+                    {(popularShown >= 24 || popularTotal > 24) && (
+                      <Link
+                        href="/games/popular"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                      >
+                        View all Most Popular <ArrowRight size={14} />
+                      </Link>
+                    )}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   Popularity data unavailable — configure a RAWG_API_KEY to enable this section.
@@ -324,15 +363,40 @@ export default function GamesSearch() {
               />
 
               {isNewLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {Array.from({ length: 10 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : newReleasesCards.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {newReleasesCards.map(game => (
-                    <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {newReleasesCards.map(game => (
+                      <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-5">
+                    {newShown < 24 && allNew.length > newShown ? (
+                      <button
+                        onClick={() => setNewShown(Math.min(24, allNew.length))}
+                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ChevronDown size={15} />
+                        Show {Math.min(12, allNew.length - newShown)} more
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+
+                    {(newShown >= 24 || newTotal > 24) && (
+                      <Link
+                        href="/games/new-releases"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                      >
+                        View all New &amp; Upcoming <ArrowRight size={14} />
+                      </Link>
+                    )}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
                   New release data unavailable — configure a RAWG_API_KEY to enable this section.
