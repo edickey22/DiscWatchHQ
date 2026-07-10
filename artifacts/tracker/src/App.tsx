@@ -3,6 +3,7 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
+import GamesSearch from '@/pages/GamesSearch';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,7 @@ function AppRouter() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/releases/:id" component={ReleaseDetail} />
+      <Route path="/games" component={GamesSearch} />
       <Route component={NotFound} />
     </Switch>
   );

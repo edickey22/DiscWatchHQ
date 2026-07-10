@@ -1,20 +1,27 @@
-import { Link } from "wouter"
+import { Link, useLocation } from "wouter"
 import { ControllerIcon } from "@/components/ControllerIcon"
 import { useGetReleaseStats } from "@workspace/api-client-react"
 
 export function Header() {
   const { data: stats } = useGetReleaseStats()
+  const [location] = useLocation()
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between">
+      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between gap-4">
 
         {/* ── Wordmark ─────────────────────────────────────────────────── */}
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <ControllerIcon size={30} />
           <span className="flex items-center gap-1.5 leading-none">
             <span className="font-display text-[1.2rem] font-bold tracking-tight">
-              <span className="text-foreground">Disc</span>
+              {/*
+               * "Disc" uses explicit light/dark text so the wordmark stays
+               * legible on any background:
+               *   Light background → text-gray-900 (near-black)
+               *   Dark background  → dark:text-foreground (near-white)
+               */}
+              <span className="text-gray-900 dark:text-foreground">Disc</span>
               <span className="text-primary">Watch</span>
             </span>
             <span className="
@@ -27,9 +34,33 @@ export function Header() {
           </span>
         </Link>
 
+        {/* ── Page navigation ───────────────────────────────────────────── */}
+        <nav className="hidden sm:flex items-center gap-1 text-[13px] font-medium">
+          <Link
+            href="/"
+            className={`px-3 py-1.5 rounded transition-colors ${
+              location === "/"
+                ? "text-foreground bg-secondary/60"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+            }`}
+          >
+            Boutique
+          </Link>
+          <Link
+            href="/games"
+            className={`px-3 py-1.5 rounded transition-colors ${
+              location === "/games"
+                ? "text-foreground bg-secondary/60"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+            }`}
+          >
+            Browse Games
+          </Link>
+        </nav>
+
         {/* ── Live stats (desktop) ──────────────────────────────────────── */}
         {stats && (
-          <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight">
+          <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight shrink-0">
             <div className="flex flex-col items-center">
               <span className="text-muted-foreground text-[10px] uppercase">Available</span>
               <span className="text-primary font-bold">{stats.available}</span>

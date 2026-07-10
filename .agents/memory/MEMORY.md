@@ -2,3 +2,4 @@
 - [Publisher scraper registry](scraper-registry.md) — 5 live scrapers; SRG defunct (Devolver 2024); correct SLG domain is strictlylimitedgames.com not strictly-limited.com
 - [Amazon URL injection](affiliate-config.md) — only injected on https amazon.*/amzn.to hostnames; tag added by API layer, not stored in DB
 - [eBay search URLs](affiliate-config.md) — computed per-request in formatRelease, only for sold_out status, category 139973 (Video Games)
+- [RAWG integration](rawg-integration.md) — game browse page at /games; server-side proxy only; RAWG_API_KEY must be in Replit Secrets; 10-min true-LRU cache; RAWG attribution required on every page displaying their data
