@@ -41,49 +41,6 @@ interface BlizzardCollectionResponse {
   products: BlizzardProduct[];
 }
 
-// ── Merch filter ──────────────────────────────────────────────────────────────
-// Blizzard's "limited-edition" collection mixes CE game bundles with pins,
-// figures, statues, and art books. Only physical games/game-editions pass.
-
-const BLIZZARD_MERCH_TYPES = new Set([
-  "pin", "pins", "enamel pin", "lapel pin",
-  "figurine", "figure", "funko",
-  "statue", "replica",
-  "art book", "artbook",
-  "apparel", "clothing", "t-shirt", "hoodie",
-  "accessories", "accessory",
-  "poster", "print",
-  "soundtrack", "music", "vinyl",
-  "gift card",
-  "plush", "toy",
-  "sticker", "patch",
-]);
-
-const BLIZZARD_MERCH_TITLE_KWS = [
-  "enamel pin", "lapel pin", "pin set",
-  "funko pop", "figurine", "statue", "replica",
-  "art book", "artbook",
-  "vinyl record", "soundtrack",
-  "t-shirt", "hoodie", "zip-up",
-  "poster", "lithograph",
-  "plush", "keychain", "lanyard",
-  "gift card", "sticker sheet",
-];
-
-/**
- * Returns true only for physical game / game collector's edition products.
- * Filters out pins, figures, apparel, art books, and other merchandise.
- */
-function isBlizzardGame(product: BlizzardProduct): boolean {
-  const type  = (product.product_type ?? "").trim().toLowerCase();
-  const title = product.title.toLowerCase();
-
-  if (BLIZZARD_MERCH_TYPES.has(type)) return false;
-  if (BLIZZARD_MERCH_TITLE_KWS.some(kw => title.includes(kw))) return false;
-
-  return true;
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function fetchCollection(handle: string): Promise<BlizzardProduct[]> {
@@ -171,8 +128,9 @@ export const blizzardGearScraper: PublisherScraper = {
     const results: ScrapedRelease[] = [];
 
     for (const product of products) {
-      // Skip non-game merchandise (pins, figures, art books, apparel, etc.)
-      if (!isBlizzardGame(product)) continue;
+      // Skip gift cards only — all other items (games, CEs, collectibles,
+      // pins, figures, apparel, art books) are intentionally included in Boutique.
+      if (/gift.?card/i.test(product.title) || /^gift\s*card$/i.test(product.product_type)) continue;
 
       results.push({
         externalId: product.handle,

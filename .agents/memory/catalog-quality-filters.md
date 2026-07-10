@@ -39,11 +39,12 @@ Parameter is `q=` (NOT `searchTerm=` — the old param returns zero results on G
 
 `buildGameStopSearchUrl()` in `affiliateConfig.ts` → `https://www.gamestop.com/search/?q=${encodeURIComponent(title)}`
 
-## Blizzard scraper merch filter
+## Boutique vs Browse Games — merch policy
 
-`blizzardGear.ts` — `isBlizzardGame()` function using `BLIZZARD_MERCH_TYPES` Set (exact product_type match, lowercase) and `BLIZZARD_MERCH_TITLE_KWS` array (substring). Covers pins, figures, statues, art books, apparel, soundtracks. Mirror of LRG's isGame() pattern.
+**Browse Games** = games only (catalog_games table, RAWG/TGDB sources).  
+**Boutique** = intentionally broad — games AND collectible merch (pins, figures, CEs, apparel, art books, etc.) from tracked storefronts. All items drive affiliate purchases.
 
-**Note:** product_type taxonomy can drift (new Blizzard labels). If merch leaks through in future, check for new product_type values and add to the Set.
+`blizzardGear.ts` skips **gift cards only** — all other products (including pins, Funko Pops, art books) are included in Boutique. Do NOT add a product_type merch filter to Boutique scrapers (Blizzard, Fangamer, iam8bit, etc.).
 
 ## Hero tile animation opacity
 
