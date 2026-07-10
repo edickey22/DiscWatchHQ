@@ -63,7 +63,14 @@ function buildSlides(
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-/** Score/rating badge reused from TgdbGameCard at larger size. */
+/**
+ * Labeled score block — shows the numeric rating with a clear source label
+ * so visitors immediately understand what the number means.
+ *
+ * Metacritic: colour-coded score (green ≥75, yellow ≥50, red <50)
+ *             + "Metacritic" label below
+ * ESRB:       rating letter + "ESRB" label below (fallback when no score)
+ */
 function ScoreBadge({ game }: { game: CatalogGame }) {
   if (game.metacritic !== null) {
     const colour =
@@ -71,22 +78,36 @@ function ScoreBadge({ game }: { game: CatalogGame }) {
       : game.metacritic >= 50 ? "bg-yellow-500 text-black"
       : "bg-red-500 text-white"
     return (
-      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-mono font-black ${colour}`}>
-        {game.metacritic}
-      </span>
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <span
+          className={`inline-flex items-center justify-center w-12 h-10 rounded-lg text-base font-mono font-black ${colour}`}
+          aria-label={`Metacritic score: ${game.metacritic} out of 100`}
+        >
+          {game.metacritic}
+        </span>
+        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 leading-none">
+          Metacritic
+        </span>
+      </div>
     )
   }
   if (game.esrbRating && game.esrbRating !== "Not Rated") {
-    const label = game.esrbRating.includes(" - ")
+    const letter = game.esrbRating.includes(" - ")
       ? game.esrbRating.split(" - ")[0].trim()
       : game.esrbRating.charAt(0)
     return (
-      <span
-        className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-mono font-black bg-secondary text-muted-foreground border border-border/50"
-        title={`ESRB: ${game.esrbRating}`}
-      >
-        {label}
-      </span>
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <span
+          className="inline-flex items-center justify-center w-12 h-10 rounded-lg text-base font-mono font-black bg-secondary text-muted-foreground border border-border/50"
+          title={`ESRB rating: ${game.esrbRating}`}
+          aria-label={`ESRB rating: ${game.esrbRating}`}
+        >
+          {letter}
+        </span>
+        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 leading-none">
+          ESRB
+        </span>
+      </div>
     )
   }
   return null
