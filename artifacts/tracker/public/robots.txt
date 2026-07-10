@@ -5,7 +5,6 @@ Allow: /
 # (they're crawlable for link-following but not useful as landing pages)
 Disallow: /api/
 
-# XML sitemap — covering all boutique release pages and browse views.
-# The full sitemap is served dynamically at /api/sitemap.xml
-# Update the domain below once deployed to a custom domain.
-Sitemap: /api/sitemap.xml
+# XML sitemap — generated at build time, served as a static file.
+# Covers home, /games, /boutique, and all individual release pages.
+Sitemap: /sitemap.xml
