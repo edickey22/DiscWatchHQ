@@ -133,18 +133,25 @@ function TileColumn({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  useDocumentHead({
-    title:       "DiscWatchHQ — Find Any Game, Buy Anywhere",
-    description: "Search 899,000+ physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.",
-    canonical:   buildCanonicalUrl("/"),
-    jsonLd:      null,
-  })
-
   const { data: stats }        = useGetReleaseStats()
   const { data: catalogStats } = useQuery({
     queryKey:  ["catalog-stats"],
     queryFn:   fetchCatalogStats,
     staleTime: 5 * 60_000,
+  })
+
+  // Use the live catalog count when available (e.g. "899K+"), fall back to
+  // the same static figure used in index.html so the two never disagree.
+  const catalogLabel =
+    catalogStats?.count && catalogStats.count > 100_000
+      ? `${Math.floor(catalogStats.count / 1_000).toLocaleString()}K+`
+      : "900,000+"
+
+  useDocumentHead({
+    title:       "DiscWatchHQ — Find Any Game, Buy Anywhere",
+    description: `Search ${catalogLabel} physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.`,
+    canonical:   buildCanonicalUrl("/"),
+    jsonLd:      null,
   })
   const { data: covers = [] } = useQuery({
     queryKey:  ["landing-covers-v2"],
