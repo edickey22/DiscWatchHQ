@@ -672,7 +672,7 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
         fetch(
           `https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(q)}&page_size=3&search_precise=true`,
           { headers: { "User-Agent": "DiscWatchHQ/1.0" }, signal: AbortSignal.timeout(8_000) },
-        ).then(r => r.ok ? r.json() : null),
+        ).then(r => r.ok ? r.json() as Promise<{ results: Array<{ id: number; name: string; background_image: string | null; released: string | null; metacritic: number | null; platforms: Array<{ platform: { name: string } }> | null }> }> : null),
       ),
     );
 
@@ -739,9 +739,9 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
  * GET /api/games/detail/:sourceId
  *
  * Returns enriched data for a single game, used by the Browse Games modal.
- * For RAWG-sourced games, fetches description, screenshots, and trailer from
- * the RAWG games/{id} and games/{id}/movies endpoints.
- * For TGDB-sourced games, returns the DB row (no screenshot/trailer API).
+ * For RAWG-sourced games, fetches description and screenshots from the RAWG
+ * games/{id} and games/{id}/screenshots endpoints.
+ * For TGDB-sourced games, returns the DB row (no screenshot enrichment).
  *
  * RAWG attribution is required by RAWG API ToS — the `attribution` field in
  * the response tells the frontend which credit to display.
@@ -775,31 +775,22 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       background_image: string | null;
       metacritic: number | null;
       short_screenshots: Array<{ id: number; image: string }> | null;
-      clip: { clip: string; video: string; preview: string } | null;
       esrb_rating: { name: string } | null;
       publishers: Array<{ name: string }> | null;
       platforms: Array<{ platform: { name: string } }> | null;
       released: string | null;
     }
-    interface RawgMoviesResp {
-      count: number;
-      results: Array<{
-        id: number; name: string; preview: string;
-        data: { 480: string; max: string };
-      }>;
-    }
-
     interface RawgScreenshotResp {
       count: number;
       results: Array<{ id: number; image: string }>;
     }
 
-    const [detailRes, moviesRes, screenshotsRes] = await Promise.allSettled([
+    // Two parallel requests: game detail (description, metadata) + screenshots.
+    // The /movies endpoint was removed — live API diagnostics confirmed it returns
+    // empty results for virtually the entire RAWG catalog (clip field is also null
+    // for all tested games on the free-tier API).
+    const [detailRes, screenshotsRes] = await Promise.allSettled([
       fetch(`https://api.rawg.io/api/games/${rawgId}?key=${RAWG_KEY}`, {
-        headers: { "User-Agent": "DiscWatchHQ/1.0" },
-        signal:  AbortSignal.timeout(10_000),
-      }),
-      fetch(`https://api.rawg.io/api/games/${rawgId}/movies?key=${RAWG_KEY}`, {
         headers: { "User-Agent": "DiscWatchHQ/1.0" },
         signal:  AbortSignal.timeout(10_000),
       }),
@@ -809,34 +800,12 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       }),
     ]);
 
-    let description:       string | null = null;
-    let screenshots:       string[]      = [];
-    let trailerYoutubeId:  string | null = null;
-    let trailerUrl:        string | null = null;
-    let trailerPreviewUrl: string | null = null;
+    let description: string | null = null;
+    let screenshots: string[]      = [];
 
     if (detailRes.status === "fulfilled" && detailRes.value.ok) {
       const detail = (await detailRes.value.json()) as RawgDetailResp;
       description = detail.description_raw?.trim() ?? null;
-
-      // Priority 1: clip.clip — direct RAWG-hosted mp4 URL (most games with clips have this).
-      // This is a plain HTTPS mp4 file on media.rawg.io; render with <video>, not an iframe.
-      if (detail.clip?.clip && detail.clip.clip.startsWith("http")) {
-        trailerUrl        = detail.clip.clip;
-        trailerPreviewUrl = detail.clip.preview ?? null;
-      }
-
-      // Priority 2: clip.video — YouTube URL of the full trailer.
-      // Only used when clip.clip is absent (YouTube iframe requires user-gesture for sound).
-      if (!trailerUrl && detail.clip?.video) {
-        const ytId =
-          detail.clip.video.match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] ??
-          detail.clip.video.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)?.[1] ??
-          detail.clip.video.match(/embed\/([A-Za-z0-9_-]{11})/)?.[1];
-        if (ytId) {
-          trailerYoutubeId = ytId;
-        }
-      }
     } else if (detailRes.status === "rejected") {
       logger.warn({ err: detailRes.reason, sourceId }, "RAWG game detail fetch failed");
     }
@@ -847,27 +816,6 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       screenshots = (ss.results ?? []).slice(0, 6).map(s => s.image).filter(Boolean);
     }
 
-    // Movies endpoint — contributor-uploaded full trailers as direct mp4 files.
-    // Shape: { count, results: [{ id, name, preview, data: { "480": url, max: url } }] }
-    // Overrides clip.clip when available (typically higher-quality full trailer).
-    if (moviesRes.status === "fulfilled" && moviesRes.value.ok) {
-      const movies = (await moviesRes.value.json()) as RawgMoviesResp;
-      const first = movies.results?.[0];
-      if (first) {
-        // data.max is the highest-resolution mp4; "480" is the lower-res fallback.
-        const mp4Url = first.data?.max
-          ?? (first.data as Record<string, string>)?.["480"]
-          ?? "";
-        if (mp4Url && mp4Url.startsWith("http")) {
-          trailerUrl        = mp4Url;
-          trailerYoutubeId  = null;  // prefer mp4 over YouTube when movies are available
-          trailerPreviewUrl = first.preview ?? trailerPreviewUrl;
-        }
-      }
-    }
-
-    logger.debug({ sourceId, trailerUrl, trailerYoutubeId }, "Trailer resolution complete");
-
     const base = baseRow ?? { id: sourceId, source: "rawg" as const, title: sourceId,
       releaseDate: null, platforms: [], genres: [], coverImageUrl: null,
       metacritic: null, esrbRating: null, publisherName: null,
@@ -877,7 +825,7 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       },
     };
 
-    const _payload = { ...base, description, screenshots, trailerYoutubeId, trailerUrl, trailerPreviewUrl, attribution: "rawg" };
+    const _payload = { ...base, description, screenshots, attribution: "rawg" };
     _detailCache.set(sourceId, { data: _payload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
     res.json(_payload);
     return;
@@ -891,12 +839,9 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
 
   const _tgdbPayload = {
     ...baseRow,
-    description:       null,
-    screenshots:       [],
-    trailerYoutubeId:  null,
-    trailerUrl:        null,
-    trailerPreviewUrl: null,
-    attribution:       baseRow.source,
+    description: null,
+    screenshots: [],
+    attribution: baseRow.source,
   };
   // Cache TGDB responses too — the DB row doesn't change between requests
   _detailCache.set(sourceId, { data: _tgdbPayload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });

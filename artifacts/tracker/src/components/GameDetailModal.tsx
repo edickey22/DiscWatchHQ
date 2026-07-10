@@ -1,30 +1,29 @@
 /**
  * GameDetailModal — rich game detail popup for the Browse Games page.
  *
- * Hero behaviour:
- *   - Opens with the static cover image.
- *   - If the game has a trailer, automatically crossfades into a muted
- *     video after 2.5 seconds. The user can unmute with the overlay control.
- *   - Resets to static image whenever a different game is opened.
+ * Hero:
+ *   Shows the static cover image. No trailer/video — RAWG's movies endpoint
+ *   returns empty results for virtually the entire catalog (confirmed via
+ *   live API diagnostics), so the video crossfade has been removed.
  *
  * Media gallery:
- *   Screenshots and the trailer appear in a unified thumbnail grid below the
- *   description. Clicking any thumbnail opens MediaLightbox (full-viewport
- *   overlay with navigation, keyboard, swipe, and autoplay).
+ *   Screenshots appear in a 3-column thumbnail grid. Clicking any thumbnail
+ *   opens MediaLightbox (full-viewport overlay with navigation, keyboard,
+ *   swipe, and autoplay).
  *
  * Attribution requirements (API ToS — must always be visible):
  *   RAWG: "Powered by RAWG" link to rawg.io
  *   TGDB: "Data from TheGamesDB" link (courtesy credit)
  */
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog"
 import { RetailerLinks } from "@/components/RetailerLinks"
 import {
-  ExternalLink, X, Play, Image as ImageIcon,
-  ChevronDown, ChevronUp, VolumeX, Volume2,
+  ExternalLink, X, Image as ImageIcon,
+  ChevronDown, ChevronUp,
 } from "lucide-react"
 import type { CatalogGame } from "@/components/TgdbGameCard"
 import { MediaLightbox, type MediaSlide } from "@/components/MediaLightbox"
@@ -32,13 +31,9 @@ import { MediaLightbox, type MediaSlide } from "@/components/MediaLightbox"
 // ── API response type ─────────────────────────────────────────────────────────
 
 interface GameDetail extends CatalogGame {
-  description:       string | null
-  screenshots:       string[]
-  trailerYoutubeId:  string | null
-  trailerUrl:        string | null
-  /** Thumbnail URL from clip.preview or movies[0].preview; used as <video poster>. */
-  trailerPreviewUrl: string | null
-  attribution:       "rawg" | "tgdb"
+  description: string | null
+  screenshots: string[]
+  attribution: "rawg" | "tgdb"
 }
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
@@ -51,32 +46,9 @@ async function fetchGameDetail(sourceId: string): Promise<GameDetail> {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Whether this detail object has a usable trailer for the hero / gallery.
- * YouTube always works; mp4 only when the URL explicitly ends in .mp4.
- */
-/** Regex: URL path (before any query string) ends with .mp4, case-insensitive. */
-const MP4_RE = /\.mp4(?:[?#]|$)/i
-
-function hasTrailer(detail: GameDetail | null): boolean {
-  if (!detail) return false
-  return !!(detail.trailerYoutubeId || (detail.trailerUrl && MP4_RE.test(detail.trailerUrl)))
-}
-
-/** Build the ordered slide list for the lightbox.
- *  Screenshots first, trailer last (so screenshot index === slide index). */
-function buildSlides(
-  screenshots: string[],
-  trailerYoutubeId: string | null,
-  trailerUrl: string | null,
-): MediaSlide[] {
-  const slides: MediaSlide[] = screenshots.map(url => ({ kind: "image", url }))
-  if (trailerYoutubeId) {
-    slides.push({ kind: "youtube", id: trailerYoutubeId })
-  } else if (trailerUrl && MP4_RE.test(trailerUrl)) {
-    slides.push({ kind: "mp4", url: trailerUrl })
-  }
-  return slides
+/** Build the ordered slide list for the lightbox — screenshots only. */
+function buildSlides(screenshots: string[]): MediaSlide[] {
+  return screenshots.map(url => ({ kind: "image", url }))
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -157,39 +129,22 @@ function Description({ text }: { text: string }) {
 }
 
 /**
- * Unified media gallery — screenshots + trailer thumbnail in one 3-column grid.
- * Each cell is a <button> that opens the lightbox at the correct slide index.
+ * Screenshot gallery — 3-column grid.
+ * Each cell opens the lightbox at the correct slide index.
  */
 function Gallery({
   screenshots,
-  trailerYoutubeId,
-  trailerUrl,
   onOpen,
 }: {
-  screenshots:      string[]
-  trailerYoutubeId: string | null
-  trailerUrl:       string | null
-  onOpen:           (index: number) => void
+  screenshots: string[]
+  onOpen:      (index: number) => void
 }) {
-  // Must match buildSlides() and hasTrailer() exactly — uses same MP4_RE
-  const showTrailer = !!(trailerYoutubeId || (trailerUrl && MP4_RE.test(trailerUrl)))
-  const totalItems = screenshots.length + (showTrailer ? 1 : 0)
-  if (totalItems === 0) return null
-
-  const trailerSlideIndex = screenshots.length
-  const ytThumb = trailerYoutubeId
-    ? `https://img.youtube.com/vi/${trailerYoutubeId}/mqdefault.jpg`
-    : null
-
-  const sectionLabel =
-    screenshots.length > 0 && showTrailer ? "Screenshots & Trailer"
-    : screenshots.length > 0 ? "Screenshots"
-    : "Trailer"
+  if (screenshots.length === 0) return null
 
   return (
     <section>
       <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-2">
-        <ImageIcon size={12} /> {sectionLabel}
+        <ImageIcon size={12} /> Screenshots
       </h3>
 
       <div className="grid grid-cols-3 gap-1.5">
@@ -216,38 +171,6 @@ function Gallery({
             </div>
           </button>
         ))}
-
-        {showTrailer && (
-          <button
-            type="button"
-            onClick={() => onOpen(trailerSlideIndex)}
-            className="relative aspect-video rounded overflow-hidden bg-secondary group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label="Watch trailer in full-screen viewer"
-          >
-            {ytThumb ? (
-              <img
-                src={ytThumb}
-                alt="Trailer thumbnail"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full bg-black/60 flex items-center justify-center">
-                <Play size={24} className="text-white/60" />
-              </div>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors duration-200">
-              <div className="w-10 h-10 rounded-full bg-black/70 group-hover:bg-primary/90 border border-white/20 flex items-center justify-center backdrop-blur-sm transition-colors duration-200">
-                <Play size={16} className="text-white ml-0.5" fill="white" />
-              </div>
-            </div>
-            <div className="absolute bottom-1.5 left-0 right-0 flex justify-center pointer-events-none">
-              <span className="text-[9px] font-mono uppercase tracking-widest text-white/70 bg-black/60 px-2 py-0.5 rounded-full">
-                Trailer
-              </span>
-            </div>
-          </button>
-        )}
       </div>
     </section>
   )
@@ -329,19 +252,11 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
   const [error,         setError]         = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
-  // ── Hero state — static image → muted video after 2.5 s ──
-  const [heroMode,  setHeroMode]  = useState<"image" | "video">("image")
-  const [heroMuted, setHeroMuted] = useState(true)
-  const heroIframeRef = useRef<HTMLIFrameElement>(null)
-  const heroVideoRef  = useRef<HTMLVideoElement>(null)
-
   // Reset all transient state whenever a different game is opened
   useEffect(() => {
     setDetail(null)
     setError(null)
     setLightboxIndex(null)
-    setHeroMode("image")
-    setHeroMuted(true)
 
     if (!game) return
 
@@ -355,43 +270,21 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
     return () => { cancelled = true }
   }, [game?.id])
 
-  // Auto-play timer: crossfade hero to video 2.5 s after detail loads
-  useEffect(() => {
-    if (!hasTrailer(detail)) return
-    const timer = setTimeout(() => setHeroMode("video"), 2500)
-    return () => clearTimeout(timer)
-  }, [detail?.trailerYoutubeId, detail?.trailerUrl])
-
-  // Unmute hero video (YouTube via postMessage; mp4 via ref)
-  const handleHeroUnmute = useCallback(() => {
-    heroIframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: "command", func: "unMute", args: "" }),
-      "https://www.youtube.com",
-    )
-    if (heroVideoRef.current) heroVideoRef.current.muted = false
-    setHeroMuted(false)
-  }, [])
+  const handleClose = useCallback(() => onClose(), [onClose])
 
   const displayed = detail ?? (game
-    ? { ...game, description: null, screenshots: [], trailerYoutubeId: null, trailerUrl: null, trailerPreviewUrl: null, attribution: game.source } as GameDetail
+    ? { ...game, description: null, screenshots: [], attribution: game.source } as GameDetail
     : null)
 
   const year = displayed?.releaseDate
     ? new Date(displayed.releaseDate.replace(/-/g, "/")).getFullYear()
     : null
 
-  const slides: MediaSlide[] = detail
-    ? buildSlides(detail.screenshots, detail.trailerYoutubeId, detail.trailerUrl)
-    : []
-
-  // Whether the hero is actively showing video (used to decide rendering)
-  const showingVideo  = heroMode === "video" && !!detail && hasTrailer(detail)
-  const isYouTubeHero = showingVideo && !!detail?.trailerYoutubeId
-  const isMp4Hero     = showingVideo && !detail?.trailerYoutubeId && !!(detail?.trailerUrl && MP4_RE.test(detail.trailerUrl))
+  const slides: MediaSlide[] = detail ? buildSlides(detail.screenshots) : []
 
   return (
     <>
-      <Dialog open={!!game} onOpenChange={open => { if (!open) onClose() }}>
+      <Dialog open={!!game} onOpenChange={open => { if (!open) handleClose() }}>
         <DialogContent
           className="max-w-2xl w-full p-0 overflow-hidden bg-background border-border/50 gap-0 max-h-[90vh] flex flex-col"
           hideDefaultClose
@@ -402,84 +295,29 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
 
           <div className="overflow-y-auto flex-1">
 
-            {/* ── Hero area: cover image → auto-plays trailer after 2.5 s ── */}
+            {/* ── Hero area: static cover image ── */}
             <div className="relative">
               <div className="aspect-video bg-black overflow-hidden relative">
 
-                {/* Static cover image — fades out when video takes over */}
                 {displayed?.coverImageUrl ? (
                   <img
                     src={displayed.coverImageUrl}
                     alt={displayed.title}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${showingVideo ? "opacity-0" : "opacity-100"}`}
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <div className={`absolute inset-0 flex items-center justify-center text-muted-foreground/20 transition-opacity duration-1000 ${showingVideo ? "opacity-0" : "opacity-100"}`}>
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
                     <ImageIcon size={48} />
                   </div>
                 )}
 
-                {/* YouTube hero (autoplay muted, no controls — clean cinematic look) */}
-                {isYouTubeHero && (
-                  <iframe
-                    key={`hero-yt-${detail!.trailerYoutubeId}`}
-                    ref={heroIframeRef}
-                    src={`https://www.youtube.com/embed/${detail!.trailerYoutubeId}?autoplay=1&mute=1&enablejsapi=1&rel=0&controls=0&modestbranding=1&playsinline=1`}
-                    title="Game trailer"
-                    className="absolute inset-0 w-full h-full animate-in fade-in duration-700"
-                    sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  />
-                )}
-
-                {/* mp4 hero — direct RAWG-hosted or movies-endpoint mp4 */}
-                {isMp4Hero && (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video
-                    key={detail!.trailerUrl!}
-                    ref={heroVideoRef}
-                    src={detail!.trailerUrl!}
-                    poster={detail!.trailerPreviewUrl ?? undefined}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-700"
-                  />
-                )}
-
-                {/* Bottom gradient — sits above the video for readability */}
+                {/* Bottom gradient for readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none" />
-
-                {/* "TRAILER" label — appears when video is playing */}
-                {showingVideo && (
-                  <div className="absolute top-3 left-3 pointer-events-none">
-                    <span className="text-[9px] font-mono uppercase tracking-widest text-white/60 bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm">
-                      Trailer
-                    </span>
-                  </div>
-                )}
-
-                {/* Unmute control */}
-                {showingVideo && heroMuted && (
-                  <button
-                    onClick={handleHeroUnmute}
-                    className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-mono px-3 py-1.5 rounded-full transition-colors backdrop-blur-sm border border-white/20"
-                    aria-label="Unmute trailer"
-                  >
-                    <VolumeX size={13} /> Unmute
-                  </button>
-                )}
-                {showingVideo && !heroMuted && (
-                  <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/40 text-white/50 text-xs font-mono px-3 py-1.5 rounded-full pointer-events-none">
-                    <Volume2 size={13} /> Sound on
-                  </div>
-                )}
               </div>
 
               {/* Close button */}
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="absolute top-3 right-3 w-8 h-8 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-background/90 transition-colors"
                 aria-label="Close"
               >
@@ -550,7 +388,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
               </div>
             )}
 
-            {/* ── Rich content: description + media gallery ── */}
+            {/* ── Rich content: description + screenshot gallery ── */}
             {detail && !loading && (
               <div className="px-5 pb-2 space-y-6 mt-2">
                 {detail.description && (
@@ -564,8 +402,6 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
 
                 <Gallery
                   screenshots={detail.screenshots}
-                  trailerYoutubeId={detail.trailerYoutubeId}
-                  trailerUrl={detail.trailerUrl}
                   onOpen={setLightboxIndex}
                 />
               </div>

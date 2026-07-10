@@ -148,6 +148,12 @@ export async function fetchFromRawg(
     const params = new URLSearchParams({
       key: RAWG_KEY, search: q,
       page: String(page), page_size: "20",
+      // Exclude DLC, add-ons, editions, and collection/series duplicates so
+      // a search for "Elden Ring" returns the base game, not 6 variants.
+      exclude_additions:   "true",
+      exclude_parents:     "true",
+      exclude_game_series: "true",
+      exclude_collection:  "true",
     });
     const res = await fetch(`https://api.rawg.io/api/games?${params}`, {
       headers: { "User-Agent": "DiscWatchHQ/1.0" },
@@ -191,6 +197,9 @@ export async function fetchPopularFromRawg(
     const params = new URLSearchParams({
       key: RAWG_KEY, ordering: "-metacritic",
       page_size: "20", page: String(page),
+      exclude_additions:   "true",
+      exclude_game_series: "true",
+      exclude_collection:  "true",
     });
     const res = await fetch(`https://api.rawg.io/api/games?${params}`, {
       headers: { "User-Agent": "DiscWatchHQ/1.0" },
