@@ -76,7 +76,14 @@ router.get("/sitemap.xml", async (req, res): Promise<void> => {
   <url>
     <loc>${escapeXml(baseUrl)}/games</loc>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/boutique</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
   </url>`)
 
     // ── Release pages ────────────────────────────────────────────────────────

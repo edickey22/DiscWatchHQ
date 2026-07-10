@@ -41,10 +41,10 @@ export default function Home() {
   const [sort, setSort]           = useState<SortOption>("updated")
 
   useDocumentHead({
-    title:       "DiscWatchHQ — Limited-Run Physical Game Tracker",
-    description: "Track limited-run physical video games from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. See what's available now, coming soon, and recently sold out — never miss a drop.",
-    canonical:   buildCanonicalUrl("/"),
-    jsonLd: null,
+    title:       "Boutique Tracker — Limited-Run Physical Game Releases | DiscWatchHQ",
+    description: "Track limited-run physical game releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. See what's available now, coming soon, and recently sold out.",
+    canonical:   buildCanonicalUrl("/boutique"),
+    jsonLd:      null,
   })
 
   const debouncedSearch = useDebounce(search, 300)

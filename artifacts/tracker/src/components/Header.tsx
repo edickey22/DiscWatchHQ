@@ -18,11 +18,27 @@ export function Header() {
   })
   const [location] = useLocation()
 
+  const navLink = (href: string, label: string, exact = true) => {
+    const isActive = exact ? location === href : location.startsWith(href)
+    return (
+      <Link
+        href={href}
+        className={`px-3 py-1.5 rounded transition-colors text-[13px] font-medium ${
+          isActive
+            ? "text-foreground bg-secondary/60"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+        }`}
+      >
+        {label}
+      </Link>
+    )
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between gap-4">
 
-        {/* ── Wordmark ─────────────────────────────────────────────────── */}
+        {/* ── Wordmark → landing page ──────────────────────────────────── */}
         <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <ControllerIcon size={30} />
           <span className="flex items-center gap-1.5 leading-none">
@@ -40,28 +56,10 @@ export function Header() {
           </span>
         </Link>
 
-        {/* ── Page navigation ───────────────────────────────────────────── */}
-        <nav className="hidden sm:flex items-center gap-1 text-[13px] font-medium">
-          <Link
-            href="/"
-            className={`px-3 py-1.5 rounded transition-colors ${
-              location === "/"
-                ? "text-foreground bg-secondary/60"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-            }`}
-          >
-            Boutique
-          </Link>
-          <Link
-            href="/games"
-            className={`px-3 py-1.5 rounded transition-colors ${
-              location === "/games"
-                ? "text-foreground bg-secondary/60"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-            }`}
-          >
-            Browse Games
-          </Link>
+        {/* ── Page navigation — Browse Games first (primary catalog) ────── */}
+        <nav className="hidden sm:flex items-center gap-1">
+          {navLink("/games",    "Browse Games")}
+          {navLink("/boutique", "Boutique")}
         </nav>
 
         {/* ── Live stats ────────────────────────────────────────────────── */}

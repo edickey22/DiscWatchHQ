@@ -175,6 +175,82 @@ export async function fetchFromRawg(
   }
 }
 
+/**
+ * Fetch top-rated games from RAWG using ordering=-metacritic.
+ * Used by GET /api/games/popular to pre-populate the Browse Games page.
+ * Attribution: "Popularity data from RAWG" (required by RAWG free-tier terms).
+ */
+export async function fetchPopularFromRawg(
+  page = 1,
+): Promise<{ rows: InsertCatalogGame[]; total: number; hasNext: boolean }> {
+  if (!rawgReady) return { rows: [], total: 0, hasNext: false };
+  try {
+    const params = new URLSearchParams({
+      key: RAWG_KEY, ordering: "-metacritic",
+      page_size: "20", page: String(page),
+    });
+    const res = await fetch(`https://api.rawg.io/api/games?${params}`, {
+      headers: { "User-Agent": "DiscWatchHQ/1.0" },
+      signal:  AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) {
+      logger.warn({ status: res.status }, "RAWG popular fetch error");
+      return { rows: [], total: 0, hasNext: false };
+    }
+    const data = (await res.json()) as RawgListResp;
+    const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
+      source: "rawg" as const, sourceId: `rawg:${g.id}`, title: g.name,
+      platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      publisherName: null, coverImageUrl: g.background_image ?? null,
+      releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
+      esrbRating:  null, retailerUrls: retailerUrls(g.name),
+    }));
+    return { rows, total: data.count, hasNext: !!data.next };
+  } catch (err) {
+    logger.error({ err }, "RAWG popular fetch error");
+    return { rows: [], total: 0, hasNext: false };
+  }
+}
+
+/**
+ * Fetch recently-released games from RAWG (ordering=-released, past 12 months).
+ * Used by GET /api/games/new-releases to pre-populate the Browse Games page.
+ */
+export async function fetchNewReleasesFromRawg(
+  page = 1,
+): Promise<{ rows: InsertCatalogGame[]; total: number; hasNext: boolean }> {
+  if (!rawgReady) return { rows: [], total: 0, hasNext: false };
+  try {
+    const today      = new Date().toISOString().slice(0, 10);
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    const params = new URLSearchParams({
+      key: RAWG_KEY, ordering: "-released",
+      dates: `${oneYearAgo},${today}`,
+      page_size: "20", page: String(page),
+    });
+    const res = await fetch(`https://api.rawg.io/api/games?${params}`, {
+      headers: { "User-Agent": "DiscWatchHQ/1.0" },
+      signal:  AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) {
+      logger.warn({ status: res.status }, "RAWG new-releases fetch error");
+      return { rows: [], total: 0, hasNext: false };
+    }
+    const data = (await res.json()) as RawgListResp;
+    const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
+      source: "rawg" as const, sourceId: `rawg:${g.id}`, title: g.name,
+      platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      publisherName: null, coverImageUrl: g.background_image ?? null,
+      releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
+      esrbRating:  null, retailerUrls: retailerUrls(g.name),
+    }));
+    return { rows, total: data.count, hasNext: !!data.next };
+  } catch (err) {
+    logger.error({ err }, "RAWG new-releases fetch error");
+    return { rows: [], total: 0, hasNext: false };
+  }
+}
+
 // ── TGDB types ────────────────────────────────────────────────────────────────
 //
 // Confirmed from live API responses + spec.yaml:

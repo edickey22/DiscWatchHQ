@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
+import LandingPage from '@/pages/LandingPage';
 import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
@@ -17,9 +18,14 @@ const queryClient = new QueryClient({
 function AppRouter() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/releases/:id" component={ReleaseDetail} />
+      {/* Landing page — splashy entry point */}
+      <Route path="/" component={LandingPage} />
+      {/* Browse Games — full RAWG + TGDB catalog with pre-populated sections */}
       <Route path="/games" component={GamesSearch} />
+      {/* Boutique Tracker — scarcity-tracking for limited-run physical releases */}
+      <Route path="/boutique" component={Home} />
+      {/* Release detail pages */}
+      <Route path="/releases/:id" component={ReleaseDetail} />
       <Route component={NotFound} />
     </Switch>
   );

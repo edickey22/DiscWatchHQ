@@ -22,6 +22,7 @@ import { db, catalogGamesTable, type CatalogGameRow } from "@workspace/db";
 import {
   rawgReady, tgdbReady,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
+  fetchPopularFromRawg, fetchNewReleasesFromRawg,
 } from "../lib/catalogService";
 import { checkAndReserveTgdbCall } from "../lib/tgdbBudget";
 import {
@@ -225,6 +226,135 @@ router.get("/games/search", async (req, res): Promise<void> => {
     results,
     sources,
     empty:    false,
+  });
+});
+
+/**
+ * GET /api/games/popular
+ *
+ * Returns the highest-rated games in the catalog by Metacritic score.
+ * Primary source: DB (catalog_games WHERE metacritic IS NOT NULL, ordered DESC).
+ * Cold cache (< PAGE_SIZE results): fetches from RAWG ordering=-metacritic,
+ * upserts to catalog_games, re-queries.
+ *
+ * Honest labelling: "industry-wide by Metacritic score from RAWG" — NOT
+ * "trending on DiscWatchHQ" (no on-site usage data exists yet to support that).
+ */
+router.get("/games/popular", async (req, res): Promise<void> => {
+  const page   = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const metacriticFilter = sql`${catalogGamesTable.metacritic} IS NOT NULL`;
+
+  const [dbRows, [{ total }]] = await Promise.all([
+    db.select().from(catalogGamesTable)
+      .where(metacriticFilter)
+      .orderBy(sql`${catalogGamesTable.metacritic} DESC NULLS LAST`)
+      .limit(PAGE_SIZE)
+      .offset(offset),
+    db.select({ total: sql<number>`count(*)::int` })
+      .from(catalogGamesTable)
+      .where(metacriticFilter),
+  ]);
+
+  // Cold cache: only try RAWG on page 1 when the DB has very few rated games.
+  // Checking `dbRows.length < PAGE_SIZE` is wrong — it fires on every last page
+  // even when the DB is fully warm.  `total < PAGE_SIZE` on page 1 is the only
+  // reliable signal that the catalog is genuinely sparse.
+  if (page === 1 && total < PAGE_SIZE && rawgReady) {
+    const { rows } = await fetchPopularFromRawg(1);
+    if (rows.length > 0) {
+      try { await upsertCatalogGames(rows); } catch (err) { logger.error({ err }, "popular upsert failed"); }
+      const [fresh, [{ freshTotal }]] = await Promise.all([
+        db.select().from(catalogGamesTable)
+          .where(metacriticFilter)
+          .orderBy(sql`${catalogGamesTable.metacritic} DESC NULLS LAST`)
+          .limit(PAGE_SIZE)
+          .offset(0),
+        db.select({ freshTotal: sql<number>`count(*)::int` })
+          .from(catalogGamesTable)
+          .where(metacriticFilter),
+      ]);
+      res.json({
+        results:  fresh.map(formatRow),
+        count:    freshTotal,
+        next:     freshTotal > PAGE_SIZE ? 2 : null,
+        previous: null,
+      });
+      return;
+    }
+  }
+
+  res.json({
+    results:  dbRows.map(formatRow),
+    count:    total,
+    next:     total > page * PAGE_SIZE ? page + 1 : null,
+    previous: page > 1 ? page - 1 : null,
+  });
+});
+
+/**
+ * GET /api/games/new-releases
+ *
+ * Returns recently-released games (past 12 months by releaseYear).
+ * Primary source: DB (release_year >= currentYear-1, ordered by release_year DESC).
+ * Cold cache: fetches from RAWG ordering=-released with date range, upserts, re-queries.
+ */
+router.get("/games/new-releases", async (req, res): Promise<void> => {
+  const page       = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const offset     = (page - 1) * PAGE_SIZE;
+  const prevYear   = new Date().getFullYear() - 1;
+
+  const recentFilter = sql`${catalogGamesTable.releaseYear} >= ${prevYear}`;
+
+  const [dbRows, [{ total }]] = await Promise.all([
+    db.select().from(catalogGamesTable)
+      .where(recentFilter)
+      .orderBy(
+        sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
+        sql`${catalogGamesTable.updatedAt} DESC`,
+      )
+      .limit(PAGE_SIZE)
+      .offset(offset),
+    db.select({ total: sql<number>`count(*)::int` })
+      .from(catalogGamesTable)
+      .where(recentFilter),
+  ]);
+
+  // Cold cache: only seed from RAWG on page 1 when the DB has very few recent
+  // games.  Checking `dbRows.length < PAGE_SIZE` misfires on every last page.
+  if (page === 1 && total < PAGE_SIZE && rawgReady) {
+    const { rows } = await fetchNewReleasesFromRawg(1);
+    if (rows.length > 0) {
+      try { await upsertCatalogGames(rows); } catch (err) { logger.error({ err }, "new-releases upsert failed"); }
+      const [fresh, [{ freshTotal }]] = await Promise.all([
+        db.select().from(catalogGamesTable)
+          .where(recentFilter)
+          .orderBy(
+            sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
+            sql`${catalogGamesTable.updatedAt} DESC`,
+          )
+          .limit(PAGE_SIZE)
+          .offset(0),
+        db.select({ freshTotal: sql<number>`count(*)::int` })
+          .from(catalogGamesTable)
+          .where(recentFilter),
+      ]);
+      res.json({
+        results:  fresh.map(formatRow),
+        count:    freshTotal,
+        next:     freshTotal > PAGE_SIZE ? 2 : null,
+        previous: null,
+      });
+      return;
+    }
+  }
+
+  res.json({
+    results:  dbRows.map(formatRow),
+    count:    total,
+    next:     total > page * PAGE_SIZE ? page + 1 : null,
+    previous: page > 1 ? page - 1 : null,
   });
 });
 

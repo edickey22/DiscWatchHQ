@@ -1,19 +1,35 @@
 /**
- * GamesSearch — Browse the persistent game catalog (TheGamesDB + RAWG).
+ * GamesSearch — Browse the full game catalog (RAWG + TheGamesDB).
  *
- * Searches the local catalog_games PostgreSQL table, which is populated by:
- *   1. Organic searches (this page triggers live upserts on cache misses)
- *   2. The startup backfill job (~70 popular franchises seeded from RAWG)
+ * Pre-populated sections (no search required):
+ *   • Most Popular — top games by Metacritic score, sourced from RAWG
+ *   • New & Upcoming — games released in the past 12 months, sourced from RAWG
+ *
+ * Labelling policy
+ * ─────────────────
+ * These sections are deliberately labelled as industry-wide data from RAWG,
+ * NOT as "trending on DiscWatchHQ". There is no on-site usage data yet to
+ * compute genuine site-specific trending metrics. Labels must stay honest
+ * until real analytics (page views, click-through, search frequency) exist.
+ *
+ * TODO: "Trending on DiscWatchHQ" — future section
+ *   Replace or supplement the RAWG-sourced sections with on-site trending
+ *   once we have enough traffic data. Metrics to track:
+ *     - Page views per release/game (daily sliding window)
+ *     - Retailer button click-through rates
+ *     - Search frequency per title
+ *     - Newsletter signups per listing
  *
  * Attribution:
- *   - TheGamesDB (courtesy — community-run open database)
- *   - RAWG (required by their free-tier API terms)
+ *   TheGamesDB — community-run open database (courtesy credit)
+ *   RAWG       — required by their free-tier API terms
  */
+
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   Search, ChevronLeft, ChevronRight,
-  ExternalLink, AlertCircle, Gamepad2,
+  ExternalLink, AlertCircle, Star, CalendarDays,
 } from "lucide-react"
 
 import { Header } from "@/components/Header"
@@ -40,6 +56,13 @@ interface GameSearchResponse {
   empty:    boolean
 }
 
+interface PopularResponse {
+  results:  CatalogGame[]
+  count:    number
+  next:     number | null
+  previous: number | null
+}
+
 interface PlatformsResponse {
   platforms: { name: string; count: number }[]
 }
@@ -56,6 +79,18 @@ async function fetchGames(q: string, page: number, platform: string): Promise<Ga
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
   return data as GameSearchResponse
+}
+
+async function fetchPopular(): Promise<PopularResponse> {
+  const res = await fetch("/api/games/popular")
+  if (!res.ok) return { results: [], count: 0, next: null, previous: null }
+  return res.json()
+}
+
+async function fetchNewReleases(): Promise<PopularResponse> {
+  const res = await fetch("/api/games/new-releases")
+  if (!res.ok) return { results: [], count: 0, next: null, previous: null }
+  return res.json()
 }
 
 async function fetchPlatforms(): Promise<PlatformsResponse> {
@@ -87,6 +122,30 @@ function GameCardSkeleton() {
   )
 }
 
+// ── Section header ────────────────────────────────────────────────────────────
+
+function SectionHeader({
+  icon,
+  label,
+  attribution,
+}: {
+  icon: React.ReactNode
+  label: string
+  attribution: string
+}) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+      <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
+        {icon}
+        {label}
+      </h2>
+      <p className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+        {attribution}
+      </p>
+    </div>
+  )
+}
+
 // ── Attribution ───────────────────────────────────────────────────────────────
 
 function CatalogAttribution({ sources }: { sources?: { rawg: boolean; tgdb: boolean } }) {
@@ -95,7 +154,7 @@ function CatalogAttribution({ sources }: { sources?: { rawg: boolean; tgdb: bool
   if (!showRawg && !showTgdb) return null
   return (
     <p className="text-xs text-muted-foreground/60 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-      <span>Game data from</span>
+      <span>Data from</span>
       {showTgdb && (
         <a href="https://thegamesdb.net" target="_blank" rel="noopener noreferrer"
           className="inline-flex items-center gap-0.5 text-primary/70 hover:text-primary underline underline-offset-2 transition-colors font-medium">
@@ -120,22 +179,38 @@ export default function GamesSearch() {
   const [platform, setPlatform] = useState("all")
   const [page, setPage]         = useState(1)
   const debouncedSearch         = useDebounce(search, 400)
+  const isSearching             = debouncedSearch.trim().length > 0
 
   useDocumentHead({
-    title:       "Browse Physical Games – Limited Editions & Rare Releases | DiscWatchHQ",
-    description: "Search 1,800+ physical video game releases across platforms and generations. Find limited-edition disc games from boutique publishers, compare retailer prices, and track availability.",
+    title:       "Browse Games — Physical Releases Across All Platforms | DiscWatchHQ",
+    description: "Explore popular games, new releases, and the full physical game catalog across all platforms. Search 2,000+ titles with direct retailer links.",
     canonical:   buildCanonicalUrl("/games"),
-    jsonLd: null,
+    jsonLd:      null,
   })
 
   useEffect(() => { setPage(1) }, [debouncedSearch, platform])
 
-  const { data, isLoading, error } = useQuery<GameSearchResponse, Error>({
-    queryKey:        ["catalog-games", debouncedSearch, page, platform],
-    queryFn:         () => fetchGames(debouncedSearch, page, platform === "all" ? "" : platform),
-    staleTime:       10 * 60 * 1_000,
-    placeholderData: prev => prev,
-    enabled:         debouncedSearch.trim().length > 0,
+  // ── Search results (only when actively searching) ──
+  const { data: searchData, isLoading: isSearchLoading, error: searchError } =
+    useQuery<GameSearchResponse, Error>({
+      queryKey:        ["catalog-games", debouncedSearch, page, platform],
+      queryFn:         () => fetchGames(debouncedSearch, page, platform === "all" ? "" : platform),
+      staleTime:       10 * 60 * 1_000,
+      placeholderData: prev => prev,
+      enabled:         isSearching,
+    })
+
+  // ── Pre-populated sections (always loaded, hidden when searching) ──
+  const { data: popularData, isLoading: isPopularLoading } = useQuery<PopularResponse>({
+    queryKey:  ["games-popular"],
+    queryFn:   fetchPopular,
+    staleTime: 30 * 60 * 1_000,
+  })
+
+  const { data: newData, isLoading: isNewLoading } = useQuery<PopularResponse>({
+    queryKey:  ["games-new-releases"],
+    queryFn:   fetchNewReleases,
+    staleTime: 30 * 60 * 1_000,
   })
 
   const { data: platformsData } = useQuery<PlatformsResponse>({
@@ -144,9 +219,12 @@ export default function GamesSearch() {
     staleTime: 5 * 60 * 1_000,
   })
 
-  const totalPages   = data?.count ? Math.ceil(data.count / 20) : 0
-  const neitherReady = data && !data.sources?.rawg && !data.sources?.tgdb
-  const showGrid     = !neitherReady && debouncedSearch.trim().length > 0
+  const totalPages   = searchData?.count ? Math.ceil(searchData.count / 20) : 0
+  const neitherReady = searchData && !searchData.sources?.rawg && !searchData.sources?.tgdb
+
+  // Limit pre-populated sections to 10 cards — readable without overwhelming
+  const popularCards    = (popularData?.results ?? []).slice(0, 10)
+  const newReleasesCards = (newData?.results ?? []).slice(0, 10)
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -155,22 +233,22 @@ export default function GamesSearch() {
       <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">
 
         {/* ── Page header ── */}
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
             <div>
               <h1 className="font-display font-bold text-2xl md:text-3xl text-foreground tracking-tight">
                 Browse Games
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                {data?.count && !data.empty
-                  ? `${data.count.toLocaleString()} results — click any retailer button to find a copy.`
-                  : "Search by title, find affiliate buy links across all major retailers."}
+                {isSearching && searchData?.count && !searchData.empty
+                  ? `${searchData.count.toLocaleString()} results for "${debouncedSearch}"`
+                  : "Popular titles, new releases, and the full game catalog."}
               </p>
             </div>
-            <CatalogAttribution sources={data?.sources} />
+            {isSearching && <CatalogAttribution sources={searchData?.sources} />}
           </div>
 
-          {/* Search + platform filter row */}
+          {/* Search + platform filter */}
           <div className="flex gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search
@@ -180,7 +258,7 @@ export default function GamesSearch() {
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder={`"Zelda", "Final Fantasy", "Halo"…`}
+                placeholder={`Search by title — "Zelda", "Halo", "Final Fantasy"…`}
                 className="pl-9 bg-card border-card-border"
                 autoComplete="off"
                 spellCheck={false}
@@ -195,9 +273,7 @@ export default function GamesSearch() {
                 <SelectContent>
                   <SelectItem value="all">All platforms</SelectItem>
                   {platformsData.platforms.map(p => (
-                    <SelectItem key={p.name} value={p.name}>
-                      {p.name}
-                    </SelectItem>
+                    <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -205,7 +281,100 @@ export default function GamesSearch() {
           </div>
         </div>
 
-        {/* ── No sources configured ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            PRE-POPULATED SECTIONS
+            Hidden when the user is actively searching. Shown by default so
+            the page has real, crawlable content on every load.
+        ══════════════════════════════════════════════════════════════════ */}
+        {!isSearching && (
+          <>
+            {/* ── Most Popular ── */}
+            <section className="mb-12">
+              <SectionHeader
+                icon={<Star size={18} className="text-primary" />}
+                label="Most Popular"
+                attribution="Industry-wide by Metacritic score · RAWG · Not site-specific trending"
+              />
+
+              {isPopularLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {Array.from({ length: 10 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                </div>
+              ) : popularCards.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {popularCards.map(game => (
+                    <CatalogGameCard key={game.id} game={game} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  Popularity data unavailable — configure a RAWG_API_KEY to enable this section.
+                </p>
+              )}
+            </section>
+
+            {/* ── New & Upcoming ── */}
+            <section className="mb-12">
+              <SectionHeader
+                icon={<CalendarDays size={18} className="text-primary" />}
+                label="New & Upcoming"
+                attribution="Released in the past 12 months · Sorted by release date · RAWG"
+              />
+
+              {isNewLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {Array.from({ length: 10 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                </div>
+              ) : newReleasesCards.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {newReleasesCards.map(game => (
+                    <CatalogGameCard key={game.id} game={game} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  New release data unavailable — configure a RAWG_API_KEY to enable this section.
+                </p>
+              )}
+            </section>
+
+            {/*
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              TODO: "Trending on DiscWatchHQ"
+              ─────────────────────────────────────────────────────────────
+              Replace or augment the sections above with on-site trending
+              metrics once real traffic and engagement data are available.
+
+              Placeholder: the two RAWG-sourced sections are honest, useful
+              proxies until DiscWatchHQ has enough usage data to compute
+              genuine site-specific trends.
+
+              Metrics needed for real trending:
+                - Page views per release/game (daily sliding window)
+                - Retailer button click-through rates per listing
+                - Search frequency per title (query log analysis)
+                - Newsletter alert signups per listing
+
+              Implementation ideas once data is available:
+                - Materialised view in PostgreSQL updated every hour
+                - "Trending this week" sorted by view velocity (views today
+                  vs views same day last week)
+                - Separate "Rising" section for games gaining search traction
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            */}
+
+            {/* Attribution strip */}
+            <div className="border-t border-border/20 pt-4 mb-8">
+              <CatalogAttribution sources={{ rawg: true, tgdb: true }} />
+            </div>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SEARCH RESULTS (active when user types a query)
+        ══════════════════════════════════════════════════════════════════ */}
+
+        {/* No sources configured */}
         {neitherReady && (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
@@ -232,33 +401,18 @@ export default function GamesSearch() {
           </div>
         )}
 
-        {/* ── Search prompt (no query yet) ── */}
-        {!neitherReady && !debouncedSearch.trim() && (
-          <div className="flex flex-col items-center gap-4 py-20 text-center">
-            <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Gamepad2 className="text-primary/60" size={26} />
-            </div>
-            <div>
-              <h2 className="font-display font-semibold text-foreground mb-1">Search the full catalog</h2>
-              <p className="text-muted-foreground text-sm max-w-sm">
-                Type a game title to search the database across all platforms and generations.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Error ── */}
-        {error && (
+        {/* Search error */}
+        {searchError && isSearching && (
           <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive mb-6">
             <AlertCircle size={16} className="shrink-0" />
-            <p className="text-sm">{error.message}</p>
+            <p className="text-sm">{searchError.message}</p>
           </div>
         )}
 
-        {/* ── Results grid ── */}
-        {showGrid && (
+        {/* Search results grid */}
+        {isSearching && !neitherReady && (
           <>
-            {!isLoading && data?.results.length === 0 && !error && (
+            {!isSearchLoading && searchData?.results.length === 0 && !searchError && (
               <div className="py-20 text-center">
                 <p className="text-muted-foreground">
                   No games found for &ldquo;{debouncedSearch}&rdquo;. Try a different title.
@@ -267,9 +421,9 @@ export default function GamesSearch() {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
-              {isLoading
+              {isSearchLoading
                 ? Array.from({ length: 20 }).map((_, i) => <GameCardSkeleton key={i} />)
-                : data?.results.map(game => (
+                : searchData?.results.map(game => (
                     <CatalogGameCard key={game.id} game={game} />
                   ))
               }
@@ -280,7 +434,7 @@ export default function GamesSearch() {
                 <Button
                   variant="outline" size="sm"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={!data?.previous || isLoading}
+                  disabled={!searchData?.previous || isSearchLoading}
                   className="gap-1.5"
                 >
                   <ChevronLeft size={14} /> Previous
@@ -291,7 +445,7 @@ export default function GamesSearch() {
                 <Button
                   variant="outline" size="sm"
                   onClick={() => setPage(p => p + 1)}
-                  disabled={!data?.next || isLoading}
+                  disabled={!searchData?.next || isSearchLoading}
                   className="gap-1.5"
                 >
                   Next <ChevronRight size={14} />
@@ -300,9 +454,10 @@ export default function GamesSearch() {
             )}
           </>
         )}
+
       </main>
 
-      <Footer showCatalogAttribution />
+      <Footer />
     </div>
   )
 }

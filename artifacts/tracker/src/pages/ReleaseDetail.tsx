@@ -54,7 +54,7 @@ export default function ReleaseDetail() {
           <h1 className="text-2xl font-bold font-display mb-2">Release not found</h1>
           <p className="text-muted-foreground mb-6">This release doesn't exist or has been removed.</p>
           <Button asChild variant="outline">
-            <Link href="/"><ArrowLeft className="mr-2 w-4 h-4" /> Back to Tracker</Link>
+            <Link href="/boutique"><ArrowLeft className="mr-2 w-4 h-4" /> Back to Tracker</Link>
           </Button>
         </main>
         <Footer />
@@ -76,7 +76,7 @@ export default function ReleaseDetail() {
       <main className="flex-1 pb-16">
         <div className="container mx-auto max-w-5xl px-4 py-8">
           <Button asChild variant="ghost" size="sm" className="mb-6 -ml-3 text-muted-foreground hover:text-foreground">
-            <Link href="/"><ArrowLeft className="mr-2 w-4 h-4" /> Back to Tracker</Link>
+            <Link href="/boutique"><ArrowLeft className="mr-2 w-4 h-4" /> Back to Tracker</Link>
           </Button>
 
           <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
