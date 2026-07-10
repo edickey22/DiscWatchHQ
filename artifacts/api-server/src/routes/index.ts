@@ -7,6 +7,7 @@ import subscribersRouter from "./subscribers";
 import scrapeRouter from "./scrape";
 import affiliateRouter from "./affiliate";
 import gamesRouter from "./games";
+import catalogRouter from "./catalog";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(subscribersRouter);
 router.use(scrapeRouter);
 router.use(affiliateRouter);
 router.use(gamesRouter);
+router.use(catalogRouter);
 
 export default router;

@@ -1,9 +1,21 @@
 import { Link, useLocation } from "wouter"
+import { useQuery } from "@tanstack/react-query"
 import { ControllerIcon } from "@/components/ControllerIcon"
 import { useGetReleaseStats } from "@workspace/api-client-react"
 
+async function fetchCatalogStats(): Promise<{ count: number }> {
+  const res = await fetch("/api/catalog/stats")
+  if (!res.ok) return { count: 0 }
+  return res.json()
+}
+
 export function Header() {
-  const { data: stats } = useGetReleaseStats()
+  const { data: stats }        = useGetReleaseStats()
+  const { data: catalogStats } = useQuery({
+    queryKey:  ["catalog-stats"],
+    queryFn:   fetchCatalogStats,
+    staleTime: 5 * 60 * 1_000,
+  })
   const [location] = useLocation()
 
   return (
@@ -15,12 +27,6 @@ export function Header() {
           <ControllerIcon size={30} />
           <span className="flex items-center gap-1.5 leading-none">
             <span className="font-display text-[1.2rem] font-bold tracking-tight">
-              {/*
-               * "Disc" uses explicit light/dark text so the wordmark stays
-               * legible on any background:
-               *   Light background → text-gray-900 (near-black)
-               *   Dark background  → dark:text-foreground (near-white)
-               */}
               <span className="text-gray-900 dark:text-foreground">Disc</span>
               <span className="text-primary">Watch</span>
             </span>
@@ -58,25 +64,36 @@ export function Header() {
           </Link>
         </nav>
 
-        {/* ── Live stats (desktop) ──────────────────────────────────────── */}
-        {stats && (
-          <div className="hidden md:flex items-center gap-6 text-sm font-mono tracking-tight shrink-0">
-            <div className="flex flex-col items-center">
-              <span className="text-muted-foreground text-[10px] uppercase">Available</span>
-              <span className="text-primary font-bold">{stats.available}</span>
-            </div>
-            <div className="w-px h-6 bg-border" />
-            <div className="flex flex-col items-center">
-              <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
-              <span className="text-foreground font-semibold">{stats.comingSoon}</span>
-            </div>
-            <div className="w-px h-6 bg-border" />
-            <div className="flex flex-col items-center">
-              <span className="text-muted-foreground text-[10px] uppercase">Tracked</span>
-              <span className="text-foreground/80">{stats.totalTracked}</span>
-            </div>
-          </div>
-        )}
+        {/* ── Live stats ────────────────────────────────────────────────── */}
+        <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0">
+          {stats && (
+            <>
+              <div className="flex flex-col items-center">
+                <span className="text-muted-foreground text-[10px] uppercase">Available</span>
+                <span className="text-primary font-bold">{stats.available}</span>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex flex-col items-center">
+                <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
+                <span className="text-foreground font-semibold">{stats.comingSoon}</span>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex flex-col items-center">
+                <span className="text-muted-foreground text-[10px] uppercase">Boutique</span>
+                <span className="text-foreground/80">{stats.totalTracked}</span>
+              </div>
+            </>
+          )}
+          {catalogStats && catalogStats.count > 0 && (
+            <>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex flex-col items-center">
+                <span className="text-muted-foreground text-[10px] uppercase">Catalog</span>
+                <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )

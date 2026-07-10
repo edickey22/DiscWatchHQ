@@ -206,6 +206,7 @@ export default function ReleaseDetail() {
                         urls={release.retailerSearchUrls}
                         prices={release.retailerPrices}
                         variant="detail"
+                        platforms={release.platforms ?? []}
                       />
                     </div>
 

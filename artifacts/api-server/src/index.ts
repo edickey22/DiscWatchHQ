@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
 import { startEbayPriceScheduler } from "./lib/ebayPriceScheduler";
+import { startCatalogBackfill } from "./lib/catalogBackfill";
 
 const rawPort = process.env["PORT"];
 
@@ -32,4 +33,8 @@ app.listen(port, (err) => {
   // See ebayPriceScheduler.ts for quota documentation.
   // Only active when EBAY_APP_ID + EBAY_CLIENT_SECRET secrets are set.
   startEbayPriceScheduler();
+
+  // Catalog backfill — seeds catalog_games from RAWG if count < 1,000.
+  // Fires 8 s after startup, fully in background, respects RAWG rate limits.
+  startCatalogBackfill();
 });

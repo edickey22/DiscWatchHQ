@@ -128,9 +128,9 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
           </div>
         )}
 
-        {/* Retailer buttons */}
+        {/* Retailer buttons — platform-aware (retro = eBay+GameStop only) */}
         <div className="mt-auto">
-          <RetailerLinks urls={game.retailerSearchUrls} />
+          <RetailerLinks urls={game.retailerSearchUrls} platforms={game.platforms} />
         </div>
       </div>
     </article>
