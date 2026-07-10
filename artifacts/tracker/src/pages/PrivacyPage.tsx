@@ -211,10 +211,10 @@ export default function PrivacyPage() {
             </p>
             <p>
               <a
-                href="mailto:privacy@discwatchhq.com"
+                href="mailto:support@discwatchhq.com"
                 className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors font-medium"
               >
-                privacy@discwatchhq.com
+                support@discwatchhq.com
               </a>
             </p>
           </Section>
