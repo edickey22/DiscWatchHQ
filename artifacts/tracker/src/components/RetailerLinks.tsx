@@ -93,7 +93,7 @@ export function RetailerLinks({ urls, prices, variant = "card" }: RetailerLinksP
                   </span>
                   {price !== null ? (
                     <span className={`
-                      font-mono font-bold text-[12px] leading-none
+                      font-display tabular-nums font-bold text-[12px] leading-none
                       ${isBest ? "text-primary" : "text-primary/70"}
                     `}>
                       From ${price.toFixed(2)}

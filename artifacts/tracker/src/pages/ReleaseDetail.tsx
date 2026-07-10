@@ -137,7 +137,7 @@ export default function ReleaseDetail() {
                     </div>
                     <div>
                       <h3 className="text-sm font-mono text-muted-foreground mb-2">Price</h3>
-                      <p className="text-2xl font-mono font-bold text-foreground">{release.price || "TBA"}</p>
+                      <p className="text-2xl font-display tabular-nums font-bold text-foreground">{release.price || "TBA"}</p>
                     </div>
                     <div>
                       <h3 className="text-sm font-mono text-muted-foreground mb-2 flex items-center gap-2">

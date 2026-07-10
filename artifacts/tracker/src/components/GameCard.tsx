@@ -94,7 +94,7 @@ export function GameCard({ release }: GameCardProps) {
         </p>
 
         <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-          <span className="font-mono text-sm font-semibold text-foreground/90 shrink-0">
+          <span className="font-display tabular-nums text-sm font-semibold text-foreground/90 shrink-0">
             {release.price || "TBA"}
           </span>
           {isAvailable && (
