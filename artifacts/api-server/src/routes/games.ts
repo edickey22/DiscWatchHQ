@@ -824,7 +824,6 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       if (detail.clip?.clip && detail.clip.clip.startsWith("http")) {
         trailerUrl        = detail.clip.clip;
         trailerPreviewUrl = detail.clip.preview ?? null;
-        logger.debug({ sourceId, trailerUrl }, "Trailer sourced from clip.clip");
       }
 
       // Priority 2: clip.video — YouTube URL of the full trailer.
@@ -836,7 +835,6 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
           detail.clip.video.match(/embed\/([A-Za-z0-9_-]{11})/)?.[1];
         if (ytId) {
           trailerYoutubeId = ytId;
-          logger.debug({ sourceId, ytId }, "Trailer sourced from clip.video (YouTube)");
         }
       }
     } else if (detailRes.status === "rejected") {
@@ -864,7 +862,6 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
           trailerUrl        = mp4Url;
           trailerYoutubeId  = null;  // prefer mp4 over YouTube when movies are available
           trailerPreviewUrl = first.preview ?? trailerPreviewUrl;
-          logger.debug({ sourceId, mp4Url }, "Trailer sourced from movies endpoint (data.max)");
         }
       }
     }
