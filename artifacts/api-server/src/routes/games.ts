@@ -17,7 +17,7 @@
  */
 
 import { Router } from "express";
-import { and, asc, ilike, sql } from "drizzle-orm";
+import { and, asc, ilike, sql, type SQL } from "drizzle-orm";
 import { db, catalogGamesTable, type CatalogGameRow } from "@workspace/db";
 import {
   rawgReady, tgdbReady, RAWG_KEY,
@@ -53,10 +53,11 @@ function formatRow(row: CatalogGameRow) {
     title:         row.title,
     releaseDate:   row.releaseYear ? String(row.releaseYear) : null,
     platforms:     row.platforms,
-    coverImageUrl: row.coverImageUrl  ?? null,
-    metacritic:    row.metacritic     ?? null,
-    esrbRating:    row.esrbRating     ?? null,
-    publisherName: row.publisherName  ?? null,
+    genres:        row.genres        ?? [],
+    coverImageUrl: row.coverImageUrl ?? null,
+    metacritic:    row.metacritic    ?? null,
+    esrbRating:    row.esrbRating    ?? null,
+    publisherName: row.publisherName ?? null,
     // Always compute fresh from current affiliate config — never read stored
     // DB values, which may have been written before an affiliate ID was set.
     retailerSearchUrls: {
@@ -68,37 +69,78 @@ function formatRow(row: CatalogGameRow) {
   };
 }
 
+/** Valid sort options for the catalog search endpoint. */
+type SortOption = "best_rated" | "newest" | "oldest" | "alpha";
+
 // ── DB query ──────────────────────────────────────────────────────────────────
 
 async function queryDb(
   q: string,
   page: number,
   platformFilter: string,
+  genreFilter: string   = "",
+  yearFrom: number | null = null,
+  yearTo:   number | null = null,
+  sort: SortOption        = "best_rated",
 ): Promise<{ results: ReturnType<typeof formatRow>[]; total: number }> {
-  const likePattern = `%${q}%`;
-  const conditions  = [ilike(catalogGamesTable.title, likePattern)];
-  if (platformFilter) {
-    conditions.push(
-      sql`${catalogGamesTable.platforms} && ARRAY[${platformFilter}]::text[]`,
-    );
+  const conditions: SQL[] = [];
+
+  // Title search — optional in browse mode (empty q + active filters)
+  if (q.trim()) {
+    conditions.push(ilike(catalogGamesTable.title, `%${q}%`));
   }
-  const where  = and(...conditions);
+  if (platformFilter) {
+    conditions.push(sql`${catalogGamesTable.platforms} && ARRAY[${platformFilter}]::text[]`);
+  }
+  if (genreFilter) {
+    conditions.push(sql`${catalogGamesTable.genres} && ARRAY[${genreFilter}]::text[]`);
+  }
+  if (yearFrom !== null) {
+    conditions.push(sql`${catalogGamesTable.releaseYear} >= ${yearFrom}`);
+  }
+  if (yearTo !== null) {
+    conditions.push(sql`${catalogGamesTable.releaseYear} <= ${yearTo}`);
+  }
+
+  const where  = conditions.length > 0 ? and(...conditions) : undefined;
   const offset = (page - 1) * PAGE_SIZE;
+
+  // Build sort expressions.
+  // In search mode: relevance tier first, user sort as tiebreaker.
+  // In browse mode: user sort is primary.
+  const sortExprs = [];
+
+  if (q.trim()) {
+    sortExprs.push(sql`CASE
+      WHEN LOWER(${catalogGamesTable.title}) = LOWER(${q})           THEN 0
+      WHEN LOWER(${catalogGamesTable.title}) LIKE LOWER(${q}) || '%' THEN 1
+      ELSE 2
+    END`);
+  }
+
+  switch (sort) {
+    case "newest":
+      sortExprs.push(sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`);
+      sortExprs.push(asc(catalogGamesTable.title));
+      break;
+    case "oldest":
+      sortExprs.push(sql`${catalogGamesTable.releaseYear} ASC NULLS LAST`);
+      sortExprs.push(asc(catalogGamesTable.title));
+      break;
+    case "alpha":
+      sortExprs.push(asc(catalogGamesTable.title));
+      break;
+    default: // "best_rated"
+      sortExprs.push(sql`${catalogGamesTable.metacritic} DESC NULLS LAST`);
+      sortExprs.push(asc(catalogGamesTable.title));
+  }
 
   const [rows, [{ total }]] = await Promise.all([
     db.select()
       .from(catalogGamesTable)
       .where(where)
-      .orderBy(
-        // Exact title → prefix match → substring; then Metacritic desc; then A–Z
-        sql`CASE
-          WHEN LOWER(${catalogGamesTable.title}) = LOWER(${q})           THEN 0
-          WHEN LOWER(${catalogGamesTable.title}) LIKE LOWER(${q}) || '%' THEN 1
-          ELSE 2
-        END`,
-        sql`${catalogGamesTable.metacritic} DESC NULLS LAST`,
-        asc(catalogGamesTable.title),
-      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .orderBy(...(sortExprs as any[]))
       .limit(PAGE_SIZE)
       .offset(offset),
     db.select({ total: sql<number>`count(*)::int` })
@@ -127,29 +169,42 @@ router.get("/games/config", (_req, res): void => {
  * GET /api/games/search
  *
  * Query params:
- *   q        — title search string (required; empty → empty result)
+ *   q        — title search string (optional in browse mode)
  *   page     — 1-based page (default 1)
- *   platform — platform filter string (e.g. "PS5", "Switch")
+ *   platform — exact platform name (e.g. "PS5", "Switch")
+ *   genre    — exact genre name (e.g. "Action", "RPG")
+ *   yearFrom — minimum release year (inclusive)
+ *   yearTo   — maximum release year (inclusive)
+ *   sort     — "best_rated" | "newest" | "oldest" | "alpha" (default: best_rated)
  *
- * Cold search (page 1, < 10 DB results): fires RAWG + TGDB in parallel,
- * upserts results, then re-queries the DB — one round-trip for the caller.
+ * Browse mode: q may be empty when at least one other filter is set.
+ * Cold search: only fires RAWG + TGDB when q is non-empty and < 10 DB results on page 1.
  */
 router.get("/games/search", async (req, res): Promise<void> => {
   const q              = typeof req.query.q        === "string" ? req.query.q.trim()        : "";
   const page           = Math.max(1, parseInt(String(req.query.page     ?? "1")) || 1);
   const platformFilter = typeof req.query.platform === "string" ? req.query.platform.trim() : "";
+  const genreFilter    = typeof req.query.genre    === "string" ? req.query.genre.trim()    : "";
+  const yearFrom       = req.query.yearFrom ? (parseInt(String(req.query.yearFrom), 10) || null) : null;
+  const yearTo         = req.query.yearTo   ? (parseInt(String(req.query.yearTo),   10) || null) : null;
+  const rawSort        = String(req.query.sort ?? "");
+  const sort           = (["best_rated", "newest", "oldest", "alpha"].includes(rawSort)
+    ? rawSort : "best_rated") as SortOption;
   const sources        = { rawg: rawgReady, tgdb: tgdbReady };
 
-  if (!q) {
+  // Require at least q or one active filter — pure no-op otherwise
+  const hasFilters = !!(platformFilter || genreFilter || yearFrom !== null || yearTo !== null);
+  if (!q && !hasFilters) {
     res.json({ count: 0, next: null, previous: null, results: [], sources, empty: true });
     return;
   }
 
   // ── 1. Query local DB ──
-  let { results, total } = await queryDb(q, page, platformFilter);
+  let { results, total } = await queryDb(q, page, platformFilter, genreFilter, yearFrom, yearTo, sort);
 
-  // ── 2. Cold cache on page 1: fetch live + upsert + re-query ──
-  if (page === 1 && total < 10 && (rawgReady || tgdbReady)) {
+  // ── 2. Cold cache on page 1 (search mode only): fetch live + upsert + re-query ──
+  // Skip cold cache in browse mode (empty q) — we're scanning the whole table already.
+  if (q && page === 1 && total < 10 && (rawgReady || tgdbReady)) {
     // ── TGDB permanent-cache check ──────────────────────────────────────────
     // TGDB has a 1 000 req/month cap. Once a query's results are in the DB
     // (source = 'tgdb'), we never call TGDB for that term again — the DB IS
@@ -163,10 +218,6 @@ router.get("/games/search", async (req, res): Promise<void> => {
         .where(sql`source = 'tgdb' AND title ILIKE ${"%" + q + "%"}`);
 
       if (tgdbHits === 0) {
-        // True cache miss — atomically check budget and reserve a slot.
-        // checkAndReserveTgdbCall mutates the in-memory counter synchronously
-        // (no intermediate await after the state load) so concurrent requests
-        // see the updated count in their microtask and can't both slip through.
         callTgdb = await checkAndReserveTgdbCall("search");
         if (callTgdb) {
           logger.debug({ q }, "TGDB live fetch: cache miss + budget slot reserved");
@@ -197,7 +248,7 @@ router.get("/games/search", async (req, res): Promise<void> => {
       try {
         await upsertCatalogGames(liveRows);
         // Re-query — now the DB has the freshly upserted rows
-        ({ results, total } = await queryDb(q, page, platformFilter));
+        ({ results, total } = await queryDb(q, page, platformFilter, genreFilter, yearFrom, yearTo, sort));
       } catch (err) {
         logger.error({ err }, "catalog upsert failed");
         // Graceful fallback: serve live rows directly rather than an empty response
@@ -207,7 +258,8 @@ router.get("/games/search", async (req, res): Promise<void> => {
             source:        r.source as "rawg" | "tgdb",
             title:         r.title,
             releaseDate:   r.releaseYear ? String(r.releaseYear) : null,
-            platforms:     r.platforms   ?? [],  // InsertCatalogGame.platforms has a default
+            platforms:     r.platforms   ?? [],
+            genres:        r.genres      ?? [],
             coverImageUrl: r.coverImageUrl ?? null,
             metacritic:    r.metacritic   ?? null,
             esrbRating:    r.esrbRating   ?? null,

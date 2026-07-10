@@ -47,6 +47,28 @@ router.get("/catalog/platforms", async (_req, res): Promise<void> => {
 });
 
 /**
+ * GET /api/catalog/genres
+ * Returns distinct genre names present in catalog_games, sorted A–Z,
+ * each with a game count. Used by the Browse Games genre filter.
+ */
+router.get("/catalog/genres", async (_req, res): Promise<void> => {
+  const rows = await db.execute<{ genre: string; game_count: string }>(sql`
+    SELECT
+      unnest(genres) AS genre,
+      COUNT(*)       AS game_count
+    FROM catalog_games
+    WHERE array_length(genres, 1) > 0
+    GROUP BY genre
+    ORDER BY genre ASC
+  `);
+  const genres = rows.rows.map(r => ({
+    name:  r.genre,
+    count: parseInt(r.game_count, 10),
+  }));
+  res.json({ genres });
+});
+
+/**
  * GET /api/catalog/tgdb-budget
  *
  * Returns the current state of the TGDB daily call budget.

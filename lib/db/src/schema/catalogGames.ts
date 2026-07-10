@@ -29,6 +29,8 @@ export const catalogGamesTable = pgTable("catalog_games", {
   metacritic:     integer("metacritic"),
   /** ESRB content rating string: "E", "E10+", "T", "M", "AO", "RP" (TGDB only). */
   esrbRating:     text("esrb_rating"),
+  /** Genre names (e.g. ["Action", "RPG"]) — populated from RAWG; empty for TGDB entries. */
+  genres:         text("genres").array().notNull().default([]),
   /** Precomputed affiliate search URLs. Regenerated on upsert. */
   retailerUrls:   jsonb("retailer_urls").$type<{
     ebay: string; amazon: string; gamestop: string; bestbuy: string;

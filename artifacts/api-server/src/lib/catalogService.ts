@@ -129,10 +129,12 @@ function parseYear(dateStr: string | null | undefined): number | null {
 // ── RAWG ──────────────────────────────────────────────────────────────────────
 
 interface RawgPlatformEntry { platform: { name: string } }
+interface RawgGenre       { id: number; name: string }
 interface RawgGame {
   id: number; name: string; released: string | null;
   background_image: string | null; metacritic: number | null;
   platforms: RawgPlatformEntry[] | null;
+  genres:    RawgGenre[]         | null;
 }
 interface RawgListResp { count: number; next: string | null; results: RawgGame[] }
 
@@ -161,6 +163,7 @@ export async function fetchFromRawg(
       sourceId:      `rawg:${g.id}`,
       title:         g.name,
       platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null,
       coverImageUrl: g.background_image ?? null,
       releaseYear:   parseYear(g.released),
@@ -201,6 +204,7 @@ export async function fetchPopularFromRawg(
     const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
       source: "rawg" as const, sourceId: `rawg:${g.id}`, title: g.name,
       platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null, coverImageUrl: g.background_image ?? null,
       releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
       esrbRating:  null, retailerUrls: retailerUrls(g.name),
@@ -240,6 +244,7 @@ export async function fetchNewReleasesFromRawg(
     const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
       source: "rawg" as const, sourceId: `rawg:${g.id}`, title: g.name,
       platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null, coverImageUrl: g.background_image ?? null,
       releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
       esrbRating:  null, retailerUrls: retailerUrls(g.name),
@@ -556,6 +561,7 @@ export async function upsertCatalogGames(rows: InsertCatalogGame[]): Promise<num
       set: {
         title:         sql`EXCLUDED.title`,
         platforms:     sql`EXCLUDED.platforms`,
+        genres:        sql`EXCLUDED.genres`,
         publisherName: sql`EXCLUDED.publisher_name`,
         coverImageUrl: sql`EXCLUDED.cover_image_url`,
         metacritic:    sql`EXCLUDED.metacritic`,

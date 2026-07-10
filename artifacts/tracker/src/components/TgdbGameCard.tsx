@@ -17,6 +17,7 @@ export interface CatalogGame {
   title:         string
   releaseDate:   string | null
   platforms:     string[]
+  genres?:       string[]   // RAWG only; absent for TGDB entries
   coverImageUrl: string | null
   metacritic:    number | null   // RAWG; null for TGDB
   esrbRating:    string | null   // TGDB; null for RAWG
