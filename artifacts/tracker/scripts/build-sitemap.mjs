@@ -80,10 +80,14 @@ async function main() {
       const client = new Client({ connectionString: dbUrl });
       await client.connect();
 
-      const { rows } = await client.query(
-        `SELECT id, status, updated_at FROM releases ORDER BY updated_at DESC`
-      );
-      await client.end();
+      let rows;
+      try {
+        ({ rows } = await client.query(
+          `SELECT id, status, updated_at FROM releases ORDER BY updated_at DESC`
+        ));
+      } finally {
+        await client.end();
+      }
 
       for (const r of rows) {
         const priority =
