@@ -6,24 +6,15 @@
  *
  * Confidence: HIGH — Shopify JSON feed, no HTML parsing.
  *
- * ⚠ Note on item types:
- *   The Blizzard Gear Store "Limited Edition" collection contains a mix of:
- *     • Physical game Collector's Edition bundles (WoW, Diablo, Overwatch CEs)
- *     • Collector's accessories — enamel pins, figures, statues, art books —
- *       which are NOT physical game discs
- *
- *   All items in the `limited-edition` collection are included because:
- *     a) Blizzard CE game boxes are sold here when available
- *     b) The collector's items are still limited-run physical products of
- *        interest to the same audience
- *   The `editionType` field is set per-item type to help the UI distinguish.
+ * Filter: only physical game editions (CE bundles) pass through.
+ * Pins, figures, statues, art books, apparel, and other merchandise are
+ * excluded — the same product_type + title-keyword guard used by LRG.
  *
  * Collection scraped: `limited-edition` (Blizzard Limited Edition & Collector's Edition)
  *
  * Status detection: variant availability.
  *   All variants unavailable → sold_out.
  *   At least one available  → available.
- *   (Blizzard does not use pre-order tags on this collection.)
  *
  * Platforms: Blizzard titles are primarily PC. Platform signals are inferred
  * from the title; items with no platform signal use ["PC"] as default since
@@ -49,6 +40,51 @@ interface BlizzardProduct {
 interface BlizzardCollectionResponse {
   products: BlizzardProduct[];
 }
+
+// ── Merch filter ──────────────────────────────────────────────────────────────
+// Blizzard's "limited-edition" collection mixes CE game bundles with pins,
+// figures, statues, and art books. Only physical games/game-editions pass.
+
+const BLIZZARD_MERCH_TYPES = new Set([
+  "pin", "pins", "enamel pin", "lapel pin",
+  "figurine", "figure", "funko",
+  "statue", "replica",
+  "art book", "artbook",
+  "apparel", "clothing", "t-shirt", "hoodie",
+  "accessories", "accessory",
+  "poster", "print",
+  "soundtrack", "music", "vinyl",
+  "gift card",
+  "plush", "toy",
+  "sticker", "patch",
+]);
+
+const BLIZZARD_MERCH_TITLE_KWS = [
+  "enamel pin", "lapel pin", "pin set",
+  "funko pop", "figurine", "statue", "replica",
+  "art book", "artbook",
+  "vinyl record", "soundtrack",
+  "t-shirt", "hoodie", "zip-up",
+  "poster", "lithograph",
+  "plush", "keychain", "lanyard",
+  "gift card", "sticker sheet",
+];
+
+/**
+ * Returns true only for physical game / game collector's edition products.
+ * Filters out pins, figures, apparel, art books, and other merchandise.
+ */
+function isBlizzardGame(product: BlizzardProduct): boolean {
+  const type  = (product.product_type ?? "").trim().toLowerCase();
+  const title = product.title.toLowerCase();
+
+  if (BLIZZARD_MERCH_TYPES.has(type)) return false;
+  if (BLIZZARD_MERCH_TITLE_KWS.some(kw => title.includes(kw))) return false;
+
+  return true;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function fetchCollection(handle: string): Promise<BlizzardProduct[]> {
   const all: BlizzardProduct[] = [];
@@ -114,17 +150,10 @@ function extractPlatforms(title: string, tags: string[]): string[] {
 
 /**
  * Infer editionType from product_type and tags.
- * Blizzard uses a mix of "Collector's Edition", statues, figures, pins, etc.
  */
 function extractEditionType(product: BlizzardProduct): string | null {
-  const type = product.product_type?.toLowerCase() ?? "";
   const tagStr = product.tags.join(" ").toLowerCase();
-
   if (/collector.?s edition/i.test(tagStr)) return "Collector's Edition";
-  if (/statue|replica/i.test(type)) return "Statue/Replica";
-  if (/figurine|figure|funko/i.test(type)) return "Figure";
-  if (/\bpin\b/i.test(type)) return "Collector's Pin";
-  if (/book|artbook/i.test(type)) return "Art Book";
   return "Limited Edition";
 }
 
@@ -142,8 +171,8 @@ export const blizzardGearScraper: PublisherScraper = {
     const results: ScrapedRelease[] = [];
 
     for (const product of products) {
-      // Skip gift cards — these are not physical items
-      if (/gift.?card/i.test(product.title) || product.product_type === "Gift Card") continue;
+      // Skip non-game merchandise (pins, figures, art books, apparel, etc.)
+      if (!isBlizzardGame(product)) continue;
 
       results.push({
         externalId: product.handle,

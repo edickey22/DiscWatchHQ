@@ -100,7 +100,8 @@ export function buildAmazonSearchUrl(title: string): string {
  * Falls back to direct search when GAMESTOP_RAKUTEN_ID is not set.
  */
 export function buildGameStopSearchUrl(title: string): string {
-  const directUrl = `https://www.gamestop.com/search/?searchTerm=${encodeURIComponent(title)}`;
+  // GameStop search parameter is "q" (not "searchTerm" — that returns zero results).
+  const directUrl = `https://www.gamestop.com/search/?q=${encodeURIComponent(title)}`;
   if (!affiliateConfig.gamestop.affiliateId) return directUrl;
   const { affiliateId, merchantId } = affiliateConfig.gamestop;
   return `https://click.linksynergy.com/deeplink?id=${affiliateId}&mid=${merchantId}&murl=${encodeURIComponent(directUrl)}`;

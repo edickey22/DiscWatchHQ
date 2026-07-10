@@ -262,20 +262,32 @@ router.get("/games/search", async (req, res): Promise<void> => {
       }
     }
 
-    const [rawgRes, tgdbRes] = await Promise.allSettled([
-      fetchFromRawg(q, 1),
-      callTgdb
-        ? fetchFromTgdb(q, 1)
-        : Promise.resolve({ rows: [] as typeof catalogGamesTable.$inferInsert[], total: 0, hasNext: false }),
-    ]);
+    // RAWG first — it's curated and returns clean deduplicated entries.
+    // TGDB is community-edited and mixes in junk (fake platform entries,
+    // test rows). Call TGDB only as a genuine fallback when RAWG has zero
+    // results, not as a parallel enrichment source.
+    let rawgRows: typeof catalogGamesTable.$inferInsert[] = [];
+    try {
+      const rawgRes = await fetchFromRawg(q, 1);
+      rawgRows = rawgRes.rows;
+    } catch (err) {
+      logger.error({ err }, "RAWG live fetch failed");
+    }
 
-    if (rawgRes.status === "rejected") logger.error({ err: rawgRes.reason }, "RAWG live fetch failed");
-    if (tgdbRes.status === "rejected") logger.error({ err: tgdbRes.reason }, "TGDB live fetch failed");
+    const tgdbRows: typeof catalogGamesTable.$inferInsert[] = [];
+    if (callTgdb && rawgRows.length === 0) {
+      try {
+        const tgdbRes = await fetchFromTgdb(q, 1);
+        tgdbRows.push(...tgdbRes.rows);
+        logger.debug({ q, tgdbCount: tgdbRes.rows.length }, "TGDB fallback used (RAWG had 0 results)");
+      } catch (err) {
+        logger.error({ err }, "TGDB live fetch failed");
+      }
+    } else if (callTgdb && rawgRows.length > 0) {
+      logger.debug({ q, rawgCount: rawgRows.length }, "TGDB fallback skipped — RAWG returned results");
+    }
 
-    const liveRows = [
-      ...(rawgRes.status === "fulfilled" ? rawgRes.value.rows : []),
-      ...(tgdbRes.status === "fulfilled" ? tgdbRes.value.rows : []),
-    ];
+    const liveRows = [...rawgRows, ...tgdbRows];
 
     if (liveRows.length > 0) {
       try {

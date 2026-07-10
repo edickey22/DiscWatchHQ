@@ -176,7 +176,7 @@ export default function LandingPage() {
             {/* Tile grid: 4 cols on mobile → 7 on lg */}
             <div
               className="h-full flex gap-1"
-              style={{ opacity: 0.3 }}
+              style={{ opacity: 0.5 }}
             >
               {COLUMN_CONFIG.map((_, idx) => (
                 <div
@@ -191,7 +191,7 @@ export default function LandingPage() {
             </div>
 
             {/* Left vignette — keeps hero text fully legible */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/92 to-background/20 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/10 pointer-events-none" />
             {/* Top vignette */}
             <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80 pointer-events-none" />
           </div>

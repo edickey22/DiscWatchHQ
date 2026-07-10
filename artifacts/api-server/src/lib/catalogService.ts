@@ -164,20 +164,22 @@ export async function fetchFromRawg(
       return { rows: [], total: 0, hasNext: false };
     }
     const data = (await res.json()) as RawgListResp;
-    const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
-      source:        "rawg",
-      sourceId:      `rawg:${g.id}`,
-      title:         g.name,
-      platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
-      genres:        (g.genres    ?? []).map(gn => gn.name),
-      publisherName: null,
-      coverImageUrl: g.background_image ?? null,
-      releaseDate:   g.released ?? null,
-      releaseYear:   parseYear(g.released),
-      metacritic:    g.metacritic ?? null,
-      esrbRating:    null,
-      retailerUrls:  retailerUrls(g.name),
-    }));
+    const rows: InsertCatalogGame[] = (data.results ?? [])
+      .filter(g => isPlausibleRawgGame(g.name))
+      .map(g => ({
+        source:        "rawg",
+        sourceId:      `rawg:${g.id}`,
+        title:         g.name,
+        platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+        genres:        (g.genres    ?? []).map(gn => gn.name),
+        publisherName: null,
+        coverImageUrl: g.background_image ?? null,
+        releaseDate:   g.released ?? null,
+        releaseYear:   parseYear(g.released),
+        metacritic:    g.metacritic ?? null,
+        esrbRating:    null,
+        retailerUrls:  retailerUrls(g.name),
+      }));
     return { rows, total: data.count, hasNext: !!data.next };
   } catch (err) {
     logger.error({ err }, "RAWG fetch error");
@@ -440,21 +442,116 @@ function resolvePlatformName(
   return entry ? normPlatform(entry.name) : null;
 }
 
+// ── RAWG quality filter ───────────────────────────────────────────────────────
+//
+// RAWG's community DB includes fan-made retro demakes ("Elden Ring PS1",
+// "Celeste GBA"), challenge videos ("Elden Ring in 24 Hours"), and other
+// noise. Filter these out before upsert so they never reach the DB or the UI.
+
+/** Retro platform labels that fan demakes inject into their RAWG titles. */
+const RAWG_RETRO_DEMAKE_RE  = /\s+(PS1|PS2|GB|GBA|GBC|N64|NES|SNES|GameCube|Dreamcast|Saturn|Sega\s+Genesis)(\s|$|\s*\()/i;
+/** "in N hours/minutes" challenge-run titles. */
+const RAWG_TIME_CHALLENGE_RE = /\s+in\s+\d+\s+(minute|hour|day|second)/i;
+
+/**
+ * Returns false for RAWG entries that are clearly fan demakes, challenge
+ * submissions, or community test/junk titles.
+ *
+ * NOTE: deliberately does NOT reject on a bare /\btest\b/ pattern to avoid
+ * false positives on real game titles like "Test Drive", "The Turing Test",
+ * "Test Mechanic", etc.
+ */
+function isPlausibleRawgGame(name: string): boolean {
+  // Explicit community junk markers (very low false-positive risk)
+  if (/zoohair/i.test(name))             return false;
+  if (/\bdemake\b/i.test(name))          return false;
+  // Reject parenthetical test tokens: "(test)" / "(Test Build)" — yes
+  if (/\(\s*test[\s)]/i.test(name))      return false;
+  // Reject titles that END with " Test" (fan-build annotation pattern) UNLESS
+  // the title starts with "The ", "A ", or "An " — which protects legitimate
+  // titles like "The Turing Test" while catching "Elden Ring Test".
+  if (/\s+Test\s*$/i.test(name) && !/^(the|a|an)\s/i.test(name)) return false;
+
+  // Fan-demake pattern: title ends in / is followed by a retro-platform label
+  // e.g. "Elden Ring PS1", "Celeste GBA", "Half-Life GB (2021)"
+  if (RAWG_RETRO_DEMAKE_RE.test(name))   return false;
+
+  // Challenge-run titles: "Elden Ring in 24 Hours", "Minecraft in 60 seconds"
+  if (RAWG_TIME_CHALLENGE_RE.test(name)) return false;
+
+  return true;
+}
+
+// ── TGDB quality filter ───────────────────────────────────────────────────────
+//
+// TGDB is community-edited and contains junk/test entries (e.g. "Elden Ring PS1",
+// "Elden Ring Test", "Elden Ring PS1 (ZooHair)"). Filter them before upsert so
+// they never reach the DB or the UI.
+
+/**
+ * Platforms definitively discontinued before 2007 — any TGDB entry on these
+ * platforms with a release year >= 2016 is almost certainly a fan port / fake.
+ *
+ * Deliberately excludes Wii, Xbox 360, PS2, GBA (all had real tail releases
+ * after 2010) to avoid false positives on legitimate late-cycle titles.
+ */
+const TGDB_ANCIENT_PLATFORMS = new Set([
+  "PS1",
+  "Game Boy", "GBC",          // discontinued 2003
+  "N64",                       // discontinued 2002
+  "SNES", "NES",
+  "Genesis", "Saturn", "Dreamcast", "Game Gear", "Sega CD", "32X",
+  "Master System",
+  "Atari 2600", "Atari 5200", "Atari 7800",
+  "TG-16", "Neo Geo",
+]);
+
+/**
+ * Returns false for TGDB entries that are clearly junk/test/placeholder.
+ * Applied per-row before any DB write so stale data never reaches the UI.
+ *
+ * NOTE: deliberately does NOT reject on a bare /\btest\b/ to avoid false
+ * positives on "Test Drive", "The Turing Test", etc.
+ */
+function isPlausibleTgdbEntry(g: TgdbGame, platformName: string | null): boolean {
+  const title = g.game_title;
+
+  // Explicit community junk tokens (very specific, low false-positive risk)
+  if (/zoohair/i.test(title))          return false;
+  if (/\bplaceholder\b/i.test(title))  return false;
+  if (/\(\s*test[\s)]/i.test(title))   return false; // "(test)" / "(Test Build)"
+
+  // Platform plausibility: ancient platform + clearly-modern release → fake.
+  // "Elden Ring PS1" released 2022 on a platform discontinued in 2006 = junk.
+  // Threshold is 2016 (conservative) to avoid flagging any real tail releases.
+  if (platformName && TGDB_ANCIENT_PLATFORMS.has(platformName) && g.release_date) {
+    const year = parseInt(g.release_date.slice(0, 4), 10);
+    if (!isNaN(year) && year >= 2016) return false;
+  }
+
+  return true;
+}
+
 /**
  * Map a TGDB search/detail response to InsertCatalogGame rows.
  * Shared between fetchFromTgdb (search) and fetchTgdbById (detail).
+ * Junk/test entries are filtered out before mapping.
  */
 function mapTgdbGames(
   data: TgdbSearchResp,
   publisherNames: Map<number, string>,
 ): InsertCatalogGame[] {
-  return data.data.games.map(g => {
+  const rows: InsertCatalogGame[] = [];
+
+  for (const g of data.data.games) {
     const platformName   = resolvePlatformName(g.platform ?? null, data.include.platform);
+    if (!isPlausibleTgdbEntry(g, platformName)) continue;
+
     const publisherName  = g.publishers?.[0] != null
       ? (publisherNames.get(g.publishers[0]) ?? null)
       : null;
 
-    return {
+    rows.push({
       source:        "tgdb",
       sourceId:      `tgdb:${g.id}`,
       title:         g.game_title,
@@ -465,8 +562,10 @@ function mapTgdbGames(
       metacritic:    null,                    // TGDB has no Metacritic data
       esrbRating:    g.rating ?? null,
       retailerUrls:  retailerUrls(g.game_title),
-    };
-  });
+    });
+  }
+
+  return rows;
 }
 
 // ── TGDB search ───────────────────────────────────────────────────────────────

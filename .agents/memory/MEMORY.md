@@ -6,3 +6,4 @@
 - [TGDB daily budget](tgdb-budget.md) — 28/day hard cap (10 backfill + 18 search); checkAndReserveTgdbCall() is the only gating entry point; permanent DB cache check skips TGDB if any tgdb rows match query; system_kv persists state
 - [ControllerIcon](icon-notes.md) — Lucide gamepad-2 outline icon (exact path data); viewBox 0 0 24 24; strokes use hsl(var(--primary)); default size=28
 - [LRG merch filter](scraper-registry.md) — isGame() blocks known merch product_types (lowercase-normalized) + title keyword fallback; wired in addProducts loop
+- [Catalog quality filters](catalog-quality-filters.md) — RAWG + TGDB both need junk-entry filters; \btest\b alone causes false positives; GameStop search param is "q" not "searchTerm"
