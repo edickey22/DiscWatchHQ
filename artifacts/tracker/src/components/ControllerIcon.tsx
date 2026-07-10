@@ -1,19 +1,12 @@
 /**
- * ControllerIcon — generic modern gamepad silhouette.
+ * ControllerIcon — Lucide "gamepad-2" icon (exact path data, verbatim).
  *
- * Geometry (viewBox 0 0 28 28):
- *   Body   — wide rounded rect, x=2 y=7 w=24 h=10 rx=5
- *   Grips  — two rounded rect extensions below body corners (y=14–25)
- *   D-pad  — cross cutout left of centre (dark fill, appears punched out)
- *   Dots   — two face-button circles right of centre (dark fill)
- *
- * All accent shapes use hsl(var(--primary)) so they inherit
- * the site's CSS-variable colour scheme automatically.
+ * Source: https://lucide.dev/icons/gamepad-2
+ * viewBox: 0 0 24 24
+ * All strokes use hsl(var(--primary)) so they inherit the site's green accent.
  */
 
 const ACCENT = "hsl(var(--primary))"
-// Near-black cutout that matches the dark background (0 0% 5%)
-const CUTOUT = "#0a0c0a"
 
 export function ControllerIcon({
   size = 28,
@@ -21,35 +14,37 @@ export function ControllerIcon({
 }: {
   size?: number
   className?: string
-}) {
+} = {}) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 28 28"
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
-      {/* ── Body ─────────────────────────────────────────────────────── */}
-      <rect x="2" y="7" width="24" height="10" rx="5" fill={ACCENT} />
-
-      {/* ── Left grip ────────────────────────────────────────────────── */}
-      <rect x="3" y="14" width="9" height="11" rx="4.5" fill={ACCENT} />
-
-      {/* ── Right grip ───────────────────────────────────────────────── */}
-      <rect x="16" y="14" width="9" height="11" rx="4.5" fill={ACCENT} />
-
-      {/* ── D-pad (cross cutout) — left half of body ─────────────────── */}
-      {/* Horizontal bar */}
-      <rect x="6" y="11.3" width="5.5" height="1.8" rx="0.5" fill={CUTOUT} />
-      {/* Vertical bar */}
-      <rect x="8.5" y="9.5" width="1.8" height="5.5" rx="0.5" fill={CUTOUT} />
-
-      {/* ── Face buttons (two dots) — right half of body ─────────────── */}
-      <circle cx="18.5" cy="11" r="1.25" fill={CUTOUT} />
-      <circle cx="21.2" cy="12.8" r="1.25" fill={CUTOUT} />
+      <line
+        x1="6" y1="11" x2="10" y2="11"
+        stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <line
+        x1="8" y1="9" x2="8" y2="13"
+        stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <line
+        x1="15" y1="12" x2="15.01" y2="12"
+        stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <line
+        x1="18" y1="10" x2="18.01" y2="10"
+        stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <path
+        d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"
+        stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
     </svg>
   )
 }

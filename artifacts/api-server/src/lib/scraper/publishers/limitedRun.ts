@@ -123,6 +123,55 @@ function isAllSoldOut(product: LRGProduct): boolean {
 }
 
 /**
+ * Known non-game product_type values used by LRG's Shopify store.
+ * Products matching any of these are excluded from the tracked catalog.
+ */
+// All entries are lowercase — matched against product_type.toLowerCase()
+const MERCH_PRODUCT_TYPES = new Set([
+  "apparel", "t-shirt", "shirt", "hoodie", "clothing",
+  "accessories", "accessory",
+  "art book", "artbook",
+  "soundtrack", "music", "vinyl",
+  "pin", "pins", "enamel pin", "lapel pin",
+  "poster", "print", "lithograph",
+  "toy", "figure", "figurine", "statue", "plush",
+  "bag", "backpack", "tote",
+  "lanyard", "keychain", "keyring",
+  "gift card",
+  "sticker", "patch", "hat", "cap",
+])
+
+/** Title substrings that reliably identify non-game merchandise. */
+const MERCH_TITLE_KEYWORDS = [
+  "pin set", "enamel pin", "lapel pin",
+  "art book", "artbook",
+  "soundtrack", "vinyl record",
+  "t-shirt", "tee shirt", "hoodie", "zip-up",
+  "poster", "lithograph",
+  "plush", "figurine", "statue",
+  "backpack", "tote bag", "lanyard", "keychain",
+  "gift card", "sticker sheet",
+]
+
+/**
+ * Returns true only for products that are actual physical games or
+ * game collector's / special editions. Excludes merchandise, apparel,
+ * accessories, soundtracks, art books, pins, and similar non-game items.
+ */
+function isGame(product: LRGProduct): boolean {
+  const type = (product.product_type ?? "").trim().toLowerCase()
+
+  // Blocklist: known merch product types (case-insensitive via normalized set)
+  if (MERCH_PRODUCT_TYPES.has(type)) return false
+
+  // Secondary guard: title keyword check catches merch with blank/generic types
+  const title = product.title.toLowerCase()
+  if (MERCH_TITLE_KEYWORDS.some((kw) => title.includes(kw))) return false
+
+  return true
+}
+
+/**
  * Extract an Amazon product URL from LRG's body_html.
  * LRG occasionally embeds Amazon buy links in their product descriptions.
  */
@@ -177,6 +226,9 @@ export const limitedRunScraper: PublisherScraper = {
       for (const product of settled.value) {
         if (seenIds.has(product.handle)) continue;
         seenIds.add(product.handle);
+
+        // Skip non-game merchandise (pins, apparel, art books, soundtracks, etc.)
+        if (!isGame(product)) continue;
 
         // Override status: if all variants sold out and in preorders collection → sold out
         let finalStatus = status;
