@@ -26,10 +26,10 @@ import { useDebounce } from "@/hooks/use-debounce"
 type SortOption = "updated" | "title" | "publisher" | "newest"
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "updated",   label: "Recently Updated" },
   { value: "newest",    label: "Newly Listed"      },
-  { value: "title",     label: "Title A–Z"         },
   { value: "publisher", label: "Publisher A–Z"     },
+  { value: "updated",   label: "Recently Updated"  },
+  { value: "title",     label: "Title A–Z"         },
 ]
 
 export default function Home() {
@@ -95,7 +95,7 @@ export default function Home() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_all">All Platforms</SelectItem>
-                    {platforms?.map(p => (
+                    {platforms?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                       <SelectItem key={p.name} value={p.name}>
                         {p.name} ({p.releaseCount})
                       </SelectItem>
@@ -110,7 +110,7 @@ export default function Home() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_all">All Publishers</SelectItem>
-                    {publishers?.map(p => (
+                    {publishers?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                       <SelectItem key={p.slug} value={p.slug}>
                         {p.name}
                       </SelectItem>
