@@ -23,6 +23,8 @@ export const catalogGamesTable = pgTable("catalog_games", {
   platforms:      text("platforms").array().notNull().default([]),
   publisherName:  text("publisher_name"),
   coverImageUrl:  text("cover_image_url"),
+  /** Full release date as YYYY-MM-DD text (from RAWG `released` field). Nullable for TGDB entries. */
+  releaseDate:    text("release_date"),
   /** 4-digit year extracted from releaseDate; avoids parsing ambiguous date strings. */
   releaseYear:    integer("release_year"),
   /** Metacritic score 0-100 (RAWG only; null for TGDB entries). */

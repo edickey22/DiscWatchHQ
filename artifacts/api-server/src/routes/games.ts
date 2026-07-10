@@ -51,7 +51,8 @@ function formatRow(row: CatalogGameRow) {
     id:            row.sourceId,
     source:        row.source as "rawg" | "tgdb",
     title:         row.title,
-    releaseDate:   row.releaseYear ? String(row.releaseYear) : null,
+    // Prefer the full YYYY-MM-DD date string; fall back to year-only string for older rows.
+  releaseDate:   row.releaseDate ?? (row.releaseYear ? String(row.releaseYear) : null),
     platforms:     row.platforms,
     genres:        row.genres        ?? [],
     coverImageUrl: row.coverImageUrl ?? null,
@@ -71,6 +72,38 @@ function formatRow(row: CatalogGameRow) {
 
 /** Valid sort options for the catalog search endpoint. */
 type SortOption = "best_rated" | "newest" | "oldest" | "alpha";
+
+/**
+ * Deduplicate search results by exact title (case-insensitive).
+ *
+ * Why this is needed: TGDB creates one database row per platform for the same
+ * game (e.g. "Elden Ring" on PS4, PS5, PC, Xbox One, Xbox Series each get their
+ * own tgdb:NNNNN row). RAWG consolidates all platforms into a single entry.
+ * This function keeps the single best entry per title: rawg beats tgdb as the
+ * source, then higher Metacritic breaks ties between same-source duplicates.
+ *
+ * Applied to every search response so no caller sees duplicates regardless of
+ * which source originally populated the DB row.
+ */
+function deduplicateByTitle(
+  results: ReturnType<typeof formatRow>[],
+): ReturnType<typeof formatRow>[] {
+  const best = new Map<string, ReturnType<typeof formatRow>>();
+  for (const r of results) {
+    const key = r.title.toLowerCase().trim();
+    const current = best.get(key);
+    if (!current) {
+      best.set(key, r);
+    } else {
+      // rawg always wins over tgdb; within the same source prefer higher Metacritic
+      const newWins =
+        (r.source === "rawg" && current.source !== "rawg") ||
+        (r.source === current.source && (r.metacritic ?? -1) > (current.metacritic ?? -1));
+      if (newWins) best.set(key, r);
+    }
+  }
+  return Array.from(best.values());
+}
 
 // ── DB query ──────────────────────────────────────────────────────────────────
 
@@ -257,7 +290,7 @@ router.get("/games/search", async (req, res): Promise<void> => {
             id:            r.sourceId,
             source:        r.source as "rawg" | "tgdb",
             title:         r.title,
-            releaseDate:   r.releaseYear ? String(r.releaseYear) : null,
+            releaseDate:   r.releaseDate ?? (r.releaseYear ? String(r.releaseYear) : null),
             platforms:     r.platforms   ?? [],
             genres:        r.genres      ?? [],
             coverImageUrl: r.coverImageUrl ?? null,
@@ -276,6 +309,10 @@ router.get("/games/search", async (req, res): Promise<void> => {
       }
     }
   }
+
+  // Deduplicate by title before responding — groups RAWG + TGDB variants of the same game,
+  // keeping the better entry (rawg > tgdb; higher Metacritic as tiebreaker within source).
+  results = deduplicateByTitle(results);
 
   res.json({
     count:    total,
@@ -359,27 +396,35 @@ router.get("/games/popular", async (req, res): Promise<void> => {
 /**
  * GET /api/games/new-releases
  *
- * Returns recently-released games (past 12 months by releaseYear).
- * Primary source: DB (release_year >= currentYear-1, ordered by release_year DESC).
- * Cold cache: fetches from RAWG ordering=-released with date range, upserts, re-queries.
+ * Returns games released in the past 12 months (date-precise, not year-approximate).
+ * Filter: release_date >= 12-months-ago AND release_date <= today (YYYY-MM-DD text compare).
+ * Order: release_date DESC (newest actual release first — NOT updatedAt, which would surface
+ * unreleased games whose RAWG page was recently edited).
+ * Cold cache: on page 1 with < PAGE_SIZE matching rows, fetches from RAWG with
+ * dates=oneYearAgo,today&ordering=-released, upserts with full release_date, re-queries.
  */
 router.get("/games/new-releases", async (req, res): Promise<void> => {
   const page  = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
   const limit = page === 1
     ? Math.min(24, Math.max(1, parseInt(String(req.query.limit ?? String(PAGE_SIZE))) || PAGE_SIZE))
     : PAGE_SIZE;
-  const offset   = (page - 1) * PAGE_SIZE;
-  const prevYear = new Date().getFullYear() - 1;
+  const offset     = (page - 1) * PAGE_SIZE;
+  // Dynamic date boundaries — computed fresh on every request, never hardcoded.
+  const today      = new Date().toISOString().slice(0, 10);                          // e.g. "2026-07-10"
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10); // e.g. "2025-07-10"
 
-  const recentFilter = sql`${catalogGamesTable.releaseYear} >= ${prevYear}`;
+  // Use release_date (full YYYY-MM-DD) for exact boundary enforcement.
+  // Excludes future games (Fable 2027-02-xx) even if their RAWG page was recently updated.
+  const recentFilter = sql`
+    ${catalogGamesTable.releaseDate} IS NOT NULL
+    AND ${catalogGamesTable.releaseDate} >= ${oneYearAgo}
+    AND ${catalogGamesTable.releaseDate} <= ${today}
+  `;
 
   const [dbRows, [{ total }]] = await Promise.all([
     db.select().from(catalogGamesTable)
       .where(recentFilter)
-      .orderBy(
-        sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
-        sql`${catalogGamesTable.updatedAt} DESC`,
-      )
+      .orderBy(sql`${catalogGamesTable.releaseDate} DESC NULLS LAST`)
       .limit(limit)
       .offset(offset),
     db.select({ total: sql<number>`count(*)::int` })
@@ -387,7 +432,7 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
       .where(recentFilter),
   ]);
 
-  // Cold cache: only seed from RAWG on page 1 when the DB has very few recent games.
+  // Cold cache: seed from RAWG on page 1 when few precise-dated rows exist.
   if (page === 1 && total < PAGE_SIZE && rawgReady) {
     const { rows } = await fetchNewReleasesFromRawg(1);
     if (rows.length > 0) {
@@ -395,10 +440,7 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
       const [fresh, [{ freshTotal }]] = await Promise.all([
         db.select().from(catalogGamesTable)
           .where(recentFilter)
-          .orderBy(
-            sql`${catalogGamesTable.releaseYear} DESC NULLS LAST`,
-            sql`${catalogGamesTable.updatedAt} DESC`,
-          )
+          .orderBy(sql`${catalogGamesTable.releaseDate} DESC NULLS LAST`)
           .limit(limit)
           .offset(0),
         db.select({ freshTotal: sql<number>`count(*)::int` })
@@ -427,31 +469,32 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
 /**
  * GET /api/games/upcoming
  *
- * Returns games with confirmed release dates in the future (release_year > current year).
- * Ordered by release_year ASC (soonest first) so the nearest launches appear first.
- * Cold cache: on page 1 when DB has < PAGE_SIZE rows, fetches from RAWG with a future
- * date range (today → 2029-12-31, ordered released ASC) and upserts before re-querying.
+ * Returns games with confirmed release dates strictly in the future (after today).
+ * Filter: release_date > today — date-precise, never shows already-released games
+ * regardless of which calendar year they belong to.
+ * Order: release_date ASC (soonest upcoming first).
+ * Cold cache: on page 1 when DB has < 5 future-dated rows, fetches from RAWG with
+ * dates=today,2027-12-31&ordering=released, upserts with full release_date, re-queries.
  */
 router.get("/games/upcoming", async (req, res): Promise<void> => {
   const page  = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
   const limit = page === 1
     ? Math.min(24, Math.max(1, parseInt(String(req.query.limit ?? String(PAGE_SIZE))) || PAGE_SIZE))
     : PAGE_SIZE;
-  const offset      = (page - 1) * PAGE_SIZE;
-  const currentYear = new Date().getFullYear();
+  const offset = (page - 1) * PAGE_SIZE;
+  const today  = new Date().toISOString().slice(0, 10); // e.g. "2026-07-10"
 
-  // "Upcoming" includes the remainder of the current year AND future years, matching
-  // RAWG's dates=today,2029-12-31 range. Using >= currentYear avoids a cold-cache loop
-  // where games with release_year == currentYear are fetched but never satisfy > currentYear.
-  const upcomingFilter = sql`${catalogGamesTable.releaseYear} >= ${currentYear}`;
+  // Strict future: release_date > today. Excludes all games already released,
+  // including those that released earlier in the current calendar year.
+  const upcomingFilter = sql`
+    ${catalogGamesTable.releaseDate} IS NOT NULL
+    AND ${catalogGamesTable.releaseDate} > ${today}
+  `;
 
   const [dbRows, [{ total }]] = await Promise.all([
     db.select().from(catalogGamesTable)
       .where(upcomingFilter)
-      .orderBy(
-        sql`${catalogGamesTable.releaseYear} ASC NULLS LAST`,
-        asc(catalogGamesTable.title),
-      )
+      .orderBy(sql`${catalogGamesTable.releaseDate} ASC NULLS LAST`)
       .limit(limit)
       .offset(offset),
     db.select({ total: sql<number>`count(*)::int` })
@@ -459,8 +502,7 @@ router.get("/games/upcoming", async (req, res): Promise<void> => {
       .where(upcomingFilter),
   ]);
 
-  // Cold cache: seed from RAWG when DB has very few upcoming rows on page 1.
-  // Use a threshold of 5 (not PAGE_SIZE) so that a seeded set of 12 won't re-trigger.
+  // Cold cache: seed from RAWG when DB has very few future-dated rows on page 1.
   if (page === 1 && total < 5 && rawgReady) {
     const { rows } = await fetchUpcomingFromRawg(1);
     if (rows.length > 0) {
@@ -468,10 +510,7 @@ router.get("/games/upcoming", async (req, res): Promise<void> => {
       const [fresh, [{ freshTotal }]] = await Promise.all([
         db.select().from(catalogGamesTable)
           .where(upcomingFilter)
-          .orderBy(
-            sql`${catalogGamesTable.releaseYear} ASC NULLS LAST`,
-            asc(catalogGamesTable.title),
-          )
+          .orderBy(sql`${catalogGamesTable.releaseDate} ASC NULLS LAST`)
           .limit(limit)
           .offset(0),
         db.select({ freshTotal: sql<number>`count(*)::int` })
@@ -552,7 +591,7 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
       id:            r.sourceId,
       source:        "tgdb" as const,
       title:         r.title,
-      releaseDate:   r.releaseYear ? String(r.releaseYear) : null,
+      releaseDate:   r.releaseDate ?? (r.releaseYear ? String(r.releaseYear) : null),
       platforms:     r.platforms ?? [],
       coverImageUrl: r.coverImageUrl ?? null,
       metacritic:    null,

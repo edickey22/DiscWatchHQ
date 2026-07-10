@@ -85,8 +85,8 @@ export function Header() {
           {catalogStats && catalogStats.count > 0 && (
             <>
               <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Catalog</span>
+              <div className="flex flex-col items-center" title="Games indexed locally — full 899K+ catalog searchable via live lookup">
+                <span className="text-muted-foreground text-[10px] uppercase">Indexed</span>
                 <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
               </div>
             </>

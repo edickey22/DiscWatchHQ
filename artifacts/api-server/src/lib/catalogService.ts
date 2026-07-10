@@ -172,6 +172,7 @@ export async function fetchFromRawg(
       genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null,
       coverImageUrl: g.background_image ?? null,
+      releaseDate:   g.released ?? null,
       releaseYear:   parseYear(g.released),
       metacritic:    g.metacritic ?? null,
       esrbRating:    null,
@@ -215,8 +216,9 @@ export async function fetchPopularFromRawg(
       platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
       genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null, coverImageUrl: g.background_image ?? null,
-      releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
-      esrbRating:  null, retailerUrls: retailerUrls(g.name),
+      releaseDate:   g.released ?? null,
+      releaseYear:   parseYear(g.released), metacritic: g.metacritic ?? null,
+      esrbRating:    null, retailerUrls: retailerUrls(g.name),
     }));
     return { rows, total: data.count, hasNext: !!data.next };
   } catch (err) {
@@ -250,6 +252,7 @@ export async function fetchUpcomingFromRawg(page = 1): Promise<{ rows: InsertCat
       genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null,
       coverImageUrl: g.background_image ?? null,
+      releaseDate:   g.released ?? null,
       releaseYear:   parseYear(g.released),
       metacritic:    g.metacritic ?? null,
       esrbRating:    null,
@@ -292,8 +295,9 @@ export async function fetchNewReleasesFromRawg(
       platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
       genres:        (g.genres    ?? []).map(gn => gn.name),
       publisherName: null, coverImageUrl: g.background_image ?? null,
-      releaseYear: parseYear(g.released), metacritic: g.metacritic ?? null,
-      esrbRating:  null, retailerUrls: retailerUrls(g.name),
+      releaseDate:   g.released ?? null,
+      releaseYear:   parseYear(g.released), metacritic: g.metacritic ?? null,
+      esrbRating:    null, retailerUrls: retailerUrls(g.name),
     }));
     return { rows, total: data.count, hasNext: !!data.next };
   } catch (err) {

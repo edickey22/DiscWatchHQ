@@ -135,7 +135,7 @@ function TileColumn({
 export default function LandingPage() {
   useDocumentHead({
     title:       "DiscWatchHQ — Find Any Game, Buy Anywhere",
-    description: "Search 2,000+ physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.",
+    description: "Search 899,000+ physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.",
     canonical:   buildCanonicalUrl("/"),
     jsonLd:      null,
   })
@@ -209,9 +209,7 @@ export default function LandingPage() {
             {/* Eyebrow */}
             <div className="inline-flex items-center gap-2 text-[11px] font-bold font-mono uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-3 py-1.5 rounded-full mb-8 select-none">
               <Zap size={10} />
-              {catalogStats?.count
-                ? `${catalogStats.count.toLocaleString()} games · 4 major retailers`
-                : "Physical game finder · 4 major retailers"}
+              Search 899,000+ games · 4 major retailers
             </div>
 
             {/* Headline */}
@@ -249,31 +247,41 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            {/* Live stats — catalog count leads, boutique secondary */}
+            {/* Live stats — searchable catalog leads, indexed/boutique secondary */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">
-              {catalogStats && catalogStats.count > 0 && (
-                <div>
-                  <div className="text-3xl sm:text-4xl font-display font-black text-primary tabular-nums">
-                    {catalogStats.count.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                    Games in Catalog
-                  </div>
+              {/* Primary claim: RAWG's full searchable catalog (899,617 confirmed) */}
+              <div>
+                <div className="text-3xl sm:text-4xl font-display font-black text-primary tabular-nums">
+                  899K+
                 </div>
-              )}
-              {stats && (
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
+                  Games Searchable
+                </div>
+              </div>
+              <div className="w-px h-10 bg-border hidden sm:block" />
+              {catalogStats && catalogStats.count > 0 && (
                 <>
-                  {catalogStats && catalogStats.count > 0 && (
-                    <div className="w-px h-10 bg-border hidden sm:block" />
-                  )}
                   <div>
-                    <div className="text-3xl sm:text-4xl font-display font-black text-foreground/70 tabular-nums">
-                      4
+                    <div className="text-3xl sm:text-4xl font-display font-black text-foreground/60 tabular-nums">
+                      {catalogStats.count.toLocaleString()}
                     </div>
                     <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                      Retailers Linked
+                      Indexed &amp; Growing
                     </div>
                   </div>
+                  <div className="w-px h-10 bg-border hidden sm:block" />
+                </>
+              )}
+              <div>
+                <div className="text-3xl sm:text-4xl font-display font-black text-foreground/70 tabular-nums">
+                  4
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
+                  Retailers Linked
+                </div>
+              </div>
+              {stats && stats.available > 0 && (
+                <>
                   <div className="w-px h-10 bg-border hidden sm:block" />
                   <div>
                     <div className="text-3xl sm:text-4xl font-display font-black text-foreground/50 tabular-nums">
@@ -320,9 +328,9 @@ export default function LandingPage() {
               </div>
               <h3 className="font-display font-bold text-xl text-foreground">Search any title</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Browse {catalogStats?.count?.toLocaleString() ?? "thousands of"} games
-                across every platform and generation — NES to PS5, retro to new releases.
-                Filter by platform, sort by Metacritic score or release date.
+                Search 899,000+ games across every platform and generation — NES to PS5,
+                retro to new releases. Filter by platform, sort by Metacritic score or
+                release date. Results are cached locally for instant repeat searches.
               </p>
             </div>
             <div className="space-y-4">
