@@ -50,7 +50,9 @@ function formatRow(row: CatalogGameRow) {
     metacritic:    row.metacritic     ?? null,
     esrbRating:    row.esrbRating     ?? null,
     publisherName: row.publisherName  ?? null,
-    retailerSearchUrls: row.retailerUrls ?? {
+    // Always compute fresh from current affiliate config — never read stored
+    // DB values, which may have been written before an affiliate ID was set.
+    retailerSearchUrls: {
       ebay:     buildEbaySearchUrl(row.title),
       amazon:   buildAmazonSearchUrl(row.title),
       gamestop: buildGameStopSearchUrl(row.title),
@@ -203,8 +205,11 @@ router.get("/games/search", async (req, res): Promise<void> => {
             metacritic:    r.metacritic   ?? null,
             esrbRating:    r.esrbRating   ?? null,
             publisherName: r.publisherName ?? null,
-            retailerSearchUrls: r.retailerUrls ?? {
-              ebay: "", amazon: "", gamestop: "", bestbuy: "",
+            retailerSearchUrls: {
+              ebay:     buildEbaySearchUrl(r.title),
+              amazon:   buildAmazonSearchUrl(r.title),
+              gamestop: buildGameStopSearchUrl(r.title),
+              bestbuy:  buildBestBuySearchUrl(r.title),
             },
           }));
           total = results.length;
@@ -285,7 +290,12 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
       metacritic:    null,
       esrbRating:    r.esrbRating  ?? null,
       publisherName: r.publisherName ?? null,
-      retailerSearchUrls: r.retailerUrls ?? { ebay: "", amazon: "", gamestop: "", bestbuy: "" },
+      retailerSearchUrls: {
+        ebay:     buildEbaySearchUrl(r.title),
+        amazon:   buildAmazonSearchUrl(r.title),
+        gamestop: buildGameStopSearchUrl(r.title),
+        bestbuy:  buildBestBuySearchUrl(r.title),
+      },
     });
   }
 });
