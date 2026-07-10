@@ -7,6 +7,8 @@ import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
+import PrivacyPage from '@/pages/PrivacyPage';
+import TermsPage from '@/pages/TermsPage';
 
 // Tells GA4 about every client-side navigation.
 // gtag('config', ...) re-fires a page_view hit with the new path whenever
@@ -67,6 +69,9 @@ function AppRouter() {
       <Route path="/boutique" component={Home} />
       {/* Release detail pages */}
       <Route path="/releases/:id" component={ReleaseDetail} />
+      {/* Legal */}
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
       <Route component={NotFound} />
       </Switch>
     </>

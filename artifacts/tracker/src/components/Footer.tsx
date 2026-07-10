@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react"
+import { Link } from "wouter"
 import { useGetScrapeStatus } from "@workspace/api-client-react"
 import { ControllerIcon } from "@/components/ControllerIcon"
 
@@ -45,6 +46,25 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
               Last index: {new Date(lastScraped).toLocaleString()}
             </p>
           ) : null}
+        </div>
+
+        {/* ── Legal links ── */}
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground/50">
+          <Link
+            href="/privacy"
+            className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+          >
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link
+            href="/terms"
+            className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+          >
+            Terms of Service
+          </Link>
+          <span aria-hidden="true">·</span>
+          <span>Affiliate disclosure: links to GameStop, Amazon, eBay &amp; Best Buy may earn a commission.</span>
         </div>
 
         {/* ── Catalog attribution (shown on Browse Games page) ── */}
