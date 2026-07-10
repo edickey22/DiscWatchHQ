@@ -9,12 +9,42 @@ import { Footer } from "@/components/Footer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RetailerLinks } from "@/components/RetailerLinks"
 import { daysUntil, formatDate } from "@/lib/utils"
+import { useDocumentHead } from "@/hooks/useDocumentHead"
+import {
+  buildReleaseTitle,
+  buildReleaseDescription,
+  buildReleaseDescriptiveCopy,
+  buildReleaseJsonLd,
+  buildCanonicalUrl,
+} from "@/lib/seo"
 
 export default function ReleaseDetail() {
   const [, params] = useRoute("/releases/:id")
   const id = params?.id ? parseInt(params.id, 10) : 0
 
   const { data: release, isLoading, isError } = useGetRelease(id)
+
+  // ── SEO — injected once data is loaded ─────────────────────────────────────
+  const canonical = buildCanonicalUrl(`/releases/${id}`)
+
+  useDocumentHead(
+    release
+      ? {
+          title:       buildReleaseTitle(release),
+          description: buildReleaseDescription(release),
+          canonical,
+          ogType:      "product",
+          ogImage:     release.coverImageUrl ?? null,
+          jsonLd:      buildReleaseJsonLd(release, canonical),
+        }
+      : {
+          // Sensible placeholder while data loads — avoids flash of wrong title
+          title:       "Game Release — DiscWatchHQ",
+          description: "Limited-run physical game release tracked by DiscWatchHQ.",
+          canonical,
+          jsonLd:      null,
+        }
+  )
 
   if (isError) {
     return (
@@ -59,7 +89,7 @@ export default function ReleaseDetail() {
                   {release?.coverImageUrl ? (
                     <img
                       src={release.coverImageUrl}
-                      alt={`${release.title} cover`}
+                      alt={`${release.title} limited-run physical edition cover`}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -251,6 +281,38 @@ export default function ReleaseDetail() {
               )}
             </div>
           </div>
+
+          {/* ── About this release — unique descriptive copy ─────────────────────
+              This section provides genuine per-listing content: what the game is,
+              why it's notable/scarce, and platform/publisher context. It serves
+              real users AND gives search engines and AI crawlers unique body text
+              to index — differentiated copy is what earns organic ranking and
+              AI citation, not just schema markup presence.
+          ─────────────────────────────────────────────────────────────────────── */}
+          {release && (
+            <div className="mt-12 pt-10 border-t border-border/30">
+              <h2 className="text-lg font-display font-bold text-foreground mb-4">
+                About this release
+              </h2>
+              <p className="text-muted-foreground leading-relaxed max-w-2xl font-mono text-sm">
+                {buildReleaseDescriptiveCopy(release)}
+              </p>
+              <p className="text-muted-foreground/50 leading-relaxed max-w-2xl font-mono text-xs mt-4">
+                DiscWatchHQ automatically tracks new and upcoming limited-run physical game
+                releases from {release.publisherName} and other boutique publishers — so you
+                never miss a drop.
+              </p>
+            </div>
+          )}
+          {isLoading && (
+            <div className="mt-12 pt-10 border-t border-border/30 space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-full max-w-2xl" />
+              <Skeleton className="h-4 w-5/6 max-w-2xl" />
+              <Skeleton className="h-4 w-4/6 max-w-2xl" />
+            </div>
+          )}
+
         </div>
       </main>
 

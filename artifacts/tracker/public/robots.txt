@@ -1,2 +1,11 @@
 User-agent: *
 Allow: /
+
+# Disallow internal API paths from being listed in SERPs
+# (they're crawlable for link-following but not useful as landing pages)
+Disallow: /api/
+
+# XML sitemap — covering all boutique release pages and browse views.
+# The full sitemap is served dynamically at /api/sitemap.xml
+# Update the domain below once deployed to a custom domain.
+Sitemap: /api/sitemap.xml

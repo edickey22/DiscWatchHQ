@@ -22,6 +22,8 @@ import { NewsletterSignup } from "@/components/NewsletterSignup"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useDocumentHead } from "@/hooks/useDocumentHead"
+import { buildCanonicalUrl } from "@/lib/seo"
 
 type SortOption = "updated" | "title" | "publisher" | "newest"
 
@@ -37,6 +39,13 @@ export default function Home() {
   const [platform, setPlatform]   = useState<string>("_all")
   const [publisher, setPublisher] = useState<string>("_all")
   const [sort, setSort]           = useState<SortOption>("updated")
+
+  useDocumentHead({
+    title:       "DiscWatchHQ — Limited-Run Physical Game Tracker",
+    description: "Track limited-run physical video games from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. See what's available now, coming soon, and recently sold out — never miss a drop.",
+    canonical:   buildCanonicalUrl("/"),
+    jsonLd: null,
+  })
 
   const debouncedSearch = useDebounce(search, 300)
 

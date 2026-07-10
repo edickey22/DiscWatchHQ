@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select"
 import { CatalogGameCard, type CatalogGame } from "@/components/TgdbGameCard"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useDocumentHead } from "@/hooks/useDocumentHead"
+import { buildCanonicalUrl } from "@/lib/seo"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -118,6 +120,13 @@ export default function GamesSearch() {
   const [platform, setPlatform] = useState("all")
   const [page, setPage]         = useState(1)
   const debouncedSearch         = useDebounce(search, 400)
+
+  useDocumentHead({
+    title:       "Browse Physical Games – Limited Editions & Rare Releases | DiscWatchHQ",
+    description: "Search 1,800+ physical video game releases across platforms and generations. Find limited-edition disc games from boutique publishers, compare retailer prices, and track availability.",
+    canonical:   buildCanonicalUrl("/games"),
+    jsonLd: null,
+  })
 
   useEffect(() => { setPage(1) }, [debouncedSearch, platform])
 
