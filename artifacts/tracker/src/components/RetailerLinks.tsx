@@ -53,71 +53,72 @@ export function RetailerLinks({ urls, prices, variant = "card" }: RetailerLinksP
   }
 
   if (variant === "detail") {
+    // Sort so lowest-priced retailer appears first (top-left) in the grid.
+    // Retailers without a confirmed price stay in their original order at the end.
+    const sortedRetailers = [...RETAILERS].sort((a, b) => {
+      const pa = confirmedPrices[a.key] ?? Infinity
+      const pb = confirmedPrices[b.key] ?? Infinity
+      return pa - pb
+    })
+
     return (
-      <div className="pt-5 mt-1 border-t border-border/30">
-        <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-3">
-          Find a copy
-        </p>
+      <div className="grid grid-cols-2 gap-2.5">
+        {sortedRetailers.map(({ key, label }) => {
+          const url    = urls[key]
+          const price  = confirmedPrices[key] ?? null
+          const isBest = key === bestKey
 
-        <div className="grid grid-cols-2 gap-2">
-          {RETAILERS.map(({ key, label }) => {
-            const url    = urls[key]
-            const price  = confirmedPrices[key] ?? null
-            const isBest = key === bestKey
+          return (
+            <a
+              key={key}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={e => e.stopPropagation()}
+              className={`
+                group relative flex flex-col gap-1.5
+                rounded-lg px-4 py-4
+                bg-primary hover:bg-primary/90 active:bg-primary/80
+                transition-all duration-150
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
+                ${isBest && price !== null
+                  ? "shadow-[0_0_20px_-4px_hsl(var(--primary)/0.6)] ring-1 ring-primary/40"
+                  : "shadow-md"
+                }
+              `}
+            >
+              {/* "BEST" pill — only when there's an actual price to compare */}
+              {isBest && price !== null && (
+                <span className="absolute top-2.5 right-3 text-[8px] font-mono font-bold tracking-[0.12em] uppercase text-primary-foreground/50">
+                  BEST
+                </span>
+              )}
 
-            return (
-              <a
-                key={key}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                onClick={e => e.stopPropagation()}
-                className={`
-                  group flex items-center justify-between gap-2
-                  rounded-lg border px-4 py-3.5
-                  transition-all duration-150
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                  ${isBest
-                    ? "border-primary/50 bg-primary/10 hover:border-primary hover:bg-primary/15 shadow-[0_0_12px_-4px_hsl(var(--primary)/0.3)]"
-                    : "border-border/50 bg-card hover:border-primary/40 hover:bg-secondary"
-                  }
-                `}
-              >
-                {/* Left: retailer name + price */}
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className={`
-                    font-display font-bold text-[13px] leading-none truncate
-                    ${isBest ? "text-primary" : "text-foreground"}
-                  `}>
-                    {label}
-                  </span>
-                  {price !== null ? (
-                    <span className={`
-                      font-display tabular-nums font-bold text-[12px] leading-none
-                      ${isBest ? "text-primary" : "text-primary/70"}
-                    `}>
-                      From ${price.toFixed(2)}
-                    </span>
-                  ) : (
-                    <span className="font-mono text-[11px] leading-none text-muted-foreground/50 group-hover:text-muted-foreground/70 transition-colors">
-                      Search
-                    </span>
-                  )}
-                </div>
-
-                {/* Right: arrow icon */}
+              {/* Retailer name row */}
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-display font-bold text-[14px] leading-none text-primary-foreground">
+                  {label}
+                </span>
                 <ArrowUpRight
-                  size={15}
-                  className={`
-                    shrink-0 transition-transform duration-150
-                    group-hover:translate-x-0.5 group-hover:-translate-y-0.5
-                    ${isBest ? "text-primary/70" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"}
-                  `}
+                  size={14}
+                  className="shrink-0 text-primary-foreground/60 group-hover:text-primary-foreground
+                             group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
                 />
-              </a>
-            )
-          })}
-        </div>
+              </div>
+
+              {/* Price or search hint */}
+              {price !== null ? (
+                <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary-foreground">
+                  From ${price.toFixed(2)}
+                </span>
+              ) : (
+                <span className="font-mono text-[10px] leading-none text-primary-foreground/50 group-hover:text-primary-foreground/70 transition-colors">
+                  Search →
+                </span>
+              )}
+            </a>
+          )
+        })}
       </div>
     )
   }

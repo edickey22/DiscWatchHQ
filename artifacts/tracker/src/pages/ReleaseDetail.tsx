@@ -149,7 +149,7 @@ export default function ReleaseDetail() {
                     </div>
                   </div>
 
-                  {/* Primary action panel */}
+                  {/* Action panel */}
                   <div className="bg-card border shadow-sm rounded-xl p-6 mb-6 relative overflow-hidden">
                     {isAvailable && isClosingSoon && (
                       <div className="absolute top-0 right-0 left-0 h-1 bg-destructive animate-pulse" />
@@ -158,7 +158,9 @@ export default function ReleaseDetail() {
                     {/* Window header */}
                     <div className="flex justify-between items-center mb-5">
                       <div>
-                        <h4 className="font-display font-bold text-lg">Preorder Window</h4>
+                        <h4 className="font-display font-bold text-lg">
+                          {isSoldOut ? "Find a Copy" : "Preorder Window"}
+                        </h4>
                         {isAvailable && release.preorderCloseDate && (
                           <p className="text-sm font-mono text-muted-foreground mt-1">
                             Closes {formatDate(release.preorderCloseDate)}
@@ -166,7 +168,7 @@ export default function ReleaseDetail() {
                         )}
                         {isSoldOut && release.soldOutAt && (
                           <p className="text-sm font-mono text-muted-foreground mt-1">
-                            Closed {formatDate(release.soldOutAt)}
+                            Sold out {formatDate(release.soldOutAt)}
                           </p>
                         )}
                         {isComingSoon && (
@@ -181,46 +183,68 @@ export default function ReleaseDetail() {
                       )}
                     </div>
 
-                    {/* ── Primary CTA: publisher storefront (always plain, no affiliate) ── */}
-                    {isAvailable && (
-                      <Button asChild size="lg" className="w-full text-base font-bold shadow-lg h-14 bg-primary hover:bg-primary/90 mb-3">
-                        <a href={release.productUrl} target="_blank" rel="noopener noreferrer">
-                          Order from {release.publisherName}
-                          <ExternalLink className="ml-2 w-5 h-5" />
-                        </a>
-                      </Button>
-                    )}
-
+                    {/* ── Coming Soon: notify button first, then retailer search ── */}
                     {isComingSoon && (
                       <Button
                         size="lg"
                         variant="outline"
-                        className="w-full text-base font-bold h-14 border-primary/20 mb-3"
+                        className="w-full text-base font-bold h-14 border-primary/20 mb-4"
                         onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
                       >
                         Notify Me
                       </Button>
                     )}
 
-                    {isSoldOut && (
-                      <div className="text-center py-2 mb-3">
+                    {/* ── PRIMARY: affiliate retailer buttons (monetized — always shown first) ── */}
+                    <div className="mb-4">
+                      {(isAvailable || isComingSoon) && (
+                        <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-3">
+                          {isAvailable ? "Buy this game" : "Search retailers"}
+                        </p>
+                      )}
+                      <RetailerLinks
+                        urls={release.retailerSearchUrls}
+                        prices={release.retailerPrices}
+                        variant="detail"
+                      />
+                    </div>
+
+                    {/* ── SECONDARY: publisher direct link (no affiliate revenue — visually subordinate) ── */}
+                    <div className="pt-3 border-t border-border/20 text-center">
+                      {isAvailable && (
                         <a
                           href={release.productUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-mono text-muted-foreground hover:text-foreground underline underline-offset-4"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/50 hover:text-muted-foreground/80 underline underline-offset-4 transition-colors"
                         >
-                          View original listing on {release.publisherName}
+                          <ExternalLink size={10} />
+                          Order direct from {release.publisherName}
                         </a>
-                      </div>
-                    )}
-
-                    {/* ── Secondary: retailer search row (affiliate-tagged when IDs configured) ── */}
-                    <RetailerLinks
-                      urls={release.retailerSearchUrls}
-                      prices={release.retailerPrices}
-                      variant="detail"
-                    />
+                      )}
+                      {isSoldOut && (
+                        <a
+                          href={release.productUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/40 hover:text-muted-foreground/70 underline underline-offset-4 transition-colors"
+                        >
+                          <ExternalLink size={10} />
+                          View original listing · {release.publisherName}
+                        </a>
+                      )}
+                      {isComingSoon && (
+                        <a
+                          href={release.productUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/40 hover:text-muted-foreground/70 underline underline-offset-4 transition-colors"
+                        >
+                          <ExternalLink size={10} />
+                          View on {release.publisherName}
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
