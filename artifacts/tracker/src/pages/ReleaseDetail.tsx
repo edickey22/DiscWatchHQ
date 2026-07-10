@@ -237,6 +237,7 @@ export default function ReleaseDetail() {
                         prices={release.retailerPrices}
                         variant="detail"
                         platforms={release.platforms ?? []}
+                        guideUrls={release.guideSearchUrls}
                       />
                     </div>
 

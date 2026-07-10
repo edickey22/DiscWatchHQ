@@ -119,6 +119,31 @@ export function buildBestBuySearchUrl(title: string): string {
 }
 
 /**
+ * eBay strategy guide search — searches for "{title} strategy guide".
+ * Most physical guides are out-of-print / used, making eBay the primary market.
+ * Appends EPN affiliate params when EBAY_CAMPAIGN_ID is set.
+ */
+export function buildEbayStrategyGuideUrl(title: string): string {
+  const q = encodeURIComponent(`${title} strategy guide`);
+  const base = `https://www.ebay.com/sch/i.html?_nkw=${q}`;
+  if (!affiliateConfig.ebay.campaignId) return base;
+  const { campaignId, rotationId, toolId } = affiliateConfig.ebay;
+  return `${base}&mkcid=1&mkrid=${rotationId}&siteid=0&campid=${campaignId}&toolid=${toolId}&mkevt=1`;
+}
+
+/**
+ * Amazon strategy guide search — searches for "{title} official strategy guide".
+ * Covers new guides from Prima / Future Press for major releases as well as used stock.
+ * Appends Associates tag when AMAZON_ASSOCIATES_TAG is set.
+ */
+export function buildAmazonStrategyGuideUrl(title: string): string {
+  const q = encodeURIComponent(`${title} official strategy guide`);
+  const base = `https://www.amazon.com/s?k=${q}`;
+  if (!affiliateConfig.amazon.associatesTag) return base;
+  return `${base}&tag=${affiliateConfig.amazon.associatesTag}`;
+}
+
+/**
  * Add an Amazon Associates tag to a known Amazon product URL.
  * Used when the scraper found a direct ASIN link.
  */

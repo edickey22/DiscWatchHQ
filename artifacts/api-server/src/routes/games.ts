@@ -29,6 +29,7 @@ import { checkAndReserveTgdbCall } from "../lib/tgdbBudget";
 import {
   buildEbaySearchUrl, buildAmazonSearchUrl,
   buildGameStopSearchUrl, buildBestBuySearchUrl,
+  buildEbayStrategyGuideUrl, buildAmazonStrategyGuideUrl,
 } from "../lib/affiliateConfig";
 import { logger } from "../lib/logger";
 
@@ -66,6 +67,10 @@ function formatRow(row: CatalogGameRow) {
       amazon:   buildAmazonSearchUrl(row.title),
       gamestop: buildGameStopSearchUrl(row.title),
       bestbuy:  buildBestBuySearchUrl(row.title),
+    },
+    guideSearchUrls: {
+      ebay:   buildEbayStrategyGuideUrl(row.title),
+      amazon: buildAmazonStrategyGuideUrl(row.title),
     },
   };
 }
@@ -314,6 +319,10 @@ router.get("/games/search", async (req, res): Promise<void> => {
               amazon:   buildAmazonSearchUrl(r.title),
               gamestop: buildGameStopSearchUrl(r.title),
               bestbuy:  buildBestBuySearchUrl(r.title),
+            },
+            guideSearchUrls: {
+              ebay:   buildEbayStrategyGuideUrl(r.title),
+              amazon: buildAmazonStrategyGuideUrl(r.title),
             },
           }));
           total = results.length;
@@ -615,6 +624,10 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
         gamestop: buildGameStopSearchUrl(r.title),
         bestbuy:  buildBestBuySearchUrl(r.title),
       },
+      guideSearchUrls: {
+        ebay:   buildEbayStrategyGuideUrl(r.title),
+        amazon: buildAmazonStrategyGuideUrl(r.title),
+      },
     });
   }
 });
@@ -873,6 +886,10 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       retailerSearchUrls: {
         ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
         gamestop: buildGameStopSearchUrl(sourceId), bestbuy: buildBestBuySearchUrl(sourceId),
+      },
+      guideSearchUrls: {
+        ebay:   buildEbayStrategyGuideUrl(sourceId),
+        amazon: buildAmazonStrategyGuideUrl(sourceId),
       },
     };
 

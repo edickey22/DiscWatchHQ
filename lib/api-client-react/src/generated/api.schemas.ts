@@ -29,6 +29,16 @@ export interface RetailerSearchUrls {
 }
 
 /**
+ * Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).
+ */
+export interface GuideSearchUrls {
+  /** eBay search for "{title} strategy guide" — best for used and out-of-print guides. */
+  ebay: string;
+  /** Amazon search for "{title} official strategy guide" — covers new releases. */
+  amazon: string;
+}
+
+/**
  * Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.
  */
 export interface RetailerPrices {
@@ -68,6 +78,7 @@ export interface Release {
   /** @nullable */
   amazonUrl?: string | null;
   retailerSearchUrls: RetailerSearchUrls;
+  guideSearchUrls?: GuideSearchUrls;
   retailerPrices?: RetailerPrices;
   firstSeenAt?: string;
   createdAt: string;

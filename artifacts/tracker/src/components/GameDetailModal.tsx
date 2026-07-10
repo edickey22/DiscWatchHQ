@@ -370,6 +370,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                     urls={displayed.retailerSearchUrls}
                     platforms={displayed.platforms}
                     variant="detail"
+                    guideUrls={displayed.guideSearchUrls}
                   />
                 </div>
               )}

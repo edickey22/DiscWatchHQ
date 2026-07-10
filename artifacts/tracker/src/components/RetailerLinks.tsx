@@ -11,9 +11,15 @@
  *   (pre-2010 discontinued hardware), Amazon and Best Buy are hidden —
  *   they realistically carry no stock for these titles. eBay leads (best
  *   source for retro), followed by GameStop (used/trade-in stock).
+ *
+ * Strategy guide links (optional):
+ *   When guideUrls is provided, a visually secondary "Strategy Guides"
+ *   section appears below the main buttons — eBay (used/OOP) and Amazon
+ *   (new releases from Prima / Future Press). Styled as ghost buttons in
+ *   the detail variant and compact text links in the card variant.
  */
 
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight, BookOpen } from "lucide-react"
 
 // ── Retro platform detection ──────────────────────────────────────────────────
 
@@ -49,12 +55,18 @@ interface RetailerSearchUrls {
   ebay: string; amazon: string; gamestop: string; bestbuy: string
 }
 
+interface GuideSearchUrls {
+  ebay: string; amazon: string
+}
+
 interface RetailerLinksProps {
-  urls:       RetailerSearchUrls
-  prices?:    RetailerPrices | null
-  variant?:   "card" | "detail"
+  urls:        RetailerSearchUrls
+  prices?:     RetailerPrices | null
+  variant?:    "card" | "detail"
   /** Game's platform list — used for retro detection. Pass whenever known. */
-  platforms?: string[]
+  platforms?:  string[]
+  /** Optional strategy guide search links (eBay + Amazon). */
+  guideUrls?:  GuideSearchUrls
 }
 
 // All four retailers in default display order
@@ -73,7 +85,7 @@ const RETRO_RETAILERS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function RetailerLinks({ urls, prices, variant = "card", platforms }: RetailerLinksProps) {
+export function RetailerLinks({ urls, prices, variant = "card", platforms, guideUrls }: RetailerLinksProps) {
   const retro    = isRetroGame(platforms ?? [])
   const RETAILERS = retro ? RETRO_RETAILERS : ALL_RETAILERS
 
@@ -157,6 +169,46 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms }: Ret
             )
           })}
         </div>
+
+        {/* ── Strategy guides — secondary discovery, not a primary CTA ── */}
+        {guideUrls && (
+          <div className="mt-3 pt-2.5 border-t border-border/15">
+            <p className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-2">
+              <BookOpen size={10} className="opacity-70 shrink-0" />
+              Strategy Guides
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href={guideUrls.ebay}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                onClick={e => e.stopPropagation()}
+                className="group flex flex-col gap-1 rounded border border-border/25 bg-secondary/20 px-3 py-2.5 hover:border-border/50 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
+                  eBay
+                </span>
+                <span className="font-mono text-[9px] leading-none text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                  Used / out-of-print →
+                </span>
+              </a>
+              <a
+                href={guideUrls.amazon}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                onClick={e => e.stopPropagation()}
+                className="group flex flex-col gap-1 rounded border border-border/25 bg-secondary/20 px-3 py-2.5 hover:border-border/50 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
+                  Amazon
+                </span>
+                <span className="font-mono text-[9px] leading-none text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                  New releases →
+                </span>
+              </a>
+            </div>
+          </div>
+        )}
       </>
     )
   }
@@ -204,6 +256,34 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms }: Ret
           )
         })}
       </div>
+
+      {/* ── Strategy guides — compact text links, clearly secondary ── */}
+      {guideUrls && (
+        <div className="mt-1.5 pt-1.5 border-t border-border/15 flex items-center gap-1.5">
+          <BookOpen size={8} className="text-muted-foreground/30 shrink-0" />
+          <div className="flex items-center gap-1.5 min-w-0">
+            <a
+              href={guideUrls.ebay}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={e => e.stopPropagation()}
+              className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors underline underline-offset-2 decoration-muted-foreground/20 truncate"
+            >
+              Guide · eBay
+            </a>
+            <span className="text-muted-foreground/20 text-[8px] shrink-0">·</span>
+            <a
+              href={guideUrls.amazon}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={e => e.stopPropagation()}
+              className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors underline underline-offset-2 decoration-muted-foreground/20 truncate"
+            >
+              Amazon
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

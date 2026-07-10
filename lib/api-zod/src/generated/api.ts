@@ -54,6 +54,10 @@ export const ListReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
   "retailerPrices": zod.object({
   "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
   "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
@@ -101,6 +105,10 @@ export const ListAvailableReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
   "retailerPrices": zod.object({
   "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
   "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
@@ -150,6 +158,10 @@ export const ListSoldOutReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
   "retailerPrices": zod.object({
   "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
   "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
@@ -197,6 +209,10 @@ export const ListComingSoonReleasesResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
   "retailerPrices": zod.object({
   "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
   "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
@@ -250,6 +266,10 @@ export const GetReleaseResponse = zod.object({
   "gamestop": zod.string(),
   "bestbuy": zod.string()
 }).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
   "retailerPrices": zod.object({
   "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
   "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')

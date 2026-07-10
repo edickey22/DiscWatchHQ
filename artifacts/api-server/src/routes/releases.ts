@@ -14,6 +14,8 @@ import {
   buildGameStopSearchUrl,
   buildBestBuySearchUrl,
   buildAmazonProductUrl,
+  buildEbayStrategyGuideUrl,
+  buildAmazonStrategyGuideUrl,
 } from "../lib/affiliateConfig";
 
 const router: IRouter = Router();
@@ -148,6 +150,11 @@ function formatRelease(row: RawRow) {
       amazon: buildAmazonSearchUrl(row.title),
       gamestop: buildGameStopSearchUrl(row.title),
       bestbuy: buildBestBuySearchUrl(row.title),
+    },
+    // Strategy guide search links — eBay (used/OOP) and Amazon (new releases)
+    guideSearchUrls: {
+      ebay:   buildEbayStrategyGuideUrl(row.title),
+      amazon: buildAmazonStrategyGuideUrl(row.title),
     },
     // Prices are DB-cached; written by the eBay price scheduler background job.
     // null = scheduler hasn't run yet, no active listings found, or item is

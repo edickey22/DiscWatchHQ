@@ -26,6 +26,10 @@ export interface RawgGame {
     gamestop: string
     bestbuy: string
   }
+  guideSearchUrls?: {
+    ebay: string
+    amazon: string
+  }
 }
 
 function MetacriticBadge({ score }: { score: number }) {
@@ -100,7 +104,7 @@ export function RawgGameCard({ game }: { game: RawgGame }) {
 
         {/* Retailer buttons — pushed to bottom of card */}
         <div className="mt-auto">
-          <RetailerLinks urls={game.retailerSearchUrls} />
+          <RetailerLinks urls={game.retailerSearchUrls} guideUrls={game.guideSearchUrls} />
         </div>
       </div>
     </article>

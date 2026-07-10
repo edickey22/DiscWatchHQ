@@ -12,6 +12,7 @@ export * from './affiliateConfigBestbuy';
 export * from './affiliateConfigEbay';
 export * from './affiliateConfigGamestop';
 export * from './errorResponse';
+export * from './guideSearchUrls';
 export * from './healthStatus';
 export * from './listAvailableReleasesParams';
 export * from './listAvailableReleasesSort';

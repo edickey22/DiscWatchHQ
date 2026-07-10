@@ -5,6 +5,7 @@
  * Limited-run physical game tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { GuideSearchUrls } from './guideSearchUrls';
 import type { ReleaseStatus } from './releaseStatus';
 import type { RetailerPrices } from './retailerPrices';
 import type { RetailerSearchUrls } from './retailerSearchUrls';
@@ -33,6 +34,7 @@ export interface Release {
   /** @nullable */
   amazonUrl?: string | null;
   retailerSearchUrls: RetailerSearchUrls;
+  guideSearchUrls?: GuideSearchUrls;
   retailerPrices?: RetailerPrices;
   firstSeenAt?: string;
   createdAt: string;

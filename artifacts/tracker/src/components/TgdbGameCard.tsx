@@ -26,6 +26,9 @@ export interface CatalogGame {
   retailerSearchUrls: {
     ebay: string; amazon: string; gamestop: string; bestbuy: string
   }
+  guideSearchUrls?: {
+    ebay: string; amazon: string
+  }
 }
 
 // ── Badges ────────────────────────────────────────────────────────────────────
@@ -177,7 +180,7 @@ export function CatalogGameCard({
 
         {/* Retailer buttons — platform-aware (retro = eBay + GameStop only) */}
         <div className="mt-auto pt-1">
-          <RetailerLinks urls={game.retailerSearchUrls} platforms={game.platforms} />
+          <RetailerLinks urls={game.retailerSearchUrls} platforms={game.platforms} guideUrls={game.guideSearchUrls} />
         </div>
       </div>
     </article>

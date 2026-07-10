@@ -366,6 +366,8 @@ components:
           type: ["string", "null"]
         retailerSearchUrls:
           $ref: "#/components/schemas/RetailerSearchUrls"
+        guideSearchUrls:
+          $ref: "#/components/schemas/GuideSearchUrls"
         retailerPrices:
           $ref: "#/components/schemas/RetailerPrices"
         firstSeenAt:
@@ -494,6 +496,18 @@ components:
           type: string
         bestbuy:
           type: string
+
+    GuideSearchUrls:
+      type: object
+      description: Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).
+      required: [ebay, amazon]
+      properties:
+        ebay:
+          type: string
+          description: 'eBay search for "{title} strategy guide" — best for used and out-of-print guides.'
+        amazon:
+          type: string
+          description: 'Amazon search for "{title} official strategy guide" — covers new releases.'
 
     RetailerPrices:
       type: object
