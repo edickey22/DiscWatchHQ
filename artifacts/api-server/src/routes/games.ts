@@ -23,6 +23,7 @@ import {
   rawgReady, tgdbReady, RAWG_KEY,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
   fetchPopularFromRawg, fetchNewReleasesFromRawg,
+  normPlatform,
 } from "../lib/catalogService";
 import { checkAndReserveTgdbCall } from "../lib/tgdbBudget";
 import {
@@ -428,6 +429,173 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
       },
     });
   }
+});
+
+// ── Landing covers ────────────────────────────────────────────────────────────
+
+interface LandingCover { title: string; coverImageUrl: string }
+let _landingCoversCache: { covers: LandingCover[]; fetchedAt: number } | null = null;
+const LANDING_CACHE_TTL_MS = 60 * 60_000; // 1 hour
+
+/**
+ * High-profile / visually rich titles to explicitly search for on RAWG.
+ * Unreleased/unindexed titles (GTA VI, Wolverine, etc.) return empty results
+ * and are silently skipped — the grid fills with other popular titles instead.
+ * Only RAWG background_image URLs are used; no press-kit or external images.
+ */
+const CURATED_COVER_SEARCHES = [
+  // 2026/2027 anticipated (many not yet in RAWG — will be skipped gracefully)
+  "Grand Theft Auto VI",
+  "Marvel Wolverine",
+  "Kingdom Hearts IV",
+  "Blood of Dawnwalker",
+  "South of Midnight",
+  "Fable 2024",
+  "Avowed",
+  // Confirmed in RAWG with great key art
+  "Grand Theft Auto V",
+  "Assassin Creed Shadows",
+  "Final Fantasy VII Rebirth",
+  "Final Fantasy XVI",
+  "Elden Ring",
+  "Cyberpunk 2077",
+  "God of War Ragnarok",
+  "Hogwarts Legacy",
+  "Baldur Gate 3",
+  "Marvel Spider-Man 2",
+  "Black Myth Wukong",
+  "Indiana Jones Great Circle",
+  "Metaphor ReFantazio",
+  "Stellar Blade",
+  "Dragon Dogma 2",
+  "Like a Dragon Infinite Wealth",
+  "Tekken 8",
+  "Street Fighter 6",
+  "Diablo IV",
+  "Starfield",
+  "Armored Core VI",
+  "Hellblade II",
+  "Death Stranding 2",
+  "Alan Wake 2",
+  "Lies of P",
+  "Remnant II",
+  "Atomic Heart",
+  "Dead Space 2023",
+  "Resident Evil 4 Remake",
+  "Returnal",
+  "Demon Souls",
+  "Forspoken",
+  "Deathloop",
+];
+
+/**
+ * GET /api/games/landing-covers
+ *
+ * Returns up to 80 game cover images for the landing-page tile wallpaper.
+ *
+ * Strategy (DB-first to minimise RAWG calls):
+ *   1. Load all catalog_games with cover images, ordered by metacritic DESC.
+ *   2. If total < 40 AND RAWG is configured: search RAWG for each curated title
+ *      in parallel (max 1 request per title, take first match with a cover image).
+ *      Upsert found rows to catalog_games so subsequent requests are DB-only.
+ *   3. Cache the assembled cover list in-process for 1 hour (LANDING_CACHE_TTL_MS).
+ *      This means RAWG curated searches run at most once per server restart.
+ *
+ * Attribution: all returned coverImageUrl values come from RAWG's
+ * background_image field, same informational-reference context as RAWG itself.
+ */
+router.get("/games/landing-covers", async (req, res): Promise<void> => {
+  // ── Serve from cache if fresh ──────────────────────────────────────────────
+  const now = Date.now();
+  if (_landingCoversCache && now - _landingCoversCache.fetchedAt < LANDING_CACHE_TTL_MS) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json({ covers: _landingCoversCache.covers });
+    return;
+  }
+
+  // ── Phase 1: load from DB ──────────────────────────────────────────────────
+  const dbRows = await db.select()
+    .from(catalogGamesTable)
+    .where(sql`${catalogGamesTable.coverImageUrl} IS NOT NULL`)
+    .orderBy(
+      sql`${catalogGamesTable.metacritic} DESC NULLS LAST`,
+      sql`${catalogGamesTable.updatedAt} DESC`,
+    )
+    .limit(80);
+
+  const seenIds  = new Set(dbRows.map(r => r.sourceId));
+  const seenUrls = new Set(dbRows.map(r => r.coverImageUrl));
+
+  let coverRows = dbRows.map(r => ({ title: r.title, coverImageUrl: r.coverImageUrl! }));
+
+  // ── Phase 2: curated RAWG searches (only if DB is sparse) ─────────────────
+  if (coverRows.length < 40 && rawgReady) {
+    const searchResults = await Promise.allSettled(
+      CURATED_COVER_SEARCHES.map(q =>
+        fetch(
+          `https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(q)}&page_size=3&search_precise=true`,
+          { headers: { "User-Agent": "DiscWatchHQ/1.0" }, signal: AbortSignal.timeout(8_000) },
+        ).then(r => r.ok ? r.json() : null),
+      ),
+    );
+
+    const newRows: typeof catalogGamesTable.$inferInsert[] = [];
+
+    for (const result of searchResults) {
+      if (result.status !== "fulfilled" || !result.value?.results?.length) continue;
+      const games: Array<{
+        id: number; name: string; background_image: string | null;
+        released: string | null; metacritic: number | null;
+        platforms: Array<{ platform: { name: string } }> | null;
+      }> = result.value.results;
+
+      for (const g of games) {
+        if (!g.background_image) continue;
+        const sourceId = `rawg:${g.id}`;
+        if (seenIds.has(sourceId) || seenUrls.has(g.background_image)) continue;
+        seenIds.add(sourceId);
+        seenUrls.add(g.background_image);
+        coverRows.push({ title: g.name, coverImageUrl: g.background_image });
+        newRows.push({
+          source: "rawg", sourceId, title: g.name,
+          platforms: (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+          publisherName: null, coverImageUrl: g.background_image,
+          releaseYear: g.released ? parseInt(g.released.slice(0, 4), 10) || null : null,
+          metacritic: g.metacritic ?? null, esrbRating: null,
+          retailerUrls: {
+            ebay:     buildEbaySearchUrl(g.name),
+            amazon:   buildAmazonSearchUrl(g.name),
+            gamestop: buildGameStopSearchUrl(g.name),
+            bestbuy:  buildBestBuySearchUrl(g.name),
+          },
+        });
+        break; // one result per search query
+      }
+    }
+
+    // Persist to DB in the background — non-blocking
+    if (newRows.length > 0) {
+      upsertCatalogGames(newRows).catch(err =>
+        logger.error({ err }, "landing covers curated upsert failed"),
+      );
+    }
+  }
+
+  // ── Deterministic shuffle (Fisher-Yates with title-hash seed) ─────────────
+  // Consistent ordering per server instance avoids visual jumps on re-fetch
+  // while still mixing curated and popular titles across all columns.
+  const arr = coverRows.slice(0, 80);
+  for (let i = arr.length - 1; i > 0; i--) {
+    // Cheap hash: xor of char codes to seed position
+    const seed = arr[i].title.split("").reduce((h, c) => (h ^ c.charCodeAt(0)) * 31, i);
+    const j = Math.abs(seed) % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  _landingCoversCache = { covers: arr, fetchedAt: now };
+
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json({ covers: arr });
 });
 
 /**

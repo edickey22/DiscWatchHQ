@@ -1,21 +1,28 @@
 /**
  * LandingPage — DiscWatchHQ hero/home experience.
  *
- * Visual concept: "The War Room"
- * A living wallpaper of real game cover art (from RAWG popular games) scrolls
- * continuously behind the hero — the sheer density of games underlines the
- * scale of what we track. Bold, dark, high-contrast. Every element earns its
- * place on the screen.
+ * Visual concept: "The War Room" — Netflix-style tile wallpaper
+ * Seven vertical columns of real RAWG game cover art scroll continuously at
+ * independent speeds, alternating directions, creating a living mosaic behind
+ * the hero. Column speeds range from 24 s (fast) to 52 s (slow) to produce
+ * layered parallax depth without any JS-driven repaints.
  *
- * Cover art use: only actual published game box art / key art from the RAWG
- * API (background_image field) is displayed, in the same informational/
- * reference context as RAWG, Metacritic, and Wikipedia — no generated or
- * fabricated artwork depicting copyrighted characters.
+ * Cover art sourcing policy:
+ *   Only actual published game key art from the RAWG API (background_image
+ *   field) is displayed — same informational/reference context as RAWG,
+ *   Metacritic, and Wikipedia. No generated, fabricated, or hotlinked artwork.
+ *   Attribution: "Powered by RAWG" link present on this page per API ToS.
+ *
+ * Performance:
+ *   • Pure CSS keyframe animations — no JS animation loop.
+ *   • `will-change: transform` promotes each column to its own GPU layer.
+ *   • `loading="lazy"` on all tile images; `decoding="async"` for off-thread decode.
+ *   • Tiles are `aria-hidden` — purely decorative; no alt text needed.
  */
 
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search } from "lucide-react"
+import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
 
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
@@ -29,15 +36,10 @@ import { buildCanonicalUrl } from "@/lib/seo"
 interface Cover { coverImageUrl: string; title: string }
 
 async function fetchCovers(): Promise<Cover[]> {
-  const res = await fetch("/api/games/popular")
+  const res = await fetch("/api/games/landing-covers")
   if (!res.ok) return []
   const data = await res.json()
-  return (data.results ?? [])
-    .filter((g: { coverImageUrl: string | null }) => g.coverImageUrl)
-    .map((g: { coverImageUrl: string; title: string }) => ({
-      coverImageUrl: g.coverImageUrl,
-      title:         g.title,
-    }))
+  return (data.covers ?? []).filter((g: Cover) => g.coverImageUrl)
 }
 
 async function fetchCatalogStats(): Promise<{ count: number }> {
@@ -56,28 +58,69 @@ const PUBLISHERS = [
   "Blizzard Gear Store",
 ]
 
-// ── Scrolling cover column ────────────────────────────────────────────────────
+// ── Column config ─────────────────────────────────────────────────────────────
+// Seven columns, alternating up/down, staggered speeds for parallax depth.
+// Duration in seconds — odd indices scroll down, even scroll up.
+const COLUMN_CONFIG = [
+  { duration: 52, reverse: false }, // col 0: slowest, up
+  { duration: 30, reverse: true  }, // col 1: fast, down
+  { duration: 44, reverse: false }, // col 2: medium, up
+  { duration: 25, reverse: true  }, // col 3: fastest, down — eye-catching centre
+  { duration: 48, reverse: false }, // col 4: slow, up
+  { duration: 35, reverse: true  }, // col 5: medium-fast, down
+  { duration: 28, reverse: false }, // col 6: fast, up
+] as const
 
-function CoverColumn({
+// ── Scrolling tile column ─────────────────────────────────────────────────────
+
+function TileColumn({
   covers,
-  animClass,
+  colIndex,
 }: {
   covers: Cover[]
-  animClass: string
+  colIndex: number
 }) {
-  if (!covers.length) return null
-  // Duplicate for seamless infinite loop
-  const doubled = [...covers, ...covers]
+  const { duration, reverse } = COLUMN_CONFIG[colIndex]
+  // Duplicate for seamless infinite loop; minimum 6 tiles to fill viewport
+  const tiles = covers.length < 4
+    ? [...covers, ...covers, ...covers, ...covers]
+    : [...covers, ...covers]
+
+  if (!tiles.length) return null
+
+  // Unique animation name per column — avoids any shared keyframe conflict
+  const animName = `dwTile${colIndex}`
+
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className={animClass}>
-        {doubled.map((c, i) => (
-          <div key={i} className="w-full aspect-video bg-muted/50 overflow-hidden mb-1.5 rounded-sm">
+    <div
+      className="flex-1 overflow-hidden"
+      style={{ contain: "layout style" }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes ${animName} {
+          from { transform: translateY(${reverse ? "-50%" : "0"}); }
+          to   { transform: translateY(${reverse ? "0" : "-50%"}); }
+        }
+      `}</style>
+      <div
+        style={{
+          animation:   `${animName} ${duration}s linear infinite`,
+          willChange:  "transform",
+        }}
+      >
+        {tiles.map((c, i) => (
+          <div
+            key={i}
+            className="w-full overflow-hidden mb-1"
+            style={{ aspectRatio: "3/4" }}
+          >
             <img
               src={c.coverImageUrl}
               alt=""
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
               loading="lazy"
+              decoding="async"
               draggable={false}
             />
           </div>
@@ -91,45 +134,32 @@ function CoverColumn({
 
 export default function LandingPage() {
   useDocumentHead({
-    title:       "DiscWatchHQ — Track Every Limited-Run Physical Game Release",
-    description: "Never miss a drop. DiscWatchHQ tracks limited-run physical game releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more — in real time.",
+    title:       "DiscWatchHQ — Find Any Game, Buy Anywhere",
+    description: "Search 2,000+ physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.",
     canonical:   buildCanonicalUrl("/"),
     jsonLd:      null,
   })
 
   const { data: stats }        = useGetReleaseStats()
   const { data: catalogStats } = useQuery({
-    queryKey: ["catalog-stats"],
-    queryFn:  fetchCatalogStats,
-    staleTime: 5 * 60 * 1_000,
+    queryKey:  ["catalog-stats"],
+    queryFn:   fetchCatalogStats,
+    staleTime: 5 * 60_000,
   })
   const { data: covers = [] } = useQuery({
-    queryKey: ["landing-covers"],
-    queryFn:  fetchCovers,
-    staleTime: 60 * 60 * 1_000,
+    queryKey:  ["landing-covers-v2"],
+    queryFn:   fetchCovers,
+    staleTime: 60 * 60_000,
   })
 
-  // Distribute covers across 4 scrolling columns
-  const col = (mod: number) => covers.filter((_, i) => i % 4 === mod)
+  // Round-robin distribution across 7 columns
+  const colCovers = (idx: number) => covers.filter((_, i) => i % 7 === idx)
+
+  // Show tiles on mobile only if we have enough images (avoid sparse look)
+  const hasTiles = covers.length >= 7
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Keyframe animations for the cover art columns */}
-      <style>{`
-        @keyframes dwScrollUp {
-          from { transform: translateY(0); }
-          to   { transform: translateY(-50%); }
-        }
-        @keyframes dwScrollDown {
-          from { transform: translateY(-50%); }
-          to   { transform: translateY(0); }
-        }
-        .dw-col-a { animation: dwScrollUp   32s linear infinite; }
-        .dw-col-b { animation: dwScrollDown 24s linear infinite; }
-        .dw-col-c { animation: dwScrollUp   28s linear infinite; }
-        .dw-col-d { animation: dwScrollDown 36s linear infinite; }
-      `}</style>
-
       <Header />
 
       {/* ════════════════════════════════════════════════════════════════════
@@ -137,22 +167,40 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="relative flex items-center min-h-[calc(100vh-4rem)] overflow-hidden">
 
-        {/* ── Cover art wallpaper ── */}
-        {covers.length > 0 && (
+        {/* ── Tile wallpaper ── */}
+        {hasTiles && (
           <div
-            className="absolute inset-0 flex gap-1.5 overflow-hidden opacity-[0.22]"
+            className="absolute inset-0 overflow-hidden"
             aria-hidden="true"
           >
-            <CoverColumn covers={col(0)} animClass="dw-col-a" />
-            <CoverColumn covers={col(1)} animClass="dw-col-b" />
-            <CoverColumn covers={col(2)} animClass="dw-col-c" />
-            <CoverColumn covers={col(3)} animClass="dw-col-d" />
+            {/* Tile grid: 4 cols on mobile → 7 on lg */}
+            <div
+              className="h-full flex gap-1"
+              style={{ opacity: 0.3 }}
+            >
+              {COLUMN_CONFIG.map((_, idx) => (
+                <div
+                  key={idx}
+                  // Hide the rightmost 3 columns on small screens for density
+                  className={idx >= 4 ? "hidden lg:block flex-1" : "flex-1"}
+                  style={{ minWidth: 0 }}
+                >
+                  <TileColumn covers={colCovers(idx)} colIndex={idx} />
+                </div>
+              ))}
+            </div>
+
+            {/* Left vignette — keeps hero text fully legible */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/92 to-background/20 pointer-events-none" />
+            {/* Top vignette */}
+            <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80 pointer-events-none" />
           </div>
         )}
 
-        {/* ── Gradient overlays — hero text must be legible ── */}
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-background/60" />
+        {/* Fallback solid dark bg while covers load */}
+        {!hasTiles && (
+          <div className="absolute inset-0 bg-gradient-to-br from-background to-secondary/30" />
+        )}
 
         {/* ── Hero content ── */}
         <div className="relative z-10 container mx-auto max-w-6xl px-4 py-24">
@@ -161,7 +209,9 @@ export default function LandingPage() {
             {/* Eyebrow */}
             <div className="inline-flex items-center gap-2 text-[11px] font-bold font-mono uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-3 py-1.5 rounded-full mb-8 select-none">
               <Zap size={10} />
-              {catalogStats?.count ? `${catalogStats.count.toLocaleString()} games · 4 major retailers` : "Physical game finder · 4 major retailers"}
+              {catalogStats?.count
+                ? `${catalogStats.count.toLocaleString()} games · 4 major retailers`
+                : "Physical game finder · 4 major retailers"}
             </div>
 
             {/* Headline */}
@@ -184,8 +234,7 @@ export default function LandingPage() {
             {/* CTAs */}
             <div className="flex flex-wrap gap-4 mb-16">
               <Button
-                asChild
-                size="lg"
+                asChild size="lg"
                 className="h-14 px-8 text-base font-bold gap-2 shadow-lg shadow-primary/25"
               >
                 <Link href="/games">
@@ -193,18 +242,14 @@ export default function LandingPage() {
                 </Link>
               </Button>
               <Button
-                asChild
-                size="lg"
-                variant="outline"
+                asChild size="lg" variant="outline"
                 className="h-14 px-8 text-base font-semibold border-foreground/20 hover:border-foreground/40"
               >
-                <Link href="/boutique">
-                  Boutique Tracker
-                </Link>
+                <Link href="/boutique">Boutique Tracker</Link>
               </Button>
             </div>
 
-            {/* Live stats — catalog count leads, boutique numbers secondary */}
+            {/* Live stats — catalog count leads, boutique secondary */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">
               {catalogStats && catalogStats.count > 0 && (
                 <div>
@@ -241,6 +286,21 @@ export default function LandingPage() {
                 </>
               )}
             </div>
+
+            {/* RAWG attribution — required by RAWG API ToS for pages displaying their data */}
+            {hasTiles && (
+              <p className="mt-8 text-[10px] font-mono text-muted-foreground/35 flex items-center gap-1">
+                Background art powered by{" "}
+                <a
+                  href="https://rawg.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground/50 hover:text-primary underline underline-offset-2 inline-flex items-center gap-0.5 transition-colors"
+                >
+                  RAWG <ExternalLink size={8} />
+                </a>
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -258,9 +318,7 @@ export default function LandingPage() {
               <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                 <Search className="text-primary" size={18} />
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground">
-                Search any title
-              </h3>
+              <h3 className="font-display font-bold text-xl text-foreground">Search any title</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Browse {catalogStats?.count?.toLocaleString() ?? "thousands of"} games
                 across every platform and generation — NES to PS5, retro to new releases.
@@ -271,9 +329,7 @@ export default function LandingPage() {
               <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                 <ShoppingBag className="text-primary" size={18} />
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground">
-                Buy at four retailers
-              </h3>
+              <h3 className="font-display font-bold text-xl text-foreground">Buy at four retailers</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Every game card links directly to GameStop, Amazon, eBay, and Best Buy.
                 One search, four storefronts — find the best price or availability without
@@ -284,9 +340,7 @@ export default function LandingPage() {
               <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                 <Clock className="text-primary" size={18} />
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground">
-                Boutique drop tracker
-              </h3>
+              <h3 className="font-display font-bold text-xl text-foreground">Boutique drop tracker</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Limited-run physical releases from boutique publishers like Limited Run
                 Games and Strictly Limited are monitored every 2 hours — Available&nbsp;Now,
@@ -318,9 +372,7 @@ export default function LandingPage() {
                   size={20}
                 />
               </div>
-              <h3 className="font-display font-black text-2xl text-foreground mb-2">
-                Browse Games
-              </h3>
+              <h3 className="font-display font-black text-2xl text-foreground mb-2">Browse Games</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                 Explore the full game catalog — popular titles, new releases, every
                 platform from NES to PS5 — with direct retailer buy links.
@@ -344,9 +396,7 @@ export default function LandingPage() {
                   size={20}
                 />
               </div>
-              <h3 className="font-display font-black text-2xl text-foreground mb-2">
-                Boutique Tracker
-              </h3>
+              <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                 Real-time scarcity tracking for limited-run physical releases from 7
                 boutique publishers. Preorder windows, countdowns, and secondary-market
