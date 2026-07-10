@@ -1,13 +1,15 @@
 /**
  * /api/catalog — metadata endpoints for the unified game catalog.
  *
- * GET /catalog/stats     — total catalog_games count (used by header)
- * GET /catalog/platforms — distinct platforms present in catalog_games
+ * GET /catalog/stats        — total catalog_games count (used by header)
+ * GET /catalog/platforms    — distinct platforms present in catalog_games
+ * GET /catalog/tgdb-budget  — daily TGDB API call budget status (monitoring)
  */
 
 import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db, catalogGamesTable } from "@workspace/db";
+import { getTgdbBudgetStatus, DAILY_TOTAL, BACKFILL_ALLOC, SEARCH_ALLOC } from "../lib/tgdbBudget";
 
 const router = Router();
 
@@ -42,6 +44,39 @@ router.get("/catalog/platforms", async (_req, res): Promise<void> => {
     count: parseInt(r.game_count, 10),
   }));
   res.json({ platforms });
+});
+
+/**
+ * GET /api/catalog/tgdb-budget
+ *
+ * Returns the current state of the TGDB daily call budget.
+ * Useful for monitoring how many API calls remain today.
+ *
+ * Example response:
+ * {
+ *   "date": "2026-07-10",
+ *   "totalCalls": 5,
+ *   "totalBudget": 28,
+ *   "totalRemaining": 23,
+ *   "backfillCalls": 2,
+ *   "backfillBudget": 10,
+ *   "searchCalls": 3,
+ *   "searchBudget": 18,
+ *   "exhausted": false
+ * }
+ */
+router.get("/catalog/tgdb-budget", async (_req, res): Promise<void> => {
+  const status = await getTgdbBudgetStatus();
+  res.json({
+    ...status,
+    // Include the configured constants so callers know the full picture
+    config: {
+      dailyTotal:    DAILY_TOTAL,
+      backfillAlloc: BACKFILL_ALLOC,
+      searchAlloc:   SEARCH_ALLOC,
+      monthlyTarget: DAILY_TOTAL * 30,  // 840 — comfortably under TGDB's 1000/month
+    },
+  });
 });
 
 export default router;

@@ -23,6 +23,7 @@ import {
   rawgReady, tgdbReady,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
 } from "../lib/catalogService";
+import { checkAndReserveTgdbCall } from "../lib/tgdbBudget";
 import {
   buildEbaySearchUrl, buildAmazonSearchUrl,
   buildGameStopSearchUrl, buildBestBuySearchUrl,
@@ -140,13 +141,43 @@ router.get("/games/search", async (req, res): Promise<void> => {
 
   // ── 2. Cold cache on page 1: fetch live + upsert + re-query ──
   if (page === 1 && total < 10 && (rawgReady || tgdbReady)) {
+    // ── TGDB permanent-cache check ──────────────────────────────────────────
+    // TGDB has a 1 000 req/month cap. Once a query's results are in the DB
+    // (source = 'tgdb'), we never call TGDB for that term again — the DB IS
+    // the permanent cache. We only spend a TGDB call on a true cache miss
+    // (zero TGDB rows match this search term) AND if the daily budget allows.
+    let callTgdb = false;
+    if (tgdbReady) {
+      const [{ tgdbHits }] = await db
+        .select({ tgdbHits: sql<number>`count(*)::int` })
+        .from(catalogGamesTable)
+        .where(sql`source = 'tgdb' AND title ILIKE ${"%" + q + "%"}`);
+
+      if (tgdbHits === 0) {
+        // True cache miss — atomically check budget and reserve a slot.
+        // checkAndReserveTgdbCall mutates the in-memory counter synchronously
+        // (no intermediate await after the state load) so concurrent requests
+        // see the updated count in their microtask and can't both slip through.
+        callTgdb = await checkAndReserveTgdbCall("search");
+        if (callTgdb) {
+          logger.debug({ q }, "TGDB live fetch: cache miss + budget slot reserved");
+        } else {
+          logger.info({ q }, "TGDB live fetch skipped: daily budget exhausted — falling back to RAWG + DB");
+        }
+      } else {
+        logger.debug({ q, tgdbHits }, "TGDB live fetch skipped: already permanently cached in DB");
+      }
+    }
+
     const [rawgRes, tgdbRes] = await Promise.allSettled([
       fetchFromRawg(q, 1),
-      fetchFromTgdb(q, 1),
+      callTgdb
+        ? fetchFromTgdb(q, 1)
+        : Promise.resolve({ rows: [] as typeof catalogGamesTable.$inferInsert[], total: 0, hasNext: false }),
     ]);
 
-    if (rawgRes.status === "rejected") logger.error({ err: rawgRes.reason  }, "RAWG live fetch failed");
-    if (tgdbRes.status === "rejected") logger.error({ err: tgdbRes.reason  }, "TGDB live fetch failed");
+    if (rawgRes.status === "rejected") logger.error({ err: rawgRes.reason }, "RAWG live fetch failed");
+    if (tgdbRes.status === "rejected") logger.error({ err: tgdbRes.reason }, "TGDB live fetch failed");
 
     const liveRows = [
       ...(rawgRes.status === "fulfilled" ? rawgRes.value.rows : []),

@@ -1,24 +1,49 @@
 /**
- * catalogBackfill — proactive catalog seeding from RAWG.
+ * catalogBackfill — daily-throttled proactive catalog enrichment.
  *
- * Runs once at server startup if the catalog_games table has fewer than
- * MIN_ENTRIES rows, fetching page 1 of results (20 games) for each
- * franchise/keyword in POPULAR_TITLES. With ~70 franchises this produces
- * ~1,200–1,400 entries covering retro through current-gen titles.
+ * Phase 1 – RAWG seeding (virtually unlimited)
+ *   Processes up to RAWG_PER_DAY franchise titles per run from POPULAR_TITLES,
+ *   upserting RAWG results (Metacritic scores, cover screenshots, platform lists).
+ *   RAWG has a 40 req/min free-tier cap with no monthly limit worth worrying about.
+ *   Progress stored in system_kv → "rawg_backfill_idx" so it resumes across restarts.
  *
- * Rate limiting: 350 ms between RAWG requests → ~3 req/sec, well within
- * the free-tier 40 req/min cap. Total runtime: ~25 seconds in background.
+ * Phase 2 – TGDB enrichment (hard-capped at BACKFILL_ALLOC calls/day)
+ *   Processes up to BACKFILL_ALLOC (= 10) franchise titles per run from the same
+ *   list, fetching TGDB results (ESRB ratings, publisher names, boxart).
+ *   Before each TGDB call: checks whether TGDB data is already in the DB for this
+ *   franchise — if yes, skips (permanent cache). Checks tgdbBudget before fetching.
+ *   Progress stored in system_kv → "tgdb_backfill_idx".
  *
- * Subsequent server restarts skip the backfill once count ≥ MIN_ENTRIES.
+ * Schedule
+ *   Fires 10 s after startup, then every 24 h thereafter (daily rollover).
+ *   Each run is a bounded batch — it does not try to process all titles at once.
+ *   When all titles are processed, the index wraps around (continuous enrichment
+ *   cycle, refreshing stale entries approximately every 10 days for TGDB).
+ *
+ * Budget interaction
+ *   Uses canCallTgdb("backfill") + recordTgdbCall("backfill") from tgdbBudget.ts.
+ *   TGDB budget is shared with live user searches — backfill is explicitly limited
+ *   to BACKFILL_ALLOC (10) calls/day so it never crowds out real-time searches.
  */
 
+import { eq } from "drizzle-orm";
+import { db, systemKv, catalogGamesTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
-import { db, catalogGamesTable } from "@workspace/db";
-import { fetchFromRawg, rawgReady, upsertCatalogGames } from "./catalogService";
+import {
+  fetchFromRawg, fetchFromTgdb, rawgReady, tgdbReady, upsertCatalogGames,
+} from "./catalogService";
+import { checkAndReserveTgdbCall, BACKFILL_ALLOC } from "./tgdbBudget";
 import { logger } from "./logger";
 
-const MIN_ENTRIES = 1_000;
-const PACE_MS     = 350; // ms between RAWG requests
+// ── Tuning constants ──────────────────────────────────────────────────────────
+
+const RAWG_PER_DAY  = 20;         // max RAWG franchise lookups per run
+const RAWG_PACE_MS  = 350;        // ms between RAWG requests (stays well under 40/min)
+const TGDB_PER_DAY  = BACKFILL_ALLOC;  // honour the same cap as tgdbBudget
+const STARTUP_DELAY = 10_000;     // 10 s grace period after server start
+const DAILY_MS      = 24 * 60 * 60 * 1_000; // 24 h
+
+// ── Franchise list ────────────────────────────────────────────────────────────
 
 /** Broad selection of franchises and landmark titles spanning all eras. */
 const POPULAR_TITLES = [
@@ -34,16 +59,15 @@ const POPULAR_TITLES = [
   // Capcom
   "Resident Evil", "Devil May Cry", "Monster Hunter", "Street Fighter",
   "Mega Man", "Dragon's Dogma", "Onimusha",
-  // Konami / Castlevania / Silent Hill
+  // Konami
   "Castlevania", "Silent Hill", "Metal Gear Solid", "Contra",
   // Square Enix
-  "Final Fantasy", "Dragon Quest", "Kingdom Hearts", "Chrono",
+  "Final Fantasy", "Dragon Quest", "Kingdom Hearts", "Chrono Trigger",
   "Parasite Eve", "Tactics Ogre",
-  // Atlus / Persona
-  "Persona", "Shin Megami Tensei", "Dragon Odyssey",
+  // Atlus
+  "Persona", "Shin Megami Tensei",
   // Bandai Namco
-  "Tekken", "Soul Calibur", "Tales of", "Dark Souls", "Elden Ring",
-  "Pac-Man",
+  "Tekken", "Soul Calibur", "Tales of", "Dark Souls", "Elden Ring", "Pac-Man",
   // Sega
   "Sonic the Hedgehog", "Yakuza", "Phantasy Star", "Streets of Rage",
   // Activision / Blizzard
@@ -54,61 +78,148 @@ const POPULAR_TITLES = [
   "The Elder Scrolls", "Fallout", "Doom", "Quake",
   // 2K / Rockstar
   "Grand Theft Auto", "Red Dead Redemption", "BioShock", "Borderlands",
-  // Indie / modern
+  // Indie
   "Minecraft", "Terraria", "Stardew Valley", "Hollow Knight", "Celeste",
   "Cuphead", "Shovel Knight",
-  // Misc modern
-  "The Witcher", "Cyberpunk 2077", "Elden Ring", "Half-Life", "Portal",
+  // Modern AAA
+  "The Witcher", "Cyberpunk 2077", "Half-Life", "Portal",
   "Mass Effect", "Dragon Age",
   // Retro / arcade
-  "Mortal Kombat", "Street Fighter", "Tetris", "Pong", "Galaga", "Frogger",
-  "R-Type", "Gradius", "Ghosts n Goblins", "Double Dragon", "Ninja Gaiden",
-  "Earthbound", "Chrono Trigger",
+  "Mortal Kombat", "Tetris", "Galaga", "Frogger", "R-Type", "Gradius",
+  "Ghosts n Goblins", "Double Dragon", "Ninja Gaiden", "Earthbound",
 ];
 
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// ── system_kv helpers ─────────────────────────────────────────────────────────
+
+async function readIdx(key: string): Promise<number> {
+  const rows = await db.select().from(systemKv).where(eq(systemKv.key, key)).limit(1);
+  if (!rows.length) return 0;
+  return ((rows[0].value as { nextIndex?: number }).nextIndex ?? 0);
 }
 
-export function startCatalogBackfill(): void {
-  if (!rawgReady) {
-    logger.info("Catalog backfill skipped — RAWG_API_KEY not set");
+async function writeIdx(key: string, nextIndex: number): Promise<void> {
+  const value = { nextIndex } as unknown as Record<string, unknown>;
+  await db.insert(systemKv)
+    .values({ key, value, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: systemKv.key, set: { value, updatedAt: new Date() } });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function delay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+/** True if any catalog_games row from TGDB matches this franchise name. */
+async function hasTgdbEntries(franchise: string): Promise<boolean> {
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` })
+    .from(catalogGamesTable)
+    .where(sql`source = 'tgdb' AND title ILIKE ${"%" + franchise + "%"}`);
+  return n > 0;
+}
+
+// ── Main backfill run ─────────────────────────────────────────────────────────
+
+async function runBackfill(): Promise<void> {
+  const total = POPULAR_TITLES.length;
+  logger.info({ titles: total }, "Catalog backfill run starting");
+
+  // ── Phase 1: RAWG ──────────────────────────────────────────────────────────
+  if (rawgReady) {
+    let rawgIdx = await readIdx("rawg_backfill_idx");
+    let rawgDone = 0;
+
+    while (rawgDone < RAWG_PER_DAY) {
+      const title = POPULAR_TITLES[rawgIdx % total];
+      try {
+        const { rows } = await fetchFromRawg(title, 1);
+        if (rows.length > 0) await upsertCatalogGames(rows);
+      } catch (err) {
+        logger.warn({ err, title }, "Backfill RAWG fetch failed — skipping title");
+      }
+      rawgIdx++;
+      rawgDone++;
+      await delay(RAWG_PACE_MS);
+    }
+
+    await writeIdx("rawg_backfill_idx", rawgIdx % total);
+    logger.info({ rawgDone, nextRawgIdx: rawgIdx % total }, "Backfill RAWG phase complete");
+  }
+
+  // ── Phase 2: TGDB enrichment ───────────────────────────────────────────────
+  if (!tgdbReady) {
+    logger.debug("Backfill TGDB phase skipped — TGDB_API_KEY not set");
     return;
   }
 
-  // Run fully in background — do not block server startup
-  setTimeout(async () => {
-    try {
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(catalogGamesTable);
+  let tgdbIdx  = await readIdx("tgdb_backfill_idx");
+  let tgdbDone = 0;   // TGDB calls made this run
+  let skipped  = 0;   // titles skipped because already indexed
 
-      if (count >= MIN_ENTRIES) {
-        logger.info({ count }, "Catalog backfill skipped — already populated");
-        return;
+  while (tgdbDone < TGDB_PER_DAY) {
+    const title = POPULAR_TITLES[tgdbIdx % total];
+
+    // Permanent cache check — if TGDB data already in DB, skip (never re-fetch)
+    const alreadyIndexed = await hasTgdbEntries(title);
+    if (alreadyIndexed) {
+      skipped++;
+      tgdbIdx++;
+      // If every title is already indexed, break to avoid infinite loop
+      if (skipped >= total) {
+        logger.info("Backfill TGDB phase: all titles already indexed");
+        break;
       }
-
-      logger.info({ count, target: MIN_ENTRIES, franchises: POPULAR_TITLES.length },
-        "Starting catalog backfill…");
-
-      let totalUpserted = 0;
-
-      for (const title of POPULAR_TITLES) {
-        try {
-          const { rows } = await fetchFromRawg(title, 1);
-          if (rows.length > 0) {
-            const n = await upsertCatalogGames(rows);
-            totalUpserted += n;
-          }
-        } catch (err) {
-          logger.warn({ err, title }, "Backfill fetch failed for title — skipping");
-        }
-        await delay(PACE_MS);
-      }
-
-      logger.info({ totalUpserted }, "Catalog backfill complete");
-    } catch (err) {
-      logger.error({ err }, "Catalog backfill error");
+      continue;
     }
-  }, 8_000); // 8 second grace period after server start
+
+    // Atomically check budget and reserve a slot — returns false if exhausted
+    if (!(await checkAndReserveTgdbCall("backfill"))) {
+      logger.info({ tgdbDone, remaining: TGDB_PER_DAY - tgdbDone }, "Backfill TGDB phase: daily budget exhausted");
+      break;
+    }
+
+    try {
+      const { rows } = await fetchFromTgdb(title, 1);
+      if (rows.length > 0) await upsertCatalogGames(rows);
+      logger.debug({ title, rows: rows.length }, "Backfill TGDB: upserted");
+    } catch (err) {
+      logger.warn({ err, title }, "Backfill TGDB fetch failed — skipping title");
+    }
+
+    tgdbIdx++;
+    tgdbDone++;
+    await delay(500); // extra breathing room for TGDB (rate-limit headroom)
+  }
+
+  await writeIdx("tgdb_backfill_idx", tgdbIdx % total);
+  logger.info(
+    { tgdbDone, skipped, nextTgdbIdx: tgdbIdx % total },
+    "Backfill TGDB phase complete",
+  );
+}
+
+// ── Exported entry point ──────────────────────────────────────────────────────
+
+let _started = false;
+
+export function startCatalogBackfill(): void {
+  if (_started) return;
+  _started = true;
+
+  if (!rawgReady && !tgdbReady) {
+    logger.info("Catalog backfill skipped — neither RAWG_API_KEY nor TGDB_API_KEY is set");
+    return;
+  }
+
+  const schedule = async () => {
+    try {
+      await runBackfill();
+    } catch (err) {
+      logger.error({ err }, "Catalog backfill run failed");
+    }
+    // Schedule next run in 24 h — independent of how long this run took
+    setTimeout(schedule, DAILY_MS);
+  };
+
+  // First run after startup grace period
+  setTimeout(schedule, STARTUP_DELAY);
+  logger.info({ startupDelayMs: STARTUP_DELAY }, "Catalog backfill scheduled");
 }
