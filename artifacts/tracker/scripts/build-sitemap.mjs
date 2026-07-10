@@ -23,12 +23,18 @@ const outDir = resolve(__dirname, "../dist/public");
 // ── Base URL ──────────────────────────────────────────────────────────────────
 
 function getBaseUrl() {
+  // SITE_URL takes priority — set this to the canonical production domain,
+  // e.g. https://discwatchhq.com, so the sitemap uses the right hostname.
+  const siteUrl = process.env.SITE_URL;
+  if (siteUrl) {
+    return siteUrl.replace(/\/+$/, ""); // strip trailing slash
+  }
+  // Fallback to Replit's dev tunnel domain (only correct in dev builds).
   const domains = process.env.REPLIT_DOMAINS;
   if (domains) {
     const primary = domains.split(",")[0].trim();
     return `https://${primary}`;
   }
-  // Fallback: won't be correct but lets the build succeed locally
   return "https://localhost";
 }
 

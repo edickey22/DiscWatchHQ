@@ -26,3 +26,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 AMAZON_ASSOCIATES_TAG = "discwatchhq-20"
+SITE_URL = "https://discwatchhq.com"
