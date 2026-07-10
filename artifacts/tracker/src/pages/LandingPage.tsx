@@ -15,7 +15,7 @@
 
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell } from "lucide-react"
+import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search } from "lucide-react"
 
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
@@ -161,23 +161,24 @@ export default function LandingPage() {
             {/* Eyebrow */}
             <div className="inline-flex items-center gap-2 text-[11px] font-bold font-mono uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-3 py-1.5 rounded-full mb-8 select-none">
               <Zap size={10} />
-              Real-time limited-run game tracker
+              {catalogStats?.count ? `${catalogStats.count.toLocaleString()} games · 4 major retailers` : "Physical game finder · 4 major retailers"}
             </div>
 
             {/* Headline */}
             <h1 className="font-display text-[clamp(3.5rem,10vw,6.5rem)] font-black tracking-tight leading-[0.9] text-foreground mb-7">
-              EVERY<br />
-              DROP.<br />
-              <span className="text-primary">TRACKED.</span>
+              FIND ANY<br />
+              GAME.<br />
+              <span className="text-primary">BUY ANYWHERE.</span>
             </h1>
 
             {/* Sub-headline */}
             <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed mb-10 max-w-lg">
-              Limited-run physical releases from{" "}
-              <span className="text-foreground font-medium">Limited Run Games</span>,{" "}
-              <span className="text-foreground font-medium">Strictly Limited</span>,{" "}
-              <span className="text-foreground font-medium">iam8bit</span>, and 4 more boutique
-              publishers — tracked the moment they go live.
+              Search the full physical game catalog — classic to current, every platform —
+              and jump straight to{" "}
+              <span className="text-foreground font-medium">GameStop</span>,{" "}
+              <span className="text-foreground font-medium">Amazon</span>,{" "}
+              <span className="text-foreground font-medium">eBay</span>, and{" "}
+              <span className="text-foreground font-medium">Best Buy</span>.
             </p>
 
             {/* CTAs */}
@@ -203,50 +204,43 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            {/* Live stats */}
-            {stats && (
-              <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+            {/* Live stats — catalog count leads, boutique numbers secondary */}
+            <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+              {catalogStats && catalogStats.count > 0 && (
                 <div>
                   <div className="text-3xl sm:text-4xl font-display font-black text-primary tabular-nums">
-                    {stats.available}
+                    {catalogStats.count.toLocaleString()}
                   </div>
                   <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                    Available Now
+                    Games in Catalog
                   </div>
                 </div>
-                <div className="w-px h-10 bg-border hidden sm:block" />
-                <div>
-                  <div className="text-3xl sm:text-4xl font-display font-black text-foreground tabular-nums">
-                    {stats.comingSoon}
-                  </div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                    Coming Soon
-                  </div>
-                </div>
-                <div className="w-px h-10 bg-border hidden sm:block" />
-                <div>
-                  <div className="text-3xl sm:text-4xl font-display font-black text-foreground/80 tabular-nums">
-                    {stats.totalTracked}
-                  </div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                    Boutique Releases
-                  </div>
-                </div>
-                {catalogStats && catalogStats.count > 0 && (
-                  <>
+              )}
+              {stats && (
+                <>
+                  {catalogStats && catalogStats.count > 0 && (
                     <div className="w-px h-10 bg-border hidden sm:block" />
-                    <div>
-                      <div className="text-3xl sm:text-4xl font-display font-black text-foreground/50 tabular-nums">
-                        {catalogStats.count.toLocaleString()}
-                      </div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                        Game Catalog
-                      </div>
+                  )}
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-display font-black text-foreground/70 tabular-nums">
+                      4
                     </div>
-                  </>
-                )}
-              </div>
-            )}
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
+                      Retailers Linked
+                    </div>
+                  </div>
+                  <div className="w-px h-10 bg-border hidden sm:block" />
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-display font-black text-foreground/50 tabular-nums">
+                      {stats.available}
+                    </div>
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
+                      Boutique Drops Live
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -262,15 +256,15 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-3 gap-10">
             <div className="space-y-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Clock className="text-primary" size={18} />
+                <Search className="text-primary" size={18} />
               </div>
               <h3 className="font-display font-bold text-xl text-foreground">
-                Scraped every 2 hours
+                Search any title
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Every boutique publisher store is automatically monitored every 2 hours.
-                New listings are captured the moment they go live — before social media
-                catches on.
+                Browse {catalogStats?.count?.toLocaleString() ?? "thousands of"} games
+                across every platform and generation — NES to PS5, retro to new releases.
+                Filter by platform, sort by Metacritic score or release date.
               </p>
             </div>
             <div className="space-y-4">
@@ -278,25 +272,25 @@ export default function LandingPage() {
                 <ShoppingBag className="text-primary" size={18} />
               </div>
               <h3 className="font-display font-bold text-xl text-foreground">
-                Scarcity-aware
+                Buy at four retailers
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                The Boutique Tracker shows live status for every limited-run release:
-                Available&nbsp;Now, Coming&nbsp;Soon, and Sold&nbsp;Out — with preorder
-                window countdowns and direct retailer affiliate links.
+                Every game card links directly to GameStop, Amazon, eBay, and Best Buy.
+                One search, four storefronts — find the best price or availability without
+                tabbing between sites.
               </p>
             </div>
             <div className="space-y-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Library className="text-primary" size={18} />
+                <Clock className="text-primary" size={18} />
               </div>
               <h3 className="font-display font-bold text-xl text-foreground">
-                Full game catalog
+                Boutique drop tracker
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Browse {catalogStats?.count?.toLocaleString() ?? "thousands of"} games
-                across all platforms and generations. Every title links directly to
-                GameStop, Amazon, eBay, and Best Buy.
+                Limited-run physical releases from boutique publishers like Limited Run
+                Games and Strictly Limited are monitored every 2 hours — Available&nbsp;Now,
+                Coming&nbsp;Soon, and Sold&nbsp;Out with preorder countdowns.
               </p>
             </div>
           </div>
