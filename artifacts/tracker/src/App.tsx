@@ -1,11 +1,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import LandingPage from '@/pages/LandingPage';
 import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
+
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +27,9 @@ const queryClient = new QueryClient({
 
 function AppRouter() {
   return (
-    <Switch>
+    <>
+      <ScrollToTop />
+      <Switch>
       {/* Landing page — splashy entry point */}
       <Route path="/" component={LandingPage} />
       {/* Browse Games — full RAWG + TGDB catalog with pre-populated sections */}
@@ -38,7 +49,8 @@ function AppRouter() {
       {/* Release detail pages */}
       <Route path="/releases/:id" component={ReleaseDetail} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </>
   );
 }
 
