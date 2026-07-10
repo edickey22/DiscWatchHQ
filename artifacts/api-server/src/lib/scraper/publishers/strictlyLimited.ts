@@ -102,7 +102,8 @@ function extractPrice(variants: SLGVariant[]): string | null {
   if (prices.length === 0) return null;
   const min = Math.min(...prices);
   const max = Math.max(...prices);
-  return min === max ? `€${min.toFixed(2)}` : `€${min.toFixed(2)}–€${max.toFixed(2)}`;
+  // SLG prices are in EUR; we don't display non-USD prices site-wide.
+  return null;
 }
 
 function toRelease(product: SLGProduct, status: ScrapedRelease["status"]): ScrapedRelease {

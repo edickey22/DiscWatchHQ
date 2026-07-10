@@ -119,7 +119,8 @@ function extractPrice(variants: SRGVariant[]): string | null {
   if (prices.length === 0) return null;
   const min = Math.min(...prices);
   const max = Math.max(...prices);
-  return min === max ? `£${min.toFixed(2)}` : `£${min.toFixed(2)}–£${max.toFixed(2)}`;
+  // SRG prices are in GBP; we don't display non-USD prices site-wide.
+  return null;
 }
 
 function determineStatus(product: SRGProduct): ScrapedRelease["status"] {
