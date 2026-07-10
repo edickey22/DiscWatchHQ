@@ -1,13 +1,14 @@
 /**
- * /api/games — RAWG Video Games Database proxy
+ * /api/games — TheGamesDB proxy
  *
- * Requires RAWG_API_KEY in Replit Secrets (free at rawg.io/apidocs).
- * Free tier: 100,000 requests/month. Results cached 10 min per query
- * to stay well within quota.
+ * Requires TGDB_API_KEY in Replit Secrets (free at thegamesdb.net/forums/viewtopic.php?t=19274).
+ * Uses the Games/ByGameTitle endpoint for title search and the v1 include=boxart,platform
+ * option to resolve cover art and platform names in a single request.
  *
- * ⚠ RAWG attribution requirement (free-tier terms):
- *   Every page displaying RAWG data must show an active hyperlink to
- *   rawg.io. This is enforced in the GamesSearch frontend component.
+ * In-memory true-LRU cache: 500-entry cap, 10-minute TTL per entry.
+ *
+ * Attribution: TheGamesDB is a community-run open database. A courtesy
+ * credit link is shown on every page displaying TGDB data.
  */
 
 import { Router } from "express";
@@ -21,12 +22,14 @@ import {
 
 const router = Router();
 
-const RAWG_KEY = (process.env.RAWG_API_KEY ?? "").trim();
-export const rawgConfigured = !!RAWG_KEY;
+const TGDB_KEY = (process.env.TGDB_API_KEY ?? "").trim();
+export const tgdbConfigured = !!TGDB_KEY;
 
-// ── In-memory response cache ──────────────────────────────────────────────────
-
+const TGDB_BASE = "https://api.thegamesdb.net/v1";
+const PAGE_SIZE = 20;
 const CACHE_TTL_MS = 10 * 60 * 1_000; // 10 minutes
+
+// ── In-memory true-LRU cache ──────────────────────────────────────────────────
 
 interface CacheEntry { data: unknown; cachedAt: number; accessedAt: number }
 const cache = new Map<string, CacheEntry>();
@@ -35,13 +38,11 @@ function getCached(key: string): unknown | null {
   const entry = cache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.cachedAt > CACHE_TTL_MS) { cache.delete(key); return null; }
-  // Update recency so true LRU eviction works correctly
   entry.accessedAt = Date.now();
   return entry.data;
 }
 
 function setCached(key: string, data: unknown): void {
-  // True LRU eviction: evict the least-recently-accessed entry at capacity
   if (cache.size >= 500) {
     let lruKey: string | undefined;
     let lruTime = Infinity;
@@ -54,143 +55,259 @@ function setCached(key: string, data: unknown): void {
   cache.set(key, { data, cachedAt: now, accessedAt: now });
 }
 
-// ── RAWG API types ────────────────────────────────────────────────────────────
+// ── TheGamesDB API types ──────────────────────────────────────────────────────
 
-interface RawgPlatform { platform: { id: number; name: string; slug: string } }
-interface RawgGenre    { id: number; name: string }
-interface RawgGame {
+interface TgdbBoxartEntry {
   id: number;
-  slug: string;
-  name: string;
-  released: string | null;
-  background_image: string | null;
-  metacritic: number | null;
-  rating: number;
-  ratings_count: number;
-  platforms: RawgPlatform[] | null;
-  genres: RawgGenre[] | null;
-}
-interface RawgListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: RawgGame[];
+  type: string;   // "boxart", "screenshot", "fanart", etc.
+  side?: string;  // "front" | "back"
+  filename: string;
+  resolution: string | null;
 }
 
-/** Normalise verbose RAWG platform names to the short forms used on the site. */
+interface TgdbBaseUrls {
+  original: string;
+  small: string;
+  thumb: string;
+  cropped_center_thumb: string;
+  medium: string;
+  large: string;
+}
+
+interface TgdbPlatformEntry {
+  id: number;
+  name: string;
+  alias: string;
+}
+
+interface TgdbGameEntry {
+  id: number;
+  game_title: string;
+  release_date: string | null;
+  platform: number | null;
+  overview: string | null;
+  rating: string | null; // ESRB: "E", "E10+", "T", "M", "AO", "RP"
+}
+
+interface TgdbSearchResponse {
+  code: number;
+  status: string;
+  data: {
+    count: number;
+    games: TgdbGameEntry[];
+  };
+  include: {
+    boxart?: {
+      base_url: TgdbBaseUrls;
+      data: Record<string, TgdbBoxartEntry[]>;
+    };
+    platform?: {
+      data: Record<string, TgdbPlatformEntry>;
+    };
+  };
+  pages: {
+    previous: string | null;
+    current: string;
+    next: string | null;
+  };
+}
+
+// ── Platform name normalisation ───────────────────────────────────────────────
+
+/**
+ * Maps TheGamesDB platform names to the short forms used across the site.
+ * TGDB names tend to be verbose (e.g. "Sony Playstation 5"); we collapse them
+ * to match the boutique-release platform chips ("PS5", "Switch", etc.).
+ */
 const PLATFORM_MAP: Record<string, string> = {
-  "PC": "PC", "macOS": "macOS", "Linux": "Linux",
-  "PlayStation 5": "PS5", "PlayStation 4": "PS4", "PlayStation 3": "PS3",
-  "PlayStation 2": "PS2", "PlayStation": "PS1",
-  "Xbox Series S/X": "Xbox Series", "Xbox One": "Xbox One",
-  "Xbox 360": "Xbox 360", "Xbox": "Xbox",
-  "Nintendo Switch": "Switch", "Nintendo 3DS": "3DS",
-  "Nintendo DS": "DS", "Nintendo 64": "N64",
-  "SNES": "SNES", "NES": "NES",
-  "Game Boy Advance": "GBA", "Game Boy": "Game Boy",
-  "GameCube": "GameCube", "Wii": "Wii", "Wii U": "Wii U",
-  "iOS": "iOS", "Android": "Android",
+  // PlayStation
+  "Sony Playstation 5": "PS5",
+  "Sony Playstation 4": "PS4",
+  "Sony Playstation 3": "PS3",
+  "Sony Playstation 2": "PS2",
+  "Sony Playstation": "PS1",
+  "PlayStation 5": "PS5",
+  "PlayStation 4": "PS4",
+  "PlayStation 3": "PS3",
+  "PlayStation 2": "PS2",
+  "PlayStation": "PS1",
+  "PSP": "PSP",
+  "PlayStation Portable": "PSP",
+  "PlayStation Vita": "PS Vita",
+  // Xbox
+  "Microsoft Xbox Series X": "Xbox Series",
+  "Microsoft Xbox One": "Xbox One",
+  "Microsoft Xbox 360": "Xbox 360",
+  "Microsoft Xbox": "Xbox",
+  "Xbox Series X": "Xbox Series",
+  "Xbox One": "Xbox One",
+  "Xbox 360": "Xbox 360",
+  "Xbox": "Xbox",
+  // Nintendo
+  "Nintendo Switch": "Switch",
+  "Nintendo 3DS": "3DS",
+  "Nintendo DS": "DS",
+  "Nintendo 64": "N64",
+  "Super Nintendo (SNES)": "SNES",
+  "Nintendo Entertainment System (NES)": "NES",
+  "Nintendo GameCube": "GameCube",
+  "Nintendo Wii": "Wii",
+  "Nintendo Wii U": "Wii U",
+  "GameBoy Advance": "GBA",
+  "GameBoy Color": "GBC",
+  "GameBoy": "Game Boy",
+  // PC / Other
+  "PC": "PC",
+  "Mac OS": "macOS",
+  "Linux": "Linux",
+  "iOS": "iOS",
+  "Android": "Android",
+  // Sega
+  "Sega Genesis": "Genesis",
+  "Sega Saturn": "Saturn",
+  "Sega Dreamcast": "Dreamcast",
+  "Sega Game Gear": "Game Gear",
+  "Sega CD": "Sega CD",
+  "Sega 32X": "32X",
 };
-const normPlatform = (n: string) => PLATFORM_MAP[n] ?? n;
+
+const normPlatform = (name: string): string => PLATFORM_MAP[name] ?? name;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Extract the front-boxart thumb URL for a given game ID from the TGDB include block.
+ */
+function resolveCoverUrl(
+  gameId: number,
+  boxart: TgdbSearchResponse["include"]["boxart"],
+): string | null {
+  if (!boxart) return null;
+  const entries = boxart.data[String(gameId)];
+  if (!entries || entries.length === 0) return null;
+  // Prefer front boxart; fall back to first image of any type
+  const front = entries.find(e => e.type === "boxart" && e.side === "front") ?? entries[0];
+  return `${boxart.base_url.thumb}${front.filename}`;
+}
+
+/**
+ * Resolve a numeric TGDB platform ID to a normalised display name.
+ */
+function resolvePlatform(
+  platformId: number | null,
+  platformData: TgdbSearchResponse["include"]["platform"],
+): string | null {
+  if (platformId === null || !platformData) return null;
+  const entry = platformData.data[String(platformId)];
+  if (!entry) return null;
+  return normPlatform(entry.name);
+}
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/games/config
- * Returns whether the RAWG API key is configured.
+ * Returns whether the TGDB API key is configured.
  */
 router.get("/games/config", (_req, res): void => {
-  res.json({ configured: rawgConfigured });
+  res.json({ configured: tgdbConfigured });
 });
 
 /**
  * GET /api/games/search
  *
  * Query params:
- *   q           — search term (omit to browse by popularity)
- *   page        — 1-based page (default 1)
- *   page_size   — results per page (default 20, max 40)
- *   platform_id — RAWG platform ID filter (optional)
- *   genre_id    — RAWG genre ID filter (optional)
+ *   q    — title search term (required; returns empty results if omitted)
+ *   page — 1-based page number (default 1)
  *
- * 503 when RAWG_API_KEY is not configured.
+ * 503 when TGDB_API_KEY is not configured.
  */
 router.get("/games/search", async (req, res): Promise<void> => {
-  if (!rawgConfigured) {
+  if (!tgdbConfigured) {
     res.status(503).json({
-      error: "RAWG_API_KEY not configured. Add it to Replit Secrets to enable game search.",
+      error: "TGDB_API_KEY not configured. Add it to Replit Secrets to enable game search.",
       configured: false,
     });
     return;
   }
 
-  const q          = typeof req.query.q          === "string" ? req.query.q.trim()          : "";
-  const page       = Math.max(1, parseInt(String(req.query.page      ?? "1"))  || 1);
-  const pageSize   = Math.min(40, Math.max(1, parseInt(String(req.query.page_size ?? "20")) || 20));
-  const platformId = typeof req.query.platform_id === "string" ? req.query.platform_id : null;
-  const genreId    = typeof req.query.genre_id    === "string" ? req.query.genre_id    : null;
+  const q    = typeof req.query.q    === "string" ? req.query.q.trim() : "";
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
 
-  const cacheKey = `${q}|${page}|${pageSize}|${platformId ?? ""}|${genreId ?? ""}`;
+  // No query — return empty immediately (TGDB ByGameTitle requires a name)
+  if (!q) {
+    res.json({ count: 0, next: null, previous: null, results: [], configured: true, empty: true });
+    return;
+  }
+
+  const offset = (page - 1) * PAGE_SIZE;
+  // Normalise to lowercase so "Zelda" and "zelda" share a cache entry
+  const cacheKey = `tgdb|${q.toLowerCase()}|${page}`;
   const cached = getCached(cacheKey);
   if (cached) { res.json(cached); return; }
 
   try {
+    // TGDB ByGameTitle returns exactly PAGE_SIZE (20) results per page.
+    // We pass the offset explicitly; the response pages.next being non-null
+    // confirms a subsequent page exists, and we return page±1 as synthetic
+    // page numbers. Both offset math and frontend totalPages=ceil(count/20)
+    // are consistent with this single PAGE_SIZE constant.
     const params = new URLSearchParams({
-      key: RAWG_KEY,
-      page: String(page),
-      page_size: String(pageSize),
+      apikey:  TGDB_KEY,
+      name:    q,
+      fields:  "overview,rating,platform",
+      include: "boxart,platform",
     });
-    if (q)          params.set("search", q);
-    if (platformId) params.set("platforms", platformId);
-    if (genreId)    params.set("genres", genreId);
-    // Default browse (no query): show by number of RAWG users who own/want the game
-    if (!q)         params.set("ordering", "-added");
+    if (offset > 0) params.set("offset", String(offset));
 
-    const rawgRes = await fetch(`https://api.rawg.io/api/games?${params}`, {
+    const tgdbRes = await fetch(`${TGDB_BASE}/Games/ByGameTitle?${params}`, {
       headers: { "User-Agent": "DiscWatchHQ/1.0 (+https://discwatchhq.com)" },
-      signal: AbortSignal.timeout(8_000),
+      signal:  AbortSignal.timeout(10_000),
     });
 
-    if (!rawgRes.ok) {
-      logger.warn({ status: rawgRes.status }, "RAWG API error");
-      res.status(502).json({ error: `RAWG returned HTTP ${rawgRes.status}` });
+    if (!tgdbRes.ok) {
+      logger.warn({ status: tgdbRes.status }, "TheGamesDB API error");
+      res.status(502).json({ error: `TheGamesDB returned HTTP ${tgdbRes.status}` });
       return;
     }
 
-    const rawg = (await rawgRes.json()) as RawgListResponse;
+    const tgdb = (await tgdbRes.json()) as TgdbSearchResponse;
 
-    const results = rawg.results.map(game => ({
-      id:              game.id,
-      slug:            game.slug,
-      name:            game.name,
-      released:        game.released ?? null,
-      backgroundImage: game.background_image ?? null,
-      metacritic:      game.metacritic ?? null,
-      rating:          game.rating,
-      ratingsCount:    game.ratings_count,
-      platforms:       (game.platforms ?? []).map(p => normPlatform(p.platform.name)),
-      genres:          (game.genres    ?? []).map(g => g.name),
+    if (tgdb.code !== 200 || !tgdb.data?.games) {
+      logger.warn({ code: tgdb.code, status: tgdb.status }, "TheGamesDB non-success response");
+      res.status(502).json({ error: `TheGamesDB error: ${tgdb.status ?? "unknown"}` });
+      return;
+    }
+
+    const results = tgdb.data.games.map(game => ({
+      id:             game.id,
+      title:          game.game_title,
+      releaseDate:    game.release_date ?? null,
+      platform:       resolvePlatform(game.platform ?? null, tgdb.include.platform),
+      coverImageUrl:  resolveCoverUrl(game.id, tgdb.include.boxart),
+      rating:         game.rating ?? null,
       retailerSearchUrls: {
-        ebay:     buildEbaySearchUrl(game.name),
-        amazon:   buildAmazonSearchUrl(game.name),
-        gamestop: buildGameStopSearchUrl(game.name),
-        bestbuy:  buildBestBuySearchUrl(game.name),
+        ebay:     buildEbaySearchUrl(game.game_title),
+        amazon:   buildAmazonSearchUrl(game.game_title),
+        gamestop: buildGameStopSearchUrl(game.game_title),
+        bestbuy:  buildBestBuySearchUrl(game.game_title),
       },
     }));
 
     const response = {
-      count:      rawg.count,
-      next:       rawg.next     ? page + 1 : null,
-      previous:   rawg.previous ? page - 1 : null,
+      count:      tgdb.data.count,
+      next:       tgdb.pages.next     ? page + 1 : null,
+      previous:   tgdb.pages.previous ? page - 1 : null,
       results,
       configured: true,
+      empty:      false,
     };
 
     setCached(cacheKey, response);
     res.json(response);
   } catch (err) {
-    logger.error({ err }, "RAWG fetch error");
-    res.status(502).json({ error: "Failed to reach RAWG API" });
+    logger.error({ err }, "TheGamesDB fetch error");
+    res.status(502).json({ error: "Failed to reach TheGamesDB API" });
   }
 });
 

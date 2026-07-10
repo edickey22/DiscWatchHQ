@@ -2,6 +2,6 @@
 - [Publisher scraper registry](scraper-registry.md) — 5 live scrapers; SRG defunct (Devolver 2024); correct SLG domain is strictlylimitedgames.com not strictly-limited.com
 - [Amazon URL injection](affiliate-config.md) — only injected on https amazon.*/amzn.to hostnames; tag added by API layer, not stored in DB
 - [eBay search URLs](affiliate-config.md) — computed per-request in formatRelease, only for sold_out status, category 139973 (Video Games)
-- [RAWG integration](rawg-integration.md) — game browse page at /games; server-side proxy only; RAWG_API_KEY must be in Replit Secrets; 10-min true-LRU cache; RAWG attribution required on every page displaying their data
-- [ControllerIcon](icon-notes.md) — now the Lucide gamepad-2 outline icon (exact path data); viewBox 0 0 24 24; strokes use hsl(var(--primary)); default size=28 to match Header usage at size={30}
-- [LRG merch filter](scraper-registry.md) — isGame() blocks known merch product_types (lowercase-normalized) + title keyword fallback; wired in addProducts loop; Blizzard/Xbox scrapers have separate filters
+- [TGDB integration](tgdb-integration.md) — replaced RAWG; env var is TGDB_API_KEY (not RAWG_API_KEY); /games route; 10-min LRU cache; PAGE_SIZE=20 fixed; attribution required in footer+header
+- [ControllerIcon](icon-notes.md) — Lucide gamepad-2 outline icon (exact path data); viewBox 0 0 24 24; strokes use hsl(var(--primary)); default size=28
+- [LRG merch filter](scraper-registry.md) — isGame() blocks known merch product_types (lowercase-normalized) + title keyword fallback; wired in addProducts loop

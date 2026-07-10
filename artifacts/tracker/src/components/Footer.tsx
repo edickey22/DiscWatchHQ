@@ -3,11 +3,11 @@ import { useGetScrapeStatus } from "@workspace/api-client-react"
 import { ControllerIcon } from "@/components/ControllerIcon"
 
 interface FooterProps {
-  /** Set true on pages that display RAWG data to show the required attribution. */
-  showRawgAttribution?: boolean
+  /** Set true on pages that display TheGamesDB data to show the courtesy attribution. */
+  showTgdbAttribution?: boolean
 }
 
-export function Footer({ showRawgAttribution = false }: FooterProps) {
+export function Footer({ showTgdbAttribution = false }: FooterProps) {
   const { data: status } = useGetScrapeStatus()
 
   const lastScraped = status?.reduce((latest, current) => {
@@ -42,20 +42,21 @@ export function Footer({ showRawgAttribution = false }: FooterProps) {
           ) : null}
         </div>
 
-        {/* ── RAWG attribution (shown on pages displaying RAWG data) ── */}
-        {showRawgAttribution && (
+        {/* ── TheGamesDB attribution (courtesy credit on Browse Games page) ── */}
+        {showTgdbAttribution && (
           <p className="text-[11px] text-muted-foreground/50 text-center md:text-left flex items-center gap-1.5">
-            Game data provided by{" "}
+            Game catalog data provided by{" "}
             <a
-              href="https://rawg.io"
+              href="https://thegamesdb.net"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-0.5 text-primary/60 hover:text-primary/90 underline underline-offset-2 transition-colors font-medium"
-              aria-label="RAWG Video Games Database (opens in new tab)"
+              aria-label="TheGamesDB — community-run open game database (opens in new tab)"
             >
-              RAWG Video Games Database
+              TheGamesDB
               <ExternalLink size={9} />
             </a>
+            {" "}— community-run open video game database
           </p>
         )}
       </div>
