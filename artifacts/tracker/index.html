@@ -45,6 +45,16 @@
     <!-- ── PWA / Web App Manifest ────────────────────────────────────────── -->
     <link rel="manifest" href="/site.webmanifest" />
 
+    <!-- ── Google Analytics 4 ───────────────────────────────────────────── -->
+    <!-- Loads gtag.js; the SPA route-change listener lives in App.tsx -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S1861HDJE1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-S1861HDJE1');
+    </script>
+
     <!-- ── Fonts ─────────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -8,6 +8,24 @@ import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
 
+// Tells GA4 about every client-side navigation.
+// gtag('config', ...) re-fires a page_view hit with the new path whenever
+// the route changes — this is the standard SPA pattern for GA4.
+declare global {
+  interface Window {
+    gtag: (...args: unknown[]) => void;
+    dataLayer: unknown[];
+  }
+}
+function GaPageView() {
+  const [location] = useLocation();
+  useEffect(() => {
+    if (typeof window.gtag !== 'function') return;
+    window.gtag('config', 'G-S1861HDJE1', { page_path: location });
+  }, [location]);
+  return null;
+}
+
 function ScrollToTop() {
   const [location] = useLocation();
   useEffect(() => {
@@ -28,6 +46,7 @@ const queryClient = new QueryClient({
 function AppRouter() {
   return (
     <>
+      <GaPageView />
       <ScrollToTop />
       <Switch>
       {/* Landing page — splashy entry point */}
