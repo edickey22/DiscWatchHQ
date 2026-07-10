@@ -32,11 +32,13 @@ import { MediaLightbox, type MediaSlide } from "@/components/MediaLightbox"
 // ── API response type ─────────────────────────────────────────────────────────
 
 interface GameDetail extends CatalogGame {
-  description:      string | null
-  screenshots:      string[]
-  trailerYoutubeId: string | null
-  trailerUrl:       string | null
-  attribution:      "rawg" | "tgdb"
+  description:       string | null
+  screenshots:       string[]
+  trailerYoutubeId:  string | null
+  trailerUrl:        string | null
+  /** Thumbnail URL from clip.preview or movies[0].preview; used as <video poster>. */
+  trailerPreviewUrl: string | null
+  attribution:       "rawg" | "tgdb"
 }
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
@@ -371,7 +373,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
   }, [])
 
   const displayed = detail ?? (game
-    ? { ...game, description: null, screenshots: [], trailerYoutubeId: null, trailerUrl: null, attribution: game.source } as GameDetail
+    ? { ...game, description: null, screenshots: [], trailerYoutubeId: null, trailerUrl: null, trailerPreviewUrl: null, attribution: game.source } as GameDetail
     : null)
 
   const year = displayed?.releaseDate
@@ -430,13 +432,14 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                   />
                 )}
 
-                {/* mp4 hero */}
+                {/* mp4 hero — direct RAWG-hosted or movies-endpoint mp4 */}
                 {isMp4Hero && (
                   // eslint-disable-next-line jsx-a11y/media-has-caption
                   <video
                     key={detail!.trailerUrl!}
                     ref={heroVideoRef}
                     src={detail!.trailerUrl!}
+                    poster={detail!.trailerPreviewUrl ?? undefined}
                     autoPlay
                     muted
                     loop

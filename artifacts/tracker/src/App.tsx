@@ -30,6 +30,9 @@ function AppRouter() {
       <Route path="/games/new-releases">
         {() => <CatalogListPage kind="new-releases" />}
       </Route>
+      <Route path="/games/upcoming">
+        {() => <CatalogListPage kind="upcoming" />}
+      </Route>
       {/* Boutique Tracker — scarcity-tracking for limited-run physical releases */}
       <Route path="/boutique" component={Home} />
       {/* Release detail pages */}

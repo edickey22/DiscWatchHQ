@@ -217,6 +217,43 @@ export async function fetchPopularFromRawg(
 }
 
 /**
+ * Fetch upcoming games (future release dates) from RAWG.
+ * Uses dates=today,2029-12-31&ordering=released to return games sorted soonest-first.
+ * Only games with confirmed future release dates are returned.
+ */
+export async function fetchUpcomingFromRawg(page = 1): Promise<{ rows: InsertCatalogGame[]; total: number; hasNext: boolean }> {
+  if (!rawgReady) return { rows: [], total: 0, hasNext: false };
+  const today  = new Date().toISOString().slice(0, 10); // e.g. "2026-07-10"
+  const future = "2029-12-31";
+  const url = `https://api.rawg.io/api/games?key=${RAWG_KEY}&dates=${today},${future}&ordering=released&page_size=20&page=${page}&exclude_additions=true`;
+  try {
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "DiscWatchHQ/1.0" },
+      signal:  AbortSignal.timeout(12_000),
+    });
+    if (!resp.ok) throw new Error(`RAWG upcoming HTTP ${resp.status}`);
+    const data = (await resp.json()) as RawgListResp;
+    const rows: InsertCatalogGame[] = (data.results ?? []).map(g => ({
+      source:        "rawg" as const,
+      sourceId:      `rawg:${g.id}`,
+      title:         g.name,
+      platforms:     (g.platforms ?? []).map(p => normPlatform(p.platform.name)),
+      genres:        (g.genres    ?? []).map(gn => gn.name),
+      publisherName: null,
+      coverImageUrl: g.background_image ?? null,
+      releaseYear:   parseYear(g.released),
+      metacritic:    g.metacritic ?? null,
+      esrbRating:    null,
+      retailerUrls:  retailerUrls(g.name),
+    }));
+    return { rows, total: data.count, hasNext: !!data.next };
+  } catch (err) {
+    logger.error({ err }, "RAWG upcoming fetch error");
+    return { rows: [], total: 0, hasNext: false };
+  }
+}
+
+/**
  * Fetch recently-released games from RAWG (ordering=-released, past 12 months).
  * Used by GET /api/games/new-releases to pre-populate the Browse Games page.
  */

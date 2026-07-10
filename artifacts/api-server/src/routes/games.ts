@@ -22,7 +22,7 @@ import { db, catalogGamesTable, type CatalogGameRow } from "@workspace/db";
 import {
   rawgReady, tgdbReady, RAWG_KEY,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
-  fetchPopularFromRawg, fetchNewReleasesFromRawg,
+  fetchPopularFromRawg, fetchNewReleasesFromRawg, fetchUpcomingFromRawg,
   normPlatform,
 } from "../lib/catalogService";
 import { checkAndReserveTgdbCall } from "../lib/tgdbBudget";
@@ -425,6 +425,78 @@ router.get("/games/new-releases", async (req, res): Promise<void> => {
 });
 
 /**
+ * GET /api/games/upcoming
+ *
+ * Returns games with confirmed release dates in the future (release_year > current year).
+ * Ordered by release_year ASC (soonest first) so the nearest launches appear first.
+ * Cold cache: on page 1 when DB has < PAGE_SIZE rows, fetches from RAWG with a future
+ * date range (today → 2029-12-31, ordered released ASC) and upserts before re-querying.
+ */
+router.get("/games/upcoming", async (req, res): Promise<void> => {
+  const page  = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = page === 1
+    ? Math.min(24, Math.max(1, parseInt(String(req.query.limit ?? String(PAGE_SIZE))) || PAGE_SIZE))
+    : PAGE_SIZE;
+  const offset      = (page - 1) * PAGE_SIZE;
+  const currentYear = new Date().getFullYear();
+
+  // "Upcoming" includes the remainder of the current year AND future years, matching
+  // RAWG's dates=today,2029-12-31 range. Using >= currentYear avoids a cold-cache loop
+  // where games with release_year == currentYear are fetched but never satisfy > currentYear.
+  const upcomingFilter = sql`${catalogGamesTable.releaseYear} >= ${currentYear}`;
+
+  const [dbRows, [{ total }]] = await Promise.all([
+    db.select().from(catalogGamesTable)
+      .where(upcomingFilter)
+      .orderBy(
+        sql`${catalogGamesTable.releaseYear} ASC NULLS LAST`,
+        asc(catalogGamesTable.title),
+      )
+      .limit(limit)
+      .offset(offset),
+    db.select({ total: sql<number>`count(*)::int` })
+      .from(catalogGamesTable)
+      .where(upcomingFilter),
+  ]);
+
+  // Cold cache: seed from RAWG when DB has very few upcoming rows on page 1.
+  // Use a threshold of 5 (not PAGE_SIZE) so that a seeded set of 12 won't re-trigger.
+  if (page === 1 && total < 5 && rawgReady) {
+    const { rows } = await fetchUpcomingFromRawg(1);
+    if (rows.length > 0) {
+      try { await upsertCatalogGames(rows); } catch (err) { logger.error({ err }, "upcoming upsert failed"); }
+      const [fresh, [{ freshTotal }]] = await Promise.all([
+        db.select().from(catalogGamesTable)
+          .where(upcomingFilter)
+          .orderBy(
+            sql`${catalogGamesTable.releaseYear} ASC NULLS LAST`,
+            asc(catalogGamesTable.title),
+          )
+          .limit(limit)
+          .offset(0),
+        db.select({ freshTotal: sql<number>`count(*)::int` })
+          .from(catalogGamesTable)
+          .where(upcomingFilter),
+      ]);
+      res.json({
+        results:  fresh.map(formatRow),
+        count:    freshTotal,
+        next:     limit === PAGE_SIZE && freshTotal > PAGE_SIZE ? 2 : null,
+        previous: null,
+      });
+      return;
+    }
+  }
+
+  res.json({
+    results:  dbRows.map(formatRow),
+    count:    total,
+    next:     limit === PAGE_SIZE && total > page * PAGE_SIZE ? page + 1 : null,
+    previous: page > 1 ? page - 1 : null,
+  });
+});
+
+/**
  * GET /api/games/tgdb/:id
  *
  * Fetch a single TGDB game by its integer ID, upsert to catalog, return
@@ -737,58 +809,70 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       }),
     ]);
 
-    let description:      string | null = null;
-    let screenshots:      string[]      = [];
-    let trailerYoutubeId: string | null = null;
-    let trailerUrl:       string | null = null;
+    let description:       string | null = null;
+    let screenshots:       string[]      = [];
+    let trailerYoutubeId:  string | null = null;
+    let trailerUrl:        string | null = null;
+    let trailerPreviewUrl: string | null = null;
 
     if (detailRes.status === "fulfilled" && detailRes.value.ok) {
       const detail = (await detailRes.value.json()) as RawgDetailResp;
       description = detail.description_raw?.trim() ?? null;
 
-      // clip.video is a full YouTube URL ("https://youtube.com/watch?v=ID"),
-      // NOT a bare ID — extract the 11-char ID before using it in an embed.
-      if (detail.clip?.video) {
+      // Priority 1: clip.clip — direct RAWG-hosted mp4 URL (most games with clips have this).
+      // This is a plain HTTPS mp4 file on media.rawg.io; render with <video>, not an iframe.
+      if (detail.clip?.clip && detail.clip.clip.startsWith("http")) {
+        trailerUrl        = detail.clip.clip;
+        trailerPreviewUrl = detail.clip.preview ?? null;
+        logger.debug({ sourceId, trailerUrl }, "Trailer sourced from clip.clip");
+      }
+
+      // Priority 2: clip.video — YouTube URL of the full trailer.
+      // Only used when clip.clip is absent (YouTube iframe requires user-gesture for sound).
+      if (!trailerUrl && detail.clip?.video) {
         const ytId =
           detail.clip.video.match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] ??
           detail.clip.video.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)?.[1] ??
           detail.clip.video.match(/embed\/([A-Za-z0-9_-]{11})/)?.[1];
         if (ytId) {
           trailerYoutubeId = ytId;
-          trailerUrl = `https://www.youtube.com/watch?v=${ytId}`;
+          logger.debug({ sourceId, ytId }, "Trailer sourced from clip.video (YouTube)");
         }
       }
     } else if (detailRes.status === "rejected") {
       logger.warn({ err: detailRes.reason, sourceId }, "RAWG game detail fetch failed");
     }
 
-    // Screenshots endpoint returns actual screenshots (not included in game detail response)
+    // Screenshots endpoint returns actual screenshots (not in the game detail response)
     if (screenshotsRes.status === "fulfilled" && screenshotsRes.value.ok) {
       const ss = (await screenshotsRes.value.json()) as RawgScreenshotResp;
       screenshots = (ss.results ?? []).slice(0, 6).map(s => s.image).filter(Boolean);
     }
 
-    // Movies endpoint often carries richer trailer data than the clip field
+    // Movies endpoint — contributor-uploaded full trailers as direct mp4 files.
+    // Shape: { count, results: [{ id, name, preview, data: { "480": url, max: url } }] }
+    // Overrides clip.clip when available (typically higher-quality full trailer).
     if (moviesRes.status === "fulfilled" && moviesRes.value.ok) {
       const movies = (await moviesRes.value.json()) as RawgMoviesResp;
       const first = movies.results?.[0];
-      if (first && !trailerYoutubeId) {
-        const videoUrl = first.data?.max ?? first.data?.["480"] ?? "";
-        // Extract YouTube video ID from various URL shapes
-        const ytMatch = videoUrl.match(
-          /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
-        );
-        if (ytMatch) {
-          trailerYoutubeId = ytMatch[1];
-          trailerUrl = `https://www.youtube.com/watch?v=${trailerYoutubeId}`;
-        } else if (videoUrl.startsWith("http")) {
-          trailerUrl = videoUrl;
+      if (first) {
+        // data.max is the highest-resolution mp4; "480" is the lower-res fallback.
+        const mp4Url = first.data?.max
+          ?? (first.data as Record<string, string>)?.["480"]
+          ?? "";
+        if (mp4Url && mp4Url.startsWith("http")) {
+          trailerUrl        = mp4Url;
+          trailerYoutubeId  = null;  // prefer mp4 over YouTube when movies are available
+          trailerPreviewUrl = first.preview ?? trailerPreviewUrl;
+          logger.debug({ sourceId, mp4Url }, "Trailer sourced from movies endpoint (data.max)");
         }
       }
     }
 
+    logger.debug({ sourceId, trailerUrl, trailerYoutubeId }, "Trailer resolution complete");
+
     const base = baseRow ?? { id: sourceId, source: "rawg" as const, title: sourceId,
-      releaseDate: null, platforms: [], coverImageUrl: null,
+      releaseDate: null, platforms: [], genres: [], coverImageUrl: null,
       metacritic: null, esrbRating: null, publisherName: null,
       retailerSearchUrls: {
         ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
@@ -796,7 +880,7 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
       },
     };
 
-    const _payload = { ...base, description, screenshots, trailerYoutubeId, trailerUrl, attribution: "rawg" };
+    const _payload = { ...base, description, screenshots, trailerYoutubeId, trailerUrl, trailerPreviewUrl, attribution: "rawg" };
     _detailCache.set(sourceId, { data: _payload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
     res.json(_payload);
     return;
@@ -810,11 +894,12 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
 
   const _tgdbPayload = {
     ...baseRow,
-    description:      null,
-    screenshots:      [],
-    trailerYoutubeId: null,
-    trailerUrl:       null,
-    attribution:      baseRow.source,
+    description:       null,
+    screenshots:       [],
+    trailerYoutubeId:  null,
+    trailerUrl:        null,
+    trailerPreviewUrl: null,
+    attribution:       baseRow.source,
   };
   // Cache TGDB responses too — the DB row doesn't change between requests
   _detailCache.set(sourceId, { data: _tgdbPayload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });

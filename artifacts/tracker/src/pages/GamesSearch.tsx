@@ -8,7 +8,7 @@
  * Modes:
  *   Browse (no query, but filter(s) active) — shows filtered DB results
  *   Search (query typed)                    — live RAWG + TGDB + DB results
- *   Default (nothing active)                — pre-populated Most Popular + New & Upcoming
+ *   Default (nothing active)                — pre-populated Most Popular + Recently Released + Upcoming
  *
  * Pre-populated sections are deliberately labelled as industry-wide data from RAWG,
  * NOT as "trending on DiscWatchHQ". Real on-site trending requires analytics data
@@ -145,6 +145,12 @@ async function fetchNewReleases(): Promise<PopularResponse> {
   return res.json()
 }
 
+async function fetchUpcoming(): Promise<PopularResponse> {
+  const res = await fetch("/api/games/upcoming?limit=24")
+  if (!res.ok) return { results: [], count: 0, next: null, previous: null }
+  return res.json()
+}
+
 async function fetchPlatforms(): Promise<PlatformsResponse> {
   const res = await fetch("/api/catalog/platforms")
   if (!res.ok) return { platforms: [] }
@@ -269,8 +275,9 @@ export default function GamesSearch() {
   const [page,         setPage]         = useState(1)
   const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null)
   // Show-more state for pre-populated sections (12 → 24)
-  const [popularShown, setPopularShown] = useState(12)
-  const [newShown,     setNewShown]     = useState(12)
+  const [popularShown,  setPopularShown]  = useState(12)
+  const [newShown,      setNewShown]      = useState(12)
+  const [upcomingShown, setUpcomingShown] = useState(12)
 
   const debouncedSearch = useDebounce(search, 400)
 
@@ -328,6 +335,11 @@ export default function GamesSearch() {
     queryFn:   fetchNewReleases,
     staleTime: 30 * 60 * 1_000,
   })
+  const { data: upcomingData, isLoading: isUpcomingLoading } = useQuery<PopularResponse>({
+    queryKey:  ["games-upcoming"],
+    queryFn:   fetchUpcoming,
+    staleTime: 30 * 60 * 1_000,
+  })
   const { data: platformsData } = useQuery<PlatformsResponse>({
     queryKey:  ["catalog-platforms"],
     queryFn:   fetchPlatforms,
@@ -343,12 +355,15 @@ export default function GamesSearch() {
   const neitherReady = searchData && !searchData.sources?.rawg && !searchData.sources?.tgdb
 
   // Pre-populated sections
-  const allPopular       = popularData?.results ?? []
-  const allNew           = newData?.results     ?? []
+  const allPopular       = popularData?.results  ?? []
+  const allNew           = newData?.results      ?? []
+  const allUpcoming      = upcomingData?.results ?? []
   const popularCards     = allPopular.slice(0, popularShown)
   const newReleasesCards = allNew.slice(0, newShown)
-  const popularTotal     = popularData?.count ?? 0
-  const newTotal         = newData?.count     ?? 0
+  const upcomingCards    = allUpcoming.slice(0, upcomingShown)
+  const popularTotal     = popularData?.count  ?? 0
+  const newTotal         = newData?.count      ?? 0
+  const upcomingTotal    = upcomingData?.count ?? 0
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -511,12 +526,12 @@ export default function GamesSearch() {
               )}
             </section>
 
-            {/* ── New & Upcoming ── */}
+            {/* ── Recently Released ── */}
             <section className="mb-12">
               <SectionHeader
                 icon={<CalendarDays size={18} className="text-primary" />}
-                label="New & Upcoming"
-                attribution="Released in the past 12 months · Sorted by release date · RAWG"
+                label="Recently Released"
+                attribution="Released in the past 12 months · Sorted newest first · RAWG"
               />
 
               {isNewLoading ? (
@@ -546,14 +561,61 @@ export default function GamesSearch() {
                         href="/games/new-releases"
                         className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                       >
-                        View all New &amp; Upcoming <ArrowRight size={14} />
+                        View all Recently Released <ArrowRight size={14} />
                       </Link>
                     )}
                   </div>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
-                  New release data unavailable — configure a RAWG_API_KEY to enable this section.
+                  Recent release data unavailable — configure a RAWG_API_KEY to enable this section.
+                </p>
+              )}
+            </section>
+
+            {/* ── Upcoming ── */}
+            <section className="mb-12">
+              <SectionHeader
+                icon={<CalendarDays size={18} className="text-primary" />}
+                label="Upcoming"
+                attribution="Confirmed future release dates · Soonest first · RAWG"
+              />
+
+              {isUpcomingLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                </div>
+              ) : upcomingCards.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {upcomingCards.map(game => (
+                      <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-5">
+                    {upcomingShown < 24 && allUpcoming.length > upcomingShown ? (
+                      <button
+                        onClick={() => setUpcomingShown(Math.min(24, allUpcoming.length))}
+                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ChevronDown size={15} />
+                        Show {Math.min(12, allUpcoming.length - upcomingShown)} more
+                      </button>
+                    ) : <span />}
+                    {(upcomingShown >= 24 || upcomingTotal > 24) && (
+                      <Link
+                        href="/games/upcoming"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                      >
+                        View all Upcoming <ArrowRight size={14} />
+                      </Link>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No upcoming games found yet — check back shortly while the catalog loads.
                 </p>
               )}
             </section>

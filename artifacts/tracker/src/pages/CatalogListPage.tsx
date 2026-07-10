@@ -29,7 +29,7 @@ interface ListResponse {
   previous: number | null
 }
 
-export type CatalogListKind = "popular" | "new-releases"
+export type CatalogListKind = "popular" | "new-releases" | "upcoming"
 
 // ── Config per kind ───────────────────────────────────────────────────────────
 
@@ -46,13 +46,23 @@ const CONFIG = {
   },
   "new-releases": {
     apiPath:     "/api/games/new-releases",
-    title:       "New & Upcoming",
-    description: "Games released in the past 12 months, sorted by release date.",
+    title:       "Recently Released",
+    description: "Physical games released in the past 12 months, sorted by release date.",
     icon:        <CalendarDays size={20} className="text-primary" />,
-    attribution: "Released in the past 12 months · Sorted by release date · RAWG",
-    docTitle:    "New & Upcoming Games — Recent Physical Releases | DiscWatchHQ",
-    docDesc:     "Browse newly released and upcoming physical games across all platforms, sorted by release date.",
+    attribution: "Released in the past 12 months · Sorted newest first · RAWG",
+    docTitle:    "Recently Released Games — New Physical Releases | DiscWatchHQ",
+    docDesc:     "Browse newly released physical games across all platforms, sorted by release date.",
     canonical:   "/games/new-releases",
+  },
+  "upcoming": {
+    apiPath:     "/api/games/upcoming",
+    title:       "Upcoming",
+    description: "Confirmed future releases ordered by launch date — soonest first.",
+    icon:        <CalendarDays size={20} className="text-primary" />,
+    attribution: "Confirmed future release dates · Sorted soonest first · RAWG",
+    docTitle:    "Upcoming Games — Confirmed Physical Releases | DiscWatchHQ",
+    docDesc:     "Browse upcoming physical game releases with confirmed launch dates, sorted soonest first.",
+    canonical:   "/games/upcoming",
   },
 } as const
 
