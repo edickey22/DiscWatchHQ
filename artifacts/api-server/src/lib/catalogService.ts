@@ -2,13 +2,26 @@
  * catalogService — shared logic for the unified game catalog (RAWG + TGDB).
  *
  * Provides:
- *   fetchFromRawg()  — fetch a search page from RAWG → InsertCatalogGame[]
- *   fetchFromTgdb()  — fetch a search page from TGDB → InsertCatalogGame[]
+ *   fetchFromRawg()    — search RAWG → InsertCatalogGame[]
+ *   fetchFromTgdb()    — search TGDB v1.1/Games/ByGameName → InsertCatalogGame[]
+ *   fetchTgdbById()    — fetch specific game(s) via v1/Games/ByGameID (batch-safe)
  *   upsertCatalogGames() — persist rows to catalog_games with ON CONFLICT DO UPDATE
  *
  * Imported by both the /api/games/search route (live search) and the
- * catalog backfill scheduler (proactive indexing).
+ * catalog backfill scheduler (proactive indexing via RAWG only).
+ *
+ * TGDB API facts (confirmed from live API + spec.yaml):
+ *   - Search endpoint: GET /v1.1/Games/ByGameName?name=…&page=N
+ *   - Detail endpoint: GET /v1/Games/ByGameID?id=1,2,3
+ *   - Auth: apikey query param on every request
+ *   - `fields` param: overview, rating, platform, publishers, genres, developers, etc.
+ *   - `include` param: ONLY boxart and platform (genres/publishers/developers are IDs in fields)
+ *   - Publisher names require separate GET /v1/Publishers (4 567 entries; cached once)
+ *   - Monthly allowance: 1 000 free requests; allowance_refresh_timer shows seconds to reset
+ *   - include.platform wraps data as { data: { "id": { id, name, alias } } }
+ *   - game.platform is a single integer ID (not an array)
  */
+
 import { sql } from "drizzle-orm";
 import { db, catalogGamesTable, type InsertCatalogGame } from "@workspace/db";
 import {
@@ -30,37 +43,73 @@ export const rawgReady = !!RAWG_KEY;
 
 const PLATFORM_MAP: Record<string, string> = {
   // PlayStation
-  "Sony Playstation 5": "PS5",   "PlayStation 5": "PS5",
-  "Sony Playstation 4": "PS4",   "PlayStation 4": "PS4",
-  "Sony Playstation 3": "PS3",   "PlayStation 3": "PS3",
-  "Sony Playstation 2": "PS2",   "PlayStation 2": "PS2",
-  "Sony Playstation":   "PS1",   "PlayStation":   "PS1",
-  "PlayStation Portable": "PSP", "PSP": "PSP",
-  "PlayStation Vita":   "PS Vita",
+  "Sony Playstation 5":       "PS5",
+  "PlayStation 5":            "PS5",
+  "Sony Playstation 4":       "PS4",
+  "PlayStation 4":            "PS4",
+  "Sony Playstation 3":       "PS3",
+  "PlayStation 3":            "PS3",
+  "Sony Playstation 2":       "PS2",
+  "PlayStation 2":            "PS2",
+  "Sony Playstation":         "PS1",
+  "PlayStation":              "PS1",
+  "PlayStation Portable":     "PSP",
+  "PSP":                      "PSP",
+  "PlayStation Vita":         "PS Vita",
   // Xbox
-  "Microsoft Xbox Series X": "Xbox Series", "Xbox Series S/X": "Xbox Series",
-  "Microsoft Xbox One":      "Xbox One",    "Xbox One":        "Xbox One",
-  "Microsoft Xbox 360":      "Xbox 360",    "Xbox 360":        "Xbox 360",
-  "Microsoft Xbox":          "Xbox",        "Xbox":            "Xbox",
+  "Microsoft Xbox Series X":  "Xbox Series",
+  "Xbox Series S/X":          "Xbox Series",
+  "Microsoft Xbox One":       "Xbox One",
+  "Xbox One":                 "Xbox One",
+  "Microsoft Xbox 360":       "Xbox 360",
+  "Xbox 360":                 "Xbox 360",
+  "Microsoft Xbox":           "Xbox",
+  "Xbox":                     "Xbox",
   // Nintendo
-  "Nintendo Switch":    "Switch",  "Nintendo Switch 2": "Switch 2",
-  "Nintendo 3DS":       "3DS",     "Nintendo DS":        "DS",
-  "Nintendo 64":        "N64",
-  "Super Nintendo (SNES)": "SNES", "Nintendo Entertainment System (NES)": "NES",
-  "Nintendo GameCube":  "GameCube","Nintendo Wii":    "Wii",
-  "Nintendo Wii U":     "Wii U",
-  "GameBoy Advance":    "GBA",     "GameBoy Color":  "GBC",
-  "GameBoy":            "Game Boy",
+  "Nintendo Switch":          "Switch",
+  "Nintendo Switch 2":        "Switch 2",
+  "Nintendo 3DS":             "3DS",
+  "Nintendo DS":              "DS",
+  "Nintendo 64":              "N64",
+  "Super Nintendo (SNES)":    "SNES",
+  "Nintendo Entertainment System (NES)": "NES",
+  "Nintendo GameCube":        "GameCube",
+  "Nintendo Wii":             "Wii",
+  "Nintendo Wii U":           "Wii U",
+  "GameBoy Advance":          "GBA",
+  "Game Boy Advance":         "GBA",
+  "GameBoy Color":            "GBC",
+  "Game Boy Color":           "GBC",
+  "GameBoy":                  "Game Boy",
+  "Game Boy":                 "Game Boy",
   // PC / Other
-  "PC": "PC", "Mac OS": "macOS", "macOS": "macOS", "Linux": "Linux",
-  "iOS": "iOS", "Android": "Android",
+  "PC":                       "PC",
+  "Mac OS":                   "macOS",
+  "macOS":                    "macOS",
+  "Linux":                    "Linux",
+  "iOS":                      "iOS",
+  "Android":                  "Android",
   // Sega
-  "Sega Genesis": "Genesis", "Sega Saturn": "Saturn",
-  "Sega Dreamcast": "Dreamcast", "Sega Game Gear": "Game Gear",
-  "Sega CD": "Sega CD", "Sega 32X": "32X",
+  "Sega Genesis":             "Genesis",
+  "Sega Mega Drive":          "Genesis",
+  "Sega Saturn":              "Saturn",
+  "Sega Dreamcast":           "Dreamcast",
+  "Sega Game Gear":           "Game Gear",
+  "Sega CD":                  "Sega CD",
+  "Sega 32X":                 "32X",
+  "Sega Master System":       "Master System",
+  // Misc
+  "Atari 2600":               "Atari 2600",
+  "Atari 5200":               "Atari 5200",
+  "Atari 7800":               "Atari 7800",
+  "Neo Geo":                  "Neo Geo",
+  "TurboGrafx-16":            "TG-16",
+  "TG-16":                    "TG-16",
 };
 
 export const normPlatform = (n: string): string => PLATFORM_MAP[n] ?? n;
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
 
 function retailerUrls(title: string) {
   return {
@@ -126,36 +175,181 @@ export async function fetchFromRawg(
   }
 }
 
-// ── TGDB ──────────────────────────────────────────────────────────────────────
+// ── TGDB types ────────────────────────────────────────────────────────────────
+//
+// Confirmed from live API responses + spec.yaml:
+//   - game.platform is a single integer ID (not an array)
+//   - include.platform wraps entries under a "data" key (same in v1 and v1.1)
+//   - boxart base_url has original / small / thumb / medium / large variants
+//   - publishers/genres/developers in fields are arrays of integer IDs
 
-interface TgdbBoxartEntry  { id: number; type: string; side?: string; filename: string }
-interface TgdbBaseUrls     { thumb: string }
-interface TgdbGameEntry    { id: number; game_title: string; release_date: string | null; platform: number | null; rating: string | null }
-interface TgdbPlatformRow  { id: number; name: string }
-interface TgdbSearchResp   {
-  code: number; status: string;
-  data:    { count: number; games: TgdbGameEntry[] };
-  include: {
-    boxart?:   { base_url: TgdbBaseUrls; data: Record<string, TgdbBoxartEntry[]> };
-    platform?: { data: Record<string, TgdbPlatformRow> };
-  };
-  pages: { previous: string | null; current: string; next: string | null };
+interface TgdbBoxartEntry {
+  id: number; type: string; side: string | null;
+  filename: string; resolution: string | null;
 }
 
-function resolveCoverUrl(gameId: number, boxart: TgdbSearchResp["include"]["boxart"]): string | null {
+interface TgdbBoxartInclude {
+  base_url: {
+    original: string; small: string; thumb: string;
+    cropped_center_thumb: string; medium: string; large: string;
+  };
+  data: Record<string, TgdbBoxartEntry[]>;
+}
+
+interface TgdbPlatformEntry { id: number; name: string; alias: string }
+interface TgdbPlatformInclude { data: Record<string, TgdbPlatformEntry> }
+
+interface TgdbGame {
+  id: number;
+  game_title: string;
+  release_date: string | null;
+  platform: number | null;    // single integer platform ID
+  region_id?: number;
+  country_id?: number;
+  overview?: string | null;
+  rating?: string | null;     // e.g. "E - Everyone", "T - Teen", "M - Mature", "Not Rated"
+  developers?: number[];      // IDs — resolved to names via separate /v1/Developers (not cached here)
+  genres?: number[];          // IDs
+  publishers?: number[];      // IDs — resolved to names via publisher cache
+}
+
+interface TgdbSearchResp {
+  code: number;
+  status: string;
+  data: { count: number; games: TgdbGame[] };
+  include: {
+    boxart?:    TgdbBoxartInclude;
+    platform?:  TgdbPlatformInclude;
+  };
+  pages: { previous: string | null; current: string; next: string | null };
+  remaining_monthly_allowance?: number;
+  extra_allowance?: number;
+}
+
+interface TgdbPublishersResp {
+  code: number;
+  data: {
+    count: number;
+    publishers: Record<string, { id: number; name: string }>;
+  };
+}
+
+// ── Publisher name cache ──────────────────────────────────────────────────────
+//
+// Fetches all 4 567 publishers from TGDB in a single request and caches them
+// for the lifetime of the process. Costs 1 of the 1 000/month allowance.
+// Fetched lazily on first TGDB search to avoid burning an allowance on startup
+// if TGDB is never actually queried.
+
+let _publisherCache: Map<number, string> | null = null;
+let _publisherCacheFetch: Promise<Map<number, string>> | null = null;
+
+/**
+ * Lazily fetch and cache all TGDB publisher names (one request, ~4 500 entries).
+ *
+ * Singleton promise guard prevents concurrent duplicate fetches.
+ * On transient failure the cache is left null so the next call retries —
+ * only a permanent success commits to _publisherCache. This way a single
+ * network blip doesn't permanently suppress publisher names for the process
+ * lifetime.
+ */
+export async function getPublisherNames(): Promise<Map<number, string>> {
+  if (_publisherCache) return _publisherCache;
+  if (_publisherCacheFetch) return _publisherCacheFetch;
+
+  _publisherCacheFetch = (async (): Promise<Map<number, string>> => {
+    try {
+      const params = new URLSearchParams({ apikey: TGDB_KEY });
+      const res = await fetch(
+        `https://api.thegamesdb.net/v1/Publishers?${params}`,
+        { headers: { "User-Agent": "DiscWatchHQ/1.0" }, signal: AbortSignal.timeout(12_000) },
+      );
+      if (!res.ok) {
+        logger.warn({ status: res.status }, "TGDB publishers fetch failed — will retry on next search");
+        return new Map(); // do NOT commit to _publisherCache — allow retry
+      }
+      const data = (await res.json()) as TgdbPublishersResp;
+      _publisherCache = new Map(
+        Object.values(data.data.publishers).map(p => [p.id, p.name]),
+      );
+      logger.info({ count: _publisherCache.size }, "TGDB publisher cache loaded");
+      return _publisherCache;
+    } catch (err) {
+      logger.warn({ err }, "TGDB publisher cache error — will retry on next search");
+      return new Map(); // transient failure: do NOT commit, allow next call to retry
+    } finally {
+      _publisherCacheFetch = null; // always clear the in-flight promise
+    }
+  })();
+
+  return _publisherCacheFetch;
+}
+
+// ── TGDB response mapper ──────────────────────────────────────────────────────
+
+function resolveCover(
+  gameId: number,
+  boxart: TgdbBoxartInclude | undefined,
+): string | null {
   if (!boxart) return null;
   const entries = boxart.data[String(gameId)];
   if (!entries?.length) return null;
+  // Prefer front boxart, fall back to first available entry
   const front = entries.find(e => e.type === "boxart" && e.side === "front") ?? entries[0];
-  return `${boxart.base_url.thumb}${front.filename}`;
+  // Use medium CDN variant for good quality / file-size tradeoff
+  return `${boxart.base_url.medium}${front.filename}`;
 }
 
-function resolveTgdbPlatform(platformId: number | null, platformData: TgdbSearchResp["include"]["platform"]): string | null {
-  if (platformId === null || !platformData) return null;
-  const entry = platformData.data[String(platformId)];
+function resolvePlatformName(
+  platformId: number | null,
+  platformInclude: TgdbPlatformInclude | undefined,
+): string | null {
+  if (platformId === null || !platformInclude) return null;
+  const entry = platformInclude.data[String(platformId)];
   return entry ? normPlatform(entry.name) : null;
 }
 
+/**
+ * Map a TGDB search/detail response to InsertCatalogGame rows.
+ * Shared between fetchFromTgdb (search) and fetchTgdbById (detail).
+ */
+function mapTgdbGames(
+  data: TgdbSearchResp,
+  publisherNames: Map<number, string>,
+): InsertCatalogGame[] {
+  return data.data.games.map(g => {
+    const platformName   = resolvePlatformName(g.platform ?? null, data.include.platform);
+    const publisherName  = g.publishers?.[0] != null
+      ? (publisherNames.get(g.publishers[0]) ?? null)
+      : null;
+
+    return {
+      source:        "tgdb",
+      sourceId:      `tgdb:${g.id}`,
+      title:         g.game_title,
+      platforms:     platformName ? [platformName] : [],
+      publisherName,
+      coverImageUrl: resolveCover(g.id, data.include.boxart),
+      releaseYear:   parseYear(g.release_date),
+      metacritic:    null,                    // TGDB has no Metacritic data
+      esrbRating:    g.rating ?? null,
+      retailerUrls:  retailerUrls(g.game_title),
+    };
+  });
+}
+
+// ── TGDB search ───────────────────────────────────────────────────────────────
+
+/**
+ * Search TheGamesDB by title.
+ *
+ * Uses v1.1/Games/ByGameName (correct endpoint — v1 had broken `mode` handling).
+ * Fields include publishers so we can resolve names via the publisher cache.
+ * Publisher cache and the game search fire in parallel to minimise latency.
+ *
+ * Note: include only supports "boxart" and "platform"; publishers/genres/genres
+ * are returned as ID arrays via fields and resolved client-side from the cache.
+ */
 export async function fetchFromTgdb(
   q: string,
   page = 1,
@@ -163,44 +357,103 @@ export async function fetchFromTgdb(
   if (!tgdbReady) return { rows: [], total: 0, hasNext: false };
 
   try {
-    const offset = (page - 1) * 20;
     const params = new URLSearchParams({
-      apikey: TGDB_KEY, name: q,
-      fields: "overview,rating,platform", include: "boxart,platform",
+      apikey:  TGDB_KEY,
+      name:    q,
+      fields:  "overview,rating,platform,publishers,genres",
+      include: "boxart,platform",
+      page:    String(page),
     });
-    if (offset > 0) params.set("offset", String(offset));
 
-    const res = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameTitle?${params}`, {
-      headers: { "User-Agent": "DiscWatchHQ/1.0" },
-      signal:  AbortSignal.timeout(12_000),
-    });
+    // Fetch publisher cache and game results in parallel
+    const [publisherNames, res] = await Promise.all([
+      getPublisherNames(),
+      fetch(`https://api.thegamesdb.net/v1.1/Games/ByGameName?${params}`, {
+        headers: { "User-Agent": "DiscWatchHQ/1.0" },
+        signal:  AbortSignal.timeout(12_000),
+      }),
+    ]);
+
     if (!res.ok) {
-      logger.warn({ status: res.status }, "TGDB API error");
+      logger.warn({ status: res.status, q }, "TGDB ByGameName API error");
       return { rows: [], total: 0, hasNext: false };
     }
+
     const data = (await res.json()) as TgdbSearchResp;
+
+    if (data.remaining_monthly_allowance !== undefined) {
+      logger.debug(
+        { remaining: data.remaining_monthly_allowance, extra: data.extra_allowance },
+        "TGDB allowance",
+      );
+    }
+
     if (data.code !== 200 || !data.data?.games) {
-      logger.warn({ code: data.code }, "TGDB non-success");
+      logger.warn({ code: data.code, status: data.status }, "TGDB non-success response");
       return { rows: [], total: 0, hasNext: false };
     }
 
-    const rows: InsertCatalogGame[] = data.data.games.map(g => ({
-      source:        "tgdb",
-      sourceId:      `tgdb:${g.id}`,
-      title:         g.game_title,
-      platforms:     [resolveTgdbPlatform(g.platform ?? null, data.include.platform)].filter(Boolean) as string[],
-      publisherName: null,
-      coverImageUrl: resolveCoverUrl(g.id, data.include.boxart),
-      releaseYear:   parseYear(g.release_date),
-      metacritic:    null,
-      esrbRating:    g.rating ?? null,
-      retailerUrls:  retailerUrls(g.game_title),
-    }));
-
+    const rows = mapTgdbGames(data, publisherNames);
     return { rows, total: data.data.count, hasNext: !!data.pages.next };
   } catch (err) {
-    logger.error({ err }, "TGDB fetch error");
+    logger.error({ err, q }, "TGDB fetchFromTgdb error");
     return { rows: [], total: 0, hasNext: false };
+  }
+}
+
+// ── TGDB by-ID detail lookup ──────────────────────────────────────────────────
+
+/**
+ * Fetch one or more games by their TGDB integer IDs.
+ *
+ * Uses v1/Games/ByGameID which accepts a comma-separated id list — safe to pass
+ * up to ~50 IDs per call without hitting URL length limits. Fetches richer data
+ * than the search endpoint (adds `developers` field).
+ *
+ * Designed for:
+ *   - On-demand single-game detail enrichment (publishers, cover, ESRB)
+ *   - Batch enrichment after a search upserts bare title-only records
+ */
+export async function fetchTgdbById(
+  ids: number[],
+): Promise<InsertCatalogGame[]> {
+  if (!tgdbReady || ids.length === 0) return [];
+
+  try {
+    const params = new URLSearchParams({
+      apikey:  TGDB_KEY,
+      id:      ids.join(","),
+      fields:  "overview,rating,platform,publishers,genres,developers",
+      include: "boxart,platform",
+    });
+
+    const [publisherNames, res] = await Promise.all([
+      getPublisherNames(),
+      fetch(`https://api.thegamesdb.net/v1/Games/ByGameID?${params}`, {
+        headers: { "User-Agent": "DiscWatchHQ/1.0" },
+        signal:  AbortSignal.timeout(12_000),
+      }),
+    ]);
+
+    if (!res.ok) {
+      logger.warn({ status: res.status, ids }, "TGDB ByGameID API error");
+      return [];
+    }
+
+    const data = (await res.json()) as TgdbSearchResp;
+
+    if (data.remaining_monthly_allowance !== undefined) {
+      logger.debug(
+        { remaining: data.remaining_monthly_allowance },
+        "TGDB allowance after ByGameID",
+      );
+    }
+
+    if (data.code !== 200 || !data.data?.games?.length) return [];
+    return mapTgdbGames(data, publisherNames);
+  } catch (err) {
+    logger.error({ err, ids }, "TGDB fetchTgdbById error");
+    return [];
   }
 }
 
@@ -208,12 +461,14 @@ export async function fetchFromTgdb(
 
 /**
  * Upsert catalog game rows into the database.
- * On conflict (same source_id), update mutable fields only.
- * Returns the number of rows processed.
+ * Deduplicates by sourceId within the batch (last writer wins).
+ * ON CONFLICT targets source_id; mutable metadata fields are updated.
+ * publisher_name and esrb_rating are included so TGDB re-fetches enrich them.
  */
 export async function upsertCatalogGames(rows: InsertCatalogGame[]): Promise<number> {
   if (rows.length === 0) return 0;
-  // Deduplicate within the batch by sourceId (last writer wins).
+
+  // Deduplicate within the batch by sourceId
   const seen = new Map<string, InsertCatalogGame>();
   for (const row of rows) seen.set(row.sourceId, row);
   const unique = Array.from(seen.values());
@@ -223,13 +478,14 @@ export async function upsertCatalogGames(rows: InsertCatalogGame[]): Promise<num
     .onConflictDoUpdate({
       target: catalogGamesTable.sourceId,
       set: {
-        title:        sql`EXCLUDED.title`,
-        platforms:    sql`EXCLUDED.platforms`,
+        title:         sql`EXCLUDED.title`,
+        platforms:     sql`EXCLUDED.platforms`,
+        publisherName: sql`EXCLUDED.publisher_name`,
         coverImageUrl: sql`EXCLUDED.cover_image_url`,
-        metacritic:   sql`EXCLUDED.metacritic`,
-        esrbRating:   sql`EXCLUDED.esrb_rating`,
-        retailerUrls: sql`EXCLUDED.retailer_urls`,
-        updatedAt:    sql`NOW()`,
+        metacritic:    sql`EXCLUDED.metacritic`,
+        esrbRating:    sql`EXCLUDED.esrb_rating`,
+        retailerUrls:  sql`EXCLUDED.retailer_urls`,
+        updatedAt:     sql`NOW()`,
       },
     });
 

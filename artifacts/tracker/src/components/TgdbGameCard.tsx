@@ -2,8 +2,8 @@
  * CatalogGameCard — card for combined TheGamesDB + RAWG catalog results.
  *
  * Handles both data shapes through the unified CatalogGame interface:
- *   - RAWG results: landscape cover art, Metacritic score badge
- *   - TGDB results: portrait boxart, ESRB rating badge
+ *   - RAWG results:   landscape cover art, Metacritic score badge
+ *   - TGDB results:   portrait boxart, ESRB rating badge, publisher name
  *   - Merged results: RAWG art + TGDB ESRB (when both sources matched)
  *
  * Exports as both `CatalogGameCard` (canonical name) and the legacy
@@ -20,10 +20,14 @@ export interface CatalogGame {
   coverImageUrl: string | null
   metacritic:    number | null   // RAWG; null for TGDB
   esrbRating:    string | null   // TGDB; null for RAWG
+  /** Publisher name resolved from TGDB publisher cache; null for RAWG or unknown */
+  publisherName?: string | null
   retailerSearchUrls: {
     ebay: string; amazon: string; gamestop: string; bestbuy: string
   }
 }
+
+// ── Badges ────────────────────────────────────────────────────────────────────
 
 /** Numeric Metacritic score badge (RAWG source). */
 function MetacriticBadge({ score }: { score: number }) {
@@ -32,21 +36,33 @@ function MetacriticBadge({ score }: { score: number }) {
     : score >= 50 ? "bg-yellow-500 text-black"
     : "bg-red-500 text-white"
   return (
-    <span className={`absolute top-2 right-2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}>
+    <span
+      title={`Metacritic: ${score}`}
+      className={`absolute top-2 right-2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}
+    >
       {score}
     </span>
   )
 }
 
-/** ESRB content rating badge (TGDB source). */
+/**
+ * ESRB content rating badge (TGDB source).
+ * Collapses long strings like "E - Everyone" to their first letter.
+ */
 function EsrbBadge({ rating }: { rating: string }) {
-  const label  = rating.length <= 4 ? rating : rating.charAt(0).toUpperCase()
+  // Abbreviate "E - Everyone" → "E", "T - Teen" → "T", etc.
+  const label = rating === "Not Rated" ? "NR"
+    : rating.includes(" - ") ? rating.split(" - ")[0].trim()
+    : rating.length <= 3 ? rating
+    : rating.charAt(0).toUpperCase()
+
   const colour =
-    rating.startsWith("E")   ? "bg-primary/80 text-primary-foreground"
-    : rating === "T"         ? "bg-yellow-500/80 text-black"
-    : rating.startsWith("M") ? "bg-orange-600/80 text-white"
-    : rating === "AO"        ? "bg-red-600/80 text-white"
+    rating.startsWith("E")              ? "bg-primary/80 text-primary-foreground"
+    : rating.startsWith("T")           ? "bg-yellow-500/80 text-black"
+    : rating.startsWith("M")           ? "bg-orange-600/80 text-white"
+    : rating === "AO"                  ? "bg-red-600/80 text-white"
     : "bg-secondary/80 text-muted-foreground"
+
   return (
     <span
       title={`ESRB Rating: ${rating}`}
@@ -56,6 +72,8 @@ function EsrbBadge({ rating }: { rating: string }) {
     </span>
   )
 }
+
+// ── Placeholder ───────────────────────────────────────────────────────────────
 
 function CoverPlaceholder() {
   return (
@@ -69,6 +87,8 @@ function CoverPlaceholder() {
   )
 }
 
+// ── Card ──────────────────────────────────────────────────────────────────────
+
 export function CatalogGameCard({ game }: { game: CatalogGame }) {
   const year = game.releaseDate
     ? new Date(game.releaseDate.replace(/-/g, "/")).getFullYear()
@@ -77,7 +97,7 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
   return (
     <article className="group bg-card border border-card-border rounded-lg overflow-hidden flex flex-col hover:border-primary/30 transition-colors duration-150">
 
-      {/* Cover image — aspect-video works for both RAWG screenshots and TGDB boxart */}
+      {/* Cover image */}
       <div className="relative aspect-video bg-secondary overflow-hidden flex-shrink-0">
         {game.coverImageUrl ? (
           <img
@@ -91,22 +111,33 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
           <CoverPlaceholder />
         )}
 
-        {/* Show Metacritic if available; fall back to ESRB */}
+        {/* Score/rating badge — Metacritic takes priority over ESRB */}
         {game.metacritic !== null
           ? <MetacriticBadge score={game.metacritic} />
-          : game.esrbRating !== null
+          : game.esrbRating !== null && game.esrbRating !== "Not Rated"
             ? <EsrbBadge rating={game.esrbRating} />
-            : null}
+            : null
+        }
       </div>
 
       {/* Body */}
-      <div className="p-3 flex flex-col gap-2 flex-1 min-h-0">
+      <div className="p-3 flex flex-col gap-1.5 flex-1 min-h-0">
 
-        {/* Title + year */}
-        <div>
-          <h3 className="font-display font-bold text-[0.82rem] leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-            {game.title}
-          </h3>
+        {/* Title */}
+        <h3 className="font-display font-bold text-[0.82rem] leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+          {game.title}
+        </h3>
+
+        {/* Publisher + year on the same line */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {game.publisherName && (
+            <span className="text-[9px] font-mono text-primary/60 truncate max-w-[120px]">
+              {game.publisherName}
+            </span>
+          )}
+          {game.publisherName && year && (
+            <span className="text-[9px] text-muted-foreground/30">·</span>
+          )}
           {year && (
             <span className="text-[10px] font-mono text-muted-foreground/50">{year}</span>
           )}
@@ -116,7 +147,10 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
         {game.platforms.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {game.platforms.slice(0, 4).map(p => (
-              <span key={p} className="text-[8px] font-mono uppercase tracking-wide bg-secondary border border-border/50 text-muted-foreground px-1 py-0.5 rounded">
+              <span
+                key={p}
+                className="text-[8px] font-mono uppercase tracking-wide bg-secondary border border-border/50 text-muted-foreground px-1 py-0.5 rounded"
+              >
                 {p}
               </span>
             ))}
@@ -128,8 +162,8 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
           </div>
         )}
 
-        {/* Retailer buttons — platform-aware (retro = eBay+GameStop only) */}
-        <div className="mt-auto">
+        {/* Retailer buttons — platform-aware (retro = eBay + GameStop only) */}
+        <div className="mt-auto pt-1">
           <RetailerLinks urls={game.retailerSearchUrls} platforms={game.platforms} />
         </div>
       </div>
@@ -137,8 +171,8 @@ export function CatalogGameCard({ game }: { game: CatalogGame }) {
   )
 }
 
-// Legacy alias — keeps any stale RawgGameCard imports from breaking at runtime
-export { CatalogGameCard as RawgGameCard }
+// ── Legacy aliases ────────────────────────────────────────────────────────────
 
-// Legacy type alias
+// Keeps any stale imports from breaking at runtime
+export { CatalogGameCard as RawgGameCard }
 export type { CatalogGame as RawgGame, CatalogGame as TgdbGame }

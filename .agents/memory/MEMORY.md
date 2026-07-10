@@ -2,6 +2,6 @@
 - [Publisher scraper registry](scraper-registry.md) — 5 live scrapers; SRG defunct (Devolver 2024); correct SLG domain is strictlylimitedgames.com not strictly-limited.com
 - [Amazon URL injection](affiliate-config.md) — only injected on https amazon.*/amzn.to hostnames; tag added by API layer, not stored in DB
 - [eBay search URLs](affiliate-config.md) — computed per-request in formatRelease, only for sold_out status, category 139973 (Video Games)
-- [TGDB integration](tgdb-integration.md) — replaced RAWG; env var is TGDB_API_KEY (not RAWG_API_KEY); /games route; 10-min LRU cache; PAGE_SIZE=20 fixed; attribution required in footer+header
+- [TGDB integration](tgdb-integration.md) — v1.1/Games/ByGameName (search), v1/Games/ByGameID (detail batch); include=boxart,platform ONLY; publishers/genres are ID arrays in fields; 1000 req/month; publisher name cache lazy singleton
 - [ControllerIcon](icon-notes.md) — Lucide gamepad-2 outline icon (exact path data); viewBox 0 0 24 24; strokes use hsl(var(--primary)); default size=28
 - [LRG merch filter](scraper-registry.md) — isGame() blocks known merch product_types (lowercase-normalized) + title keyword fallback; wired in addProducts loop
