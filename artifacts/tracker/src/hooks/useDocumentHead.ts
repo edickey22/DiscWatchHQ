@@ -119,9 +119,16 @@ export function useDocumentHead({
     upsertMeta("property", "og:description",       opts.description)
     upsertMeta("property", "og:type",              opts.ogType  ?? "website")
     upsertMeta("property", "og:site_name",         SITE_NAME)
-    upsertMeta("name",     "twitter:title",        opts.title)
-    upsertMeta("name",     "twitter:description",  opts.description)
-    upsertMeta("name",     "twitter:card",         opts.ogImage ? "summary_large_image" : "summary")
+    upsertMeta("name", "twitter:title",       opts.title)
+    upsertMeta("name", "twitter:description", opts.description)
+    // Only update twitter:card when we're injecting a custom ogImage.
+    // When ogImage is null the page intentionally inherits the site-wide
+    // default (summary_large_image + og-image.png set in index.html) — we
+    // must not overwrite it with "summary" or the large-image preview breaks
+    // on every non-release page.
+    if (opts.ogImage) {
+      upsertMeta("name", "twitter:card", "summary_large_image")
+    }
 
     if (opts.canonical) {
       upsertMeta("property", "og:url", opts.canonical)

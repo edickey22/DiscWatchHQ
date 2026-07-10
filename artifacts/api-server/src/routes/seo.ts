@@ -86,6 +86,27 @@ router.get("/sitemap.xml", async (req, res): Promise<void> => {
     <priority>0.9</priority>
   </url>`)
 
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/games/popular</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/games/new-releases</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/games/upcoming</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+
     // ── Release pages ────────────────────────────────────────────────────────
     for (const r of releases) {
       const status    = r.status as string

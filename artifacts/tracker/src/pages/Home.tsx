@@ -80,6 +80,12 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
+        {/* Visually-hidden H1 — one H1 per page for accessibility + SEO.
+            The Boutique page uses H2s for its three content sections (Currently
+            Available, Coming Soon, Sold Out). Adding a matching H1 here keeps
+            the document outline correct without altering the visual layout. */}
+        <h1 className="sr-only">Boutique Tracker — Limited-Run Physical Game Releases</h1>
+
         {/* Filter + Sort bar */}
         <section className="bg-card border-b sticky top-16 z-30 shadow-sm">
           <div className="container mx-auto max-w-6xl px-4 py-4">

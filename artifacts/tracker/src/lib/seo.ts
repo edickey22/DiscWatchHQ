@@ -101,8 +101,9 @@ export function buildReleaseTitle(r: SeoRelease): string {
 
 /**
  * Returns a unique <meta description> for a release detail page (~155 chars).
- * Incorporates publisher, platform, price, and availability to differentiate
- * this page from generic results.
+ * Incorporates publisher, platform, price, availability, and all four major
+ * retailers to target "buy [game] physical" and "[game] price comparison"
+ * searches — the two highest-intent query patterns for this site.
  */
 export function buildReleaseDescription(r: SeoRelease): string {
   const pub   = r.publisherName
@@ -111,13 +112,13 @@ export function buildReleaseDescription(r: SeoRelease): string {
 
   let desc: string
   if (r.status === "available") {
-    const closes = r.preorderCloseDate ? `. Order before ${fmtDate(r.preorderCloseDate)}` : ""
-    desc = `${r.title} (${pub}, ${plat}) is available for preorder${price}${closes}. Limited quantities — this physical edition will not be reprinted. Track it on DiscWatchHQ.`
+    const closes = r.preorderCloseDate ? ` Order closes ${fmtDate(r.preorderCloseDate)}.` : ""
+    desc = `${r.title} (${pub}, ${plat}) is available for preorder${price}.${closes} Compare prices at GameStop, Amazon, eBay & Best Buy. Limited run — won't be reprinted.`
   } else if (r.status === "coming_soon") {
-    desc = `${r.title} is coming soon from ${pub} for ${plat}. Preorders haven't opened yet. Sign up for DiscWatchHQ alerts and be notified the moment orders go live.`
+    desc = `${r.title} is coming soon from ${pub} for ${plat}. Preorders not yet open. Track the drop and compare prices at GameStop, Amazon, eBay & Best Buy on DiscWatchHQ.`
   } else {
     const soldDate = r.soldOutAt ? ` on ${fmtDate(r.soldOutAt)}` : ""
-    desc = `${r.title} (${pub}, ${plat}) sold out${soldDate}. Find secondary-market copies via eBay, GameStop, and Amazon. Track limited-run game releases at DiscWatchHQ.`
+    desc = `${r.title} (${pub}, ${plat}) sold out${soldDate}. Find secondhand copies and compare prices at eBay, GameStop, Amazon & Best Buy via DiscWatchHQ.`
   }
 
   // Target ≤ 155 chars for full SERP snippet display
@@ -169,11 +170,14 @@ export function buildReleaseDescriptiveCopy(r: SeoRelease): string {
 // ── Product JSON-LD (schema.org) ──────────────────────────────────────────────
 
 /**
- * Returns a schema.org/Product JSON-LD object with real attributes from the
- * release — no placeholder fields. Includes an Offer block with real price
- * and availability status when data is available.
+ * Returns a schema.org JSON-LD object for a release detail page.
  *
- * Only populated fields are included: Google penalises schema with fake or
+ * Uses dual @type ["Product", "VideoGame"] so the markup satisfies both:
+ *   • Product — enables price/shopping rich results in Google Search
+ *   • VideoGame — correct semantic type; enables additional VideoGame-specific
+ *     rich result signals (gamePlatform, publisher, genre)
+ *
+ * Only populated fields are included. Google penalises schema with fake or
  * empty attributes more than it rewards complete-but-fake schema.
  */
 export function buildReleaseJsonLd(
@@ -191,9 +195,16 @@ export function buildReleaseJsonLd(
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type":    "Product",
+    // Dual type: Product qualifies for price/shopping rich results;
+    // VideoGame is the semantically correct type for game titles.
+    "@type":    ["Product", "VideoGame"],
     "name":     r.title,
     "description": description,
+    // publisher is a VideoGame property; brand covers the Product side.
+    "publisher": {
+      "@type": "Organization",
+      "name":  r.publisherName,
+    },
     "brand": {
       "@type": "Brand",
       "name":  r.publisherName,
@@ -205,20 +216,20 @@ export function buildReleaseJsonLd(
     schema["image"] = r.coverImageUrl
   }
 
-  if (plat) {
-    // additionalProperty lets crawlers understand platform context
-    schema["additionalProperty"] = {
-      "@type":     "PropertyValue",
-      "name":      "Platform",
-      "value":     plat,
-    }
+  // gamePlatform is a first-class VideoGame property — more semantically
+  // correct than additionalProperty for platform data.
+  if (r.platforms?.length) {
+    schema["gamePlatform"] = r.platforms.length === 1
+      ? r.platforms[0]
+      : r.platforms
   }
 
   if (r.editionType) {
-    const existing = schema["additionalProperty"] as Record<string, unknown> | undefined
-    schema["additionalProperty"] = existing
-      ? [existing, { "@type": "PropertyValue", "name": "Edition", "value": r.editionType }]
-      : { "@type": "PropertyValue", "name": "Edition", "value": r.editionType }
+    schema["additionalProperty"] = {
+      "@type": "PropertyValue",
+      "name":  "Edition",
+      "value": r.editionType,
+    }
   }
 
   // Offer block — only include price when we have a real number
