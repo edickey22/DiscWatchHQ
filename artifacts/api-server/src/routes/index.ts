@@ -9,9 +9,11 @@ import affiliateRouter from "./affiliate";
 import gamesRouter from "./games";
 import catalogRouter from "./catalog";
 import seoRouter from "./seo";
+import socialRouter from "./social";
 
 const router: IRouter = Router();
 
+router.use(socialRouter);
 router.use(healthRouter);
 router.use(releasesRouter);
 router.use(publishersRouter);
