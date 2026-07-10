@@ -89,13 +89,25 @@ function CoverPlaceholder() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-export function CatalogGameCard({ game }: { game: CatalogGame }) {
+export function CatalogGameCard({
+  game,
+  onClick,
+}: {
+  game:    CatalogGame
+  onClick?: (game: CatalogGame) => void
+}) {
   const year = game.releaseDate
     ? new Date(game.releaseDate.replace(/-/g, "/")).getFullYear()
     : null
 
   return (
-    <article className="group bg-card border border-card-border rounded-lg overflow-hidden flex flex-col hover:border-primary/30 transition-colors duration-150">
+    <article
+      className="group bg-card border border-card-border rounded-lg overflow-hidden flex flex-col hover:border-primary/30 transition-colors duration-150 cursor-pointer"
+      onClick={() => onClick?.(game)}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={e => { if (onClick && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(game) } }}
+    >
 
       {/* Cover image */}
       <div className="relative aspect-video bg-secondary overflow-hidden flex-shrink-0">

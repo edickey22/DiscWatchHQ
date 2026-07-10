@@ -20,7 +20,7 @@ import { Router } from "express";
 import { and, asc, ilike, sql } from "drizzle-orm";
 import { db, catalogGamesTable, type CatalogGameRow } from "@workspace/db";
 import {
-  rawgReady, tgdbReady,
+  rawgReady, tgdbReady, RAWG_KEY,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
   fetchPopularFromRawg, fetchNewReleasesFromRawg,
 } from "../lib/catalogService";
@@ -428,6 +428,144 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
       },
     });
   }
+});
+
+/**
+ * GET /api/games/detail/:sourceId
+ *
+ * Returns enriched data for a single game, used by the Browse Games modal.
+ * For RAWG-sourced games, fetches description, screenshots, and trailer from
+ * the RAWG games/{id} and games/{id}/movies endpoints.
+ * For TGDB-sourced games, returns the DB row (no screenshot/trailer API).
+ *
+ * RAWG attribution is required by RAWG API ToS — the `attribution` field in
+ * the response tells the frontend which credit to display.
+ */
+router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
+  const sourceId = decodeURIComponent(req.params.sourceId);
+
+  // Load base row from DB
+  const stored = await db.select()
+    .from(catalogGamesTable)
+    .where(sql`${catalogGamesTable.sourceId} = ${sourceId}`)
+    .limit(1);
+
+  const baseRow = stored.length > 0 ? formatRow(stored[0]) : null;
+
+  // ── RAWG-enriched detail ────────────────────────────────────────────────────
+  if (sourceId.startsWith("rawg:") && rawgReady) {
+    const rawgId = sourceId.replace(/^rawg:/, "");
+
+    interface RawgDetailResp {
+      name: string;
+      description_raw: string | null;
+      background_image: string | null;
+      metacritic: number | null;
+      short_screenshots: Array<{ id: number; image: string }> | null;
+      clip: { clip: string; video: string; preview: string } | null;
+      esrb_rating: { name: string } | null;
+      publishers: Array<{ name: string }> | null;
+      platforms: Array<{ platform: { name: string } }> | null;
+      released: string | null;
+    }
+    interface RawgMoviesResp {
+      count: number;
+      results: Array<{
+        id: number; name: string; preview: string;
+        data: { 480: string; max: string };
+      }>;
+    }
+
+    interface RawgScreenshotResp {
+      count: number;
+      results: Array<{ id: number; image: string }>;
+    }
+
+    const [detailRes, moviesRes, screenshotsRes] = await Promise.allSettled([
+      fetch(`https://api.rawg.io/api/games/${rawgId}?key=${RAWG_KEY}`, {
+        headers: { "User-Agent": "DiscWatchHQ/1.0" },
+        signal:  AbortSignal.timeout(10_000),
+      }),
+      fetch(`https://api.rawg.io/api/games/${rawgId}/movies?key=${RAWG_KEY}`, {
+        headers: { "User-Agent": "DiscWatchHQ/1.0" },
+        signal:  AbortSignal.timeout(10_000),
+      }),
+      fetch(`https://api.rawg.io/api/games/${rawgId}/screenshots?key=${RAWG_KEY}&page_size=6`, {
+        headers: { "User-Agent": "DiscWatchHQ/1.0" },
+        signal:  AbortSignal.timeout(10_000),
+      }),
+    ]);
+
+    let description:      string | null = null;
+    let screenshots:      string[]      = [];
+    let trailerYoutubeId: string | null = null;
+    let trailerUrl:       string | null = null;
+
+    if (detailRes.status === "fulfilled" && detailRes.value.ok) {
+      const detail = (await detailRes.value.json()) as RawgDetailResp;
+      description = detail.description_raw?.trim() ?? null;
+
+      // Some games have a clip field (YouTube redirect)
+      if (detail.clip?.video) {
+        trailerYoutubeId = detail.clip.video;
+        trailerUrl = `https://www.youtube.com/watch?v=${trailerYoutubeId}`;
+      }
+    } else if (detailRes.status === "rejected") {
+      logger.warn({ err: detailRes.reason, sourceId }, "RAWG game detail fetch failed");
+    }
+
+    // Screenshots endpoint returns actual screenshots (not included in game detail response)
+    if (screenshotsRes.status === "fulfilled" && screenshotsRes.value.ok) {
+      const ss = (await screenshotsRes.value.json()) as RawgScreenshotResp;
+      screenshots = (ss.results ?? []).slice(0, 6).map(s => s.image).filter(Boolean);
+    }
+
+    // Movies endpoint often carries richer trailer data than the clip field
+    if (moviesRes.status === "fulfilled" && moviesRes.value.ok) {
+      const movies = (await moviesRes.value.json()) as RawgMoviesResp;
+      const first = movies.results?.[0];
+      if (first && !trailerYoutubeId) {
+        const videoUrl = first.data?.max ?? first.data?.["480"] ?? "";
+        // Extract YouTube video ID from various URL shapes
+        const ytMatch = videoUrl.match(
+          /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+        );
+        if (ytMatch) {
+          trailerYoutubeId = ytMatch[1];
+          trailerUrl = `https://www.youtube.com/watch?v=${trailerYoutubeId}`;
+        } else if (videoUrl.startsWith("http")) {
+          trailerUrl = videoUrl;
+        }
+      }
+    }
+
+    const base = baseRow ?? { id: sourceId, source: "rawg" as const, title: sourceId,
+      releaseDate: null, platforms: [], coverImageUrl: null,
+      metacritic: null, esrbRating: null, publisherName: null,
+      retailerSearchUrls: {
+        ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
+        gamestop: buildGameStopSearchUrl(sourceId), bestbuy: buildBestBuySearchUrl(sourceId),
+      },
+    };
+
+    res.json({ ...base, description, screenshots, trailerYoutubeId, trailerUrl, attribution: "rawg" });
+    return;
+  }
+
+  // ── TGDB / fallback — return DB row without enrichment ─────────────────────
+  if (!baseRow) {
+    res.status(404).json({ error: "Game not found" });
+    return;
+  }
+
+  res.json({
+    ...baseRow,
+    description:      null,
+    screenshots:      [],
+    trailerYoutubeId: null,
+    trailerUrl:       null,
+    attribution:      baseRow.source,
+  });
 });
 
 export default router;

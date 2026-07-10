@@ -41,6 +41,7 @@ import {
   SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { CatalogGameCard, type CatalogGame } from "@/components/TgdbGameCard"
+import { GameDetailModal } from "@/components/GameDetailModal"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
@@ -175,11 +176,12 @@ function CatalogAttribution({ sources }: { sources?: { rawg: boolean; tgdb: bool
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GamesSearch() {
-  const [search, setSearch]     = useState("")
-  const [platform, setPlatform] = useState("all")
-  const [page, setPage]         = useState(1)
-  const debouncedSearch         = useDebounce(search, 400)
-  const isSearching             = debouncedSearch.trim().length > 0
+  const [search, setSearch]           = useState("")
+  const [platform, setPlatform]       = useState("all")
+  const [page, setPage]               = useState(1)
+  const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null)
+  const debouncedSearch               = useDebounce(search, 400)
+  const isSearching                   = debouncedSearch.trim().length > 0
 
   useDocumentHead({
     title:       "Browse Games — Physical Releases Across All Platforms | DiscWatchHQ",
@@ -303,7 +305,7 @@ export default function GamesSearch() {
               ) : popularCards.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {popularCards.map(game => (
-                    <CatalogGameCard key={game.id} game={game} />
+                    <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                   ))}
                 </div>
               ) : (
@@ -328,7 +330,7 @@ export default function GamesSearch() {
               ) : newReleasesCards.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {newReleasesCards.map(game => (
-                    <CatalogGameCard key={game.id} game={game} />
+                    <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                   ))}
                 </div>
               ) : (
@@ -424,7 +426,7 @@ export default function GamesSearch() {
               {isSearchLoading
                 ? Array.from({ length: 20 }).map((_, i) => <GameCardSkeleton key={i} />)
                 : searchData?.results.map(game => (
-                    <CatalogGameCard key={game.id} game={game} />
+                    <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                   ))
               }
             </div>
@@ -458,6 +460,12 @@ export default function GamesSearch() {
       </main>
 
       <Footer />
+
+      {/* Game detail modal — opens on card click */}
+      <GameDetailModal
+        game={selectedGame}
+        onClose={() => setSelectedGame(null)}
+      />
     </div>
   )
 }
