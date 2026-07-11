@@ -224,7 +224,12 @@ export function MediaLightbox({ slides, initialIndex, onClose }: MediaLightboxPr
     <div
       ref={backdropRef}
       tabIndex={-1}
-      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/92 outline-none"
+      // pointer-events-auto is required here: Radix Dialog sets `pointer-events: none`
+      // on <body> while its own dialog is open (scoping interaction to its content),
+      // and this lightbox is a separate document.body portal — a sibling, not a
+      // descendant, of the Radix dialog content — so it inherits that `none` and
+      // silently ignores all touch/click input unless explicitly re-enabled here.
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/92 outline-none pointer-events-auto"
       onClick={onClose}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
