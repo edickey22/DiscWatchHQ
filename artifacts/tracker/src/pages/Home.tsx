@@ -179,8 +179,8 @@ export default function Home() {
               {isLoadingAvailable ? (
                 Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
               ) : availableData?.releases.length ? (
-                availableData.releases.map(release => (
-                  <GameCard key={release.id} release={release} />
+                availableData.releases.map((release, i) => (
+                  <GameCard key={release.id} release={release} priority={i < 4} />
                 ))
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">

@@ -9,6 +9,7 @@
  * Exports as both `CatalogGameCard` (canonical name) and the legacy
  * `RawgGameCard` alias so any stale imports don't break.
  */
+import { useState } from "react"
 import { RetailerLinks } from "@/components/RetailerLinks"
 
 export interface CatalogGame {
@@ -96,13 +97,27 @@ function CoverPlaceholder() {
 export function CatalogGameCard({
   game,
   onClick,
+  priority = false,
 }: {
   game:    CatalogGame
   onClick?: (game: CatalogGame) => void
+  /**
+   * Set true for cards in the first visible row of a grid (above the fold on
+   * load) so the cover loads eagerly instead of deferring via loading="lazy"
+   * + decoding="async". Those two attributes are correct for below-the-fold
+   * cards, but on first-row cards they defer paint until well after the rest
+   * of the card (title/price/buttons) has already rendered, producing a
+   * multi-second blank-box flicker even though the image data is fully
+   * downloaded — confirmed via naturalWidth/complete being true while the
+   * frame stays unpainted. Eager + sync decode fixes that for the cards
+   * visitors see immediately; lazy/async stays the default further down.
+   */
+  priority?: boolean
 }) {
   const year = game.releaseDate
     ? new Date(game.releaseDate.replace(/-/g, "/")).getFullYear()
     : null
+  const [imgFailed, setImgFailed] = useState(false)
 
   return (
     <article
@@ -115,13 +130,14 @@ export function CatalogGameCard({
 
       {/* Cover image */}
       <div className="relative aspect-video bg-secondary overflow-hidden flex-shrink-0">
-        {game.coverImageUrl ? (
+        {game.coverImageUrl && !imgFailed ? (
           <img
             src={game.coverImageUrl}
             alt={game.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            decoding="async"
+            loading={priority ? "eager" : "lazy"}
+            decoding={priority ? "sync" : "async"}
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <CoverPlaceholder />

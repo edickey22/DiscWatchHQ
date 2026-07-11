@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { Release, ReleaseStatus } from "@workspace/api-client-react"
@@ -8,12 +9,21 @@ import { ControllerIcon } from "@/components/ControllerIcon"
 
 interface GameCardProps {
   release: Release
+  /**
+   * Set true for cards in the first visible row (above the fold on load) so
+   * the cover loads eagerly instead of deferring via loading="lazy". Lazy
+   * loading is correct further down the page, but on first-row cards it
+   * defers paint well past the rest of the card rendering, producing a
+   * multi-second blank-box flicker even though the image is fully downloaded.
+   */
+  priority?: boolean
 }
 
-export function GameCard({ release }: GameCardProps) {
+export function GameCard({ release, priority = false }: GameCardProps) {
   const isAvailable = release.status === ReleaseStatus.available
   const isSoldOut = release.status === ReleaseStatus.sold_out
   const isComingSoon = release.status === ReleaseStatus.coming_soon
+  const [imgFailed, setImgFailed] = useState(false)
 
   const daysLeft = isAvailable ? daysUntil(release.preorderCloseDate) : null
   const isClosingSoon = daysLeft !== null && daysLeft <= 7 && daysLeft >= 0
@@ -26,7 +36,7 @@ export function GameCard({ release }: GameCardProps) {
       {/* Cover Image — navigates to detail page */}
       <Link href={`/releases/${release.id}`} className="block">
         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
-          {release.coverImageUrl ? (
+          {release.coverImageUrl && !imgFailed ? (
             <img
               src={release.coverImageUrl}
               alt={`${release.title} cover`}
@@ -34,7 +44,9 @@ export function GameCard({ release }: GameCardProps) {
                 "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
                 isSoldOut && "grayscale-[50%]"
               )}
-              loading="lazy"
+              loading={priority ? "eager" : "lazy"}
+              decoding={priority ? "sync" : "async"}
+              onError={() => setImgFailed(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary">

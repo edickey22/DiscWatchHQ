@@ -498,8 +498,8 @@ export default function GamesSearch() {
               ) : popularCards.length > 0 ? (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {popularCards.map(game => (
-                      <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
+                    {popularCards.map((game, i) => (
+                      <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} priority={i < 4} />
                     ))}
                   </div>
 
