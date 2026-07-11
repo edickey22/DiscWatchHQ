@@ -4,3 +4,4 @@ export * from "./subscribers";
 export * from "./scrapeLogs";
 export * from "./catalogGames";
 export * from "./systemKv";
+export * from "./gameDetailCache";

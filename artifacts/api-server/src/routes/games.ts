@@ -18,7 +18,7 @@
 
 import { Router } from "express";
 import { and, asc, ilike, sql, type SQL } from "drizzle-orm";
-import { db, catalogGamesTable, type CatalogGameRow } from "@workspace/db";
+import { db, catalogGamesTable, gameDetailCacheTable, type CatalogGameRow } from "@workspace/db";
 import {
   rawgReady, tgdbReady, RAWG_KEY,
   fetchFromRawg, fetchFromTgdb, fetchTgdbById, upsertCatalogGames,
@@ -36,10 +36,13 @@ import { logger } from "../lib/logger";
 const router = Router();
 const PAGE_SIZE = 20;
 
-// ── Detail response cache (30 min in-process) ─────────────────────────────────
-// Avoids re-hitting RAWG on every re-open of the same game popup within a session.
-const _detailCache = new Map<string, { data: unknown; expiresAt: number }>();
-const DETAIL_CACHE_TTL_MS = 30 * 60 * 1_000;
+// ── Detail response cache ─────────────────────────────────────────────────────
+// L1: in-process Map — zero-latency for repeated opens within the same session/instance.
+// L2: game_detail_cache Postgres table — survives restarts, shared across autoscale instances.
+// On a cache miss both layers are missed; RAWG is called, result written to L2 then L1.
+const _detailCache    = new Map<string, { data: unknown; expiresAt: number }>();
+const DETAIL_CACHE_TTL_MS    = 30 * 60 * 1_000;            // L1: 30 minutes
+const DETAIL_DB_CACHE_TTL_MS = 60 * 24 * 60 * 60 * 1_000; // L2: 60 days
 
 // ── Response formatter ────────────────────────────────────────────────────────
 
@@ -833,6 +836,37 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
   if (sourceId.startsWith("rawg:") && rawgReady) {
     const rawgId = sourceId.replace(/^rawg:/, "");
 
+    // ── L2: DB cache check ────────────────────────────────────────────────────
+    // Survives server restarts and is shared across all autoscale instances,
+    // unlike the L1 in-process Map above.
+    const dbCached = await db
+      .select()
+      .from(gameDetailCacheTable)
+      .where(sql`${gameDetailCacheTable.sourceId} = ${sourceId} AND ${gameDetailCacheTable.expiresAt} > NOW()`)
+      .limit(1);
+
+    if (dbCached.length > 0) {
+      const { description, screenshots } = dbCached[0];
+      const base = baseRow ?? {
+        id: sourceId, source: "rawg" as const, title: sourceId,
+        releaseDate: null, platforms: [], genres: [], coverImageUrl: null,
+        metacritic: null, esrbRating: null, publisherName: null,
+        retailerSearchUrls: {
+          ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
+          gamestop: buildGameStopSearchUrl(sourceId), bestbuy: buildBestBuySearchUrl(sourceId),
+        },
+        guideSearchUrls: {
+          ebay: buildEbayStrategyGuideUrl(sourceId),
+          amazon: buildAmazonStrategyGuideUrl(sourceId),
+        },
+      };
+      const _dbPayload = { ...base, description, screenshots: screenshots ?? [], attribution: "rawg" };
+      _detailCache.set(sourceId, { data: _dbPayload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
+      logger.debug({ sourceId }, "game_detail_cache L2 hit");
+      res.json(_dbPayload);
+      return;
+    }
+
     interface RawgDetailResp {
       name: string;
       description_raw: string | null;
@@ -894,6 +928,24 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
     };
 
     const _payload = { ...base, description, screenshots, attribution: "rawg" };
+
+    // ── Write to L2 DB cache (fire-and-forget) ────────────────────────────────
+    // Don't await — the response is already ready; we don't want to block the
+    // client on a DB write. Errors are logged but do not fail the request.
+    const _expiresAt = new Date(Date.now() + DETAIL_DB_CACHE_TTL_MS);
+    db.insert(gameDetailCacheTable)
+      .values({ sourceId, description, screenshots, expiresAt: _expiresAt })
+      .onConflictDoUpdate({
+        target: gameDetailCacheTable.sourceId,
+        set: {
+          description: sql`EXCLUDED.description`,
+          screenshots: sql`EXCLUDED.screenshots`,
+          fetchedAt:   sql`NOW()`,
+          expiresAt:   sql`EXCLUDED.expires_at`,
+        },
+      })
+      .catch(err => logger.warn({ err, sourceId }, "game_detail_cache L2 write failed"));
+
     _detailCache.set(sourceId, { data: _payload, expiresAt: Date.now() + DETAIL_CACHE_TTL_MS });
     res.json(_payload);
     return;

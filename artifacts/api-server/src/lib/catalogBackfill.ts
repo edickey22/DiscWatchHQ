@@ -27,7 +27,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { db, systemKv, catalogGamesTable } from "@workspace/db";
+import { db, systemKv, catalogGamesTable, gameDetailCacheTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import {
   fetchFromRawg, fetchFromTgdb, rawgReady, tgdbReady, upsertCatalogGames,
@@ -194,6 +194,21 @@ async function runBackfill(): Promise<void> {
     { tgdbDone, skipped, nextTgdbIdx: tgdbIdx % total },
     "Backfill TGDB phase complete",
   );
+
+  // ── Phase 3: game_detail_cache cleanup ────────────────────────────────────
+  // Prune expired rows once per nightly run.  The expires_at index makes this
+  // a fast range scan even as the table grows.
+  try {
+    const result = await db
+      .delete(gameDetailCacheTable)
+      .where(sql`${gameDetailCacheTable.expiresAt} < NOW()`);
+    const deleted = (result as unknown as { rowCount: number }).rowCount ?? 0;
+    if (deleted > 0) {
+      logger.info({ deleted }, "game_detail_cache: pruned expired rows");
+    }
+  } catch (err) {
+    logger.warn({ err }, "game_detail_cache cleanup failed — will retry next run");
+  }
 }
 
 // ── Exported entry point ──────────────────────────────────────────────────────
