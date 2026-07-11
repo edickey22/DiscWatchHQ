@@ -305,6 +305,16 @@ export default function GamesSearch() {
   // Reset page whenever any search/filter parameter changes
   useEffect(() => { setPage(1) }, [debouncedSearch, platform, genre, era, sort])
 
+  // Report every distinct search query to GA4 so "Search Term" reporting is populated.
+  // Fires once per debounced query change (not on page/sort changes) via the standard
+  // GA4 `search` event; window.gtag is declared globally in App.tsx.
+  useEffect(() => {
+    const term = debouncedSearch.trim()
+    if (!term) return
+    if (typeof window.gtag !== "function") return
+    window.gtag("event", "search", { search_term: term })
+  }, [debouncedSearch])
+
   const clearFilters = useCallback(() => {
     setPlatform("all")
     setGenre("all")
