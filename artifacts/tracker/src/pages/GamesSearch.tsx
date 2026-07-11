@@ -280,6 +280,10 @@ export default function GamesSearch() {
   const [upcomingShown, setUpcomingShown] = useState(12)
 
   const debouncedSearch = useDebounce(search, 400)
+  // Longer debounce dedicated to analytics — the 400ms search debounce fires on
+  // every brief typing pause, which would report partial fragments ("zeld") as
+  // distinct search terms. Waiting ~1.2s for typing to fully settle avoids that.
+  const analyticsSearch = useDebounce(search, 1200)
 
   // Active filter count (sort is not a "filter", just presentation)
   const activeFilterCount =
@@ -305,15 +309,16 @@ export default function GamesSearch() {
   // Reset page whenever any search/filter parameter changes
   useEffect(() => { setPage(1) }, [debouncedSearch, platform, genre, era, sort])
 
-  // Report every distinct search query to GA4 so "Search Term" reporting is populated.
-  // Fires once per debounced query change (not on page/sort changes) via the standard
-  // GA4 `search` event; window.gtag is declared globally in App.tsx.
+  // Report search queries to GA4 so "Search Term" reporting is populated.
+  // Uses the longer analyticsSearch debounce (not the 400ms search-results one) so
+  // partial in-progress fragments don't get reported as distinct terms; window.gtag
+  // is declared globally in App.tsx.
   useEffect(() => {
-    const term = debouncedSearch.trim()
+    const term = analyticsSearch.trim()
     if (!term) return
     if (typeof window.gtag !== "function") return
     window.gtag("event", "search", { search_term: term })
-  }, [debouncedSearch])
+  }, [analyticsSearch])
 
   const clearFilters = useCallback(() => {
     setPlatform("all")
