@@ -16,8 +16,10 @@
  *     https://search.google.com/search-console → Sitemaps → enter your URL
  *
  * Base URL derivation
- *   Uses REPLIT_DOMAINS env var (set automatically by Replit) when available,
- *   otherwise falls back to the Host header from the incoming request.
+ *   Uses SITE_URL env var when set (e.g. "https://discwatchhq.com").
+ *   Falls back to https://discwatchhq.com hardcoded — never derives from
+ *   REPLIT_DOMAINS, which is always the .replit.app dev subdomain and would
+ *   point Google at the wrong domain.
  */
 
 import { Router } from "express";
@@ -36,22 +38,25 @@ function escapeXml(s: string): string {
     .replace(/'/g,  "&apos;")
 }
 
-/** Derive the public-facing base URL for this deployment. */
-function getBaseUrl(req: import("express").Request): string {
-  const replitDomains = process.env.REPLIT_DOMAINS
-  if (replitDomains) {
-    const primary = replitDomains.split(",")[0].trim()
-    return `https://${primary}`
-  }
-  const host     = req.get("x-forwarded-host") || req.get("host") || "localhost"
-  const protocol = req.get("x-forwarded-proto") || req.protocol || "https"
-  // Strip the /api path prefix that Replit's proxy prepends
-  return `${protocol}://${host}`
+/**
+ * Return the canonical public-facing base URL.
+ *
+ * Reads SITE_URL first (set explicitly in Replit Secrets as
+ * "https://discwatchhq.com").  Falls back to the hardcoded production domain
+ * so the sitemap is always correct even if the secret is missing.
+ *
+ * We deliberately do NOT derive the domain from REPLIT_DOMAINS or request
+ * headers — REPLIT_DOMAINS is always the .replit.app dev subdomain and
+ * request Host headers vary by proxy hop, both of which caused the sitemap
+ * to emit disc-watch-hq.replit.app URLs instead of discwatchhq.com.
+ */
+function getBaseUrl(): string {
+  return (process.env.SITE_URL ?? "https://discwatchhq.com").replace(/\/$/, "")
 }
 
 router.get("/sitemap.xml", async (req, res): Promise<void> => {
   try {
-    const baseUrl = getBaseUrl(req)
+    const baseUrl = getBaseUrl()
 
     const releases = await db
       .select({

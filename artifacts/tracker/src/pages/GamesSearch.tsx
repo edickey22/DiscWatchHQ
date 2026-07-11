@@ -291,9 +291,13 @@ export default function GamesSearch() {
   // Search mode: user typed a query, OR has at least one active filter
   const isSearchMode = debouncedSearch.trim().length > 0 || hasActiveFilters
 
+  const _pageTitle = debouncedSearch.trim()
+    ? `"${debouncedSearch.trim()}" — Physical Games | DiscWatchHQ`
+    : "Browse Games — Physical Releases Across All Platforms | DiscWatchHQ"
+
   useDocumentHead({
-    title:       "Browse Games — Physical Releases Across All Platforms | DiscWatchHQ",
-    description: "Explore popular games, new releases, and the full physical game catalog across all platforms. Search 2,000+ titles with direct retailer links.",
+    title:       _pageTitle,
+    description: "Explore popular games, new releases, and the full physical game catalog across all platforms. Search 900,000+ titles with direct retailer links.",
     canonical:   buildCanonicalUrl("/games"),
     jsonLd:      null,
   })
@@ -376,7 +380,7 @@ export default function GamesSearch() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
             <div>
               <h1 className="font-display font-bold text-2xl md:text-3xl text-foreground tracking-tight">
-                Browse Games
+                {debouncedSearch.trim() ? <>Results for &ldquo;{debouncedSearch.trim()}&rdquo;</> : "Browse Games"}
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
                 {isSearchMode && searchData?.count && !searchData.empty
