@@ -315,7 +315,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
     <>
       <Dialog open={!!game} onOpenChange={open => { if (!open) handleClose() }}>
         <DialogContent
-          className="max-w-2xl w-full p-0 overflow-hidden bg-background border-border/50 gap-0 max-h-[90vh] flex flex-col"
+          className="max-w-2xl p-0 overflow-hidden bg-background border-border gap-0 max-h-[90vh] flex flex-col"
           hideDefaultClose
         >
           <DialogTitle className="sr-only">
