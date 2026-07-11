@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Search, FilterX } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -60,6 +60,15 @@ export default function Home() {
     if (debouncedSearch)      params.search    = debouncedSearch
     return params
   }, [platform, publisher, debouncedSearch, sort])
+
+  // Report every distinct search query to GA4 so "Search Term" reporting is populated,
+  // mirroring the same event on Browse Games (GamesSearch.tsx).
+  useEffect(() => {
+    const term = debouncedSearch.trim()
+    if (!term) return
+    if (typeof window.gtag !== "function") return
+    window.gtag("event", "search", { search_term: term })
+  }, [debouncedSearch])
 
   const { data: availableData,  isLoading: isLoadingAvailable }  = useListAvailableReleases(queryParams)
   const { data: comingSoonData, isLoading: isLoadingComingSoon } = useListComingSoonReleases(queryParams)
