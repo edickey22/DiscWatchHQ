@@ -36,5 +36,6 @@ Affiliate IDs are env-var-only, never hardcoded. The site falls back to plain li
 - `GameCard.tsx`: `RetailerLinks variant="card"` at bottom of every card for every status (no conditional)
 - `ReleaseDetail.tsx`: publisher storefront link is always primary CTA (plain/unsponsored); `RetailerLinks variant="detail"` is secondary inside action panel
 - Publisher storefront links are always plain `rel="noopener noreferrer"` — no boutique affiliate programs exist
+- `ReleaseDetail.tsx`: `release.productUrl` (raw DB value, `releasesTable.productUrl` passed through `formatRelease` untouched) is the actual outbound boutique storefront link, rendered as low-emphasis secondary text ("Order direct from {publisher}" / "View original listing" / "View on {publisher}"); confirmed no wrapping/query-param injection at either DB or API layer
 
 **How to activate:** Set `EBAY_CAMPAIGN_ID` and/or `AMAZON_ASSOCIATES_TAG` in Replit Secrets. No code changes needed.
