@@ -47,8 +47,9 @@ function isRetroGame(platforms: string[]): boolean {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface RetailerPrices {
-  ebay?:   number | null
-  amazon?: number | null
+  ebay?:     number | null
+  amazon?:   number | null
+  bestbuy?:  number | null
 }
 
 interface RetailerSearchUrls {
@@ -91,8 +92,9 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
 
   // Collect confirmed prices (skip null/undefined)
   const confirmedPrices: Partial<Record<typeof ALL_RETAILERS[number]["key"], number>> = {}
-  if (typeof prices?.ebay   === "number") confirmedPrices.ebay   = prices.ebay
-  if (typeof prices?.amazon === "number") confirmedPrices.amazon = prices.amazon
+  if (typeof prices?.ebay     === "number") confirmedPrices.ebay     = prices.ebay
+  if (typeof prices?.amazon   === "number") confirmedPrices.amazon   = prices.amazon
+  if (typeof prices?.bestbuy  === "number") confirmedPrices.bestbuy  = prices.bestbuy
 
   // Lowest confirmed price wins the "BEST" badge
   let bestKey: typeof ALL_RETAILERS[number]["key"] | null = null

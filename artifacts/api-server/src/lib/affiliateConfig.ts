@@ -30,6 +30,10 @@
  * │  BESTBUY_IMPACT_ID        https://partners.bestbuy.com/                │
  * │                           (SID / Affiliate ID from Impact)             │
  * │                           Format: numeric string "1234567"             │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  BESTBUY_API_KEY          https://developer.bestbuy.com/                │
+ * │                           Products API key (separate from Impact above) │
+ * │                           Enables live price + direct product links     │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -167,6 +171,18 @@ export function buildAmazonProductUrl(amazonUrl: string): string {
   } catch {
     return amazonUrl;
   }
+}
+
+/**
+ * Wrap a known Best Buy product URL with the Impact affiliate deep-link.
+ * Use this when you already have a direct product URL (e.g. from the
+ * Best Buy Products API) and want to add affiliate tracking to it.
+ * Falls back to the raw product URL when BESTBUY_IMPACT_ID is not set.
+ */
+export function buildBestBuyDirectUrl(productUrl: string): string {
+  if (!affiliateConfig.bestbuy.affiliateId || !productUrl) return productUrl;
+  const { affiliateId, programId } = affiliateConfig.bestbuy;
+  return `https://bestbuy.7eer.net/c/${affiliateId}/${programId}?url=${encodeURIComponent(productUrl)}`;
 }
 
 /** Returns true if any affiliate channel is active. */

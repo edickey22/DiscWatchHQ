@@ -28,7 +28,7 @@ import {
 import type { CatalogGame } from "@/components/TgdbGameCard"
 import { MediaLightbox, type MediaSlide } from "@/components/MediaLightbox"
 
-// ── API response type ─────────────────────────────────────────────────────────
+// ── API response types ────────────────────────────────────────────────────────
 
 interface GameDetail extends CatalogGame {
   description: string | null
@@ -36,11 +36,32 @@ interface GameDetail extends CatalogGame {
   attribution: "rawg" | "tgdb"
 }
 
-// ── Fetch helper ──────────────────────────────────────────────────────────────
+interface LiveListing {
+  price:    number   // current asking price in USD
+  url:      string   // direct product/listing URL with affiliate params applied
+  cachedAt: number   // ms epoch
+}
+
+/** Shape of GET /api/games/live-pricing/:sourceId response */
+interface LivePricing {
+  ebay?:    LiveListing | null   // absent = not configured; null = configured, no result
+  bestbuy?: LiveListing | null
+}
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 async function fetchGameDetail(sourceId: string): Promise<GameDetail> {
   const res = await fetch(`/api/games/detail/${encodeURIComponent(sourceId)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+async function fetchPricing(sourceId: string, title: string): Promise<LivePricing> {
+  const params = new URLSearchParams({ title })
+  const res    = await fetch(
+    `/api/games/live-pricing/${encodeURIComponent(sourceId)}?${params}`,
+  )
+  if (!res.ok) return {}
   return res.json()
 }
 
@@ -251,12 +272,14 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [pricing,       setPricing]       = useState<LivePricing | null>(null)
 
   // Reset all transient state whenever a different game is opened
   useEffect(() => {
     setDetail(null)
     setError(null)
     setLightboxIndex(null)
+    setPricing(null)
 
     if (!game) return
 
@@ -266,6 +289,12 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
     fetchGameDetail(game.id)
       .then(d  => { if (!cancelled) { setDetail(d);  setLoading(false) } })
       .catch(e => { if (!cancelled) { setError(e.message); setLoading(false) } })
+
+    // Fire pricing in parallel using the title from the card (no need to wait
+    // for detail). Silent failure — search URLs remain the fallback.
+    fetchPricing(game.id, game.title)
+      .then(p => { if (!cancelled) setPricing(p) })
+      .catch(() => {/* no-op: search URLs are the fallback */})
 
     return () => { cancelled = true }
   }, [game?.id])
@@ -367,7 +396,18 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
               {displayed && (
                 <div className="mt-3">
                   <RetailerLinks
-                    urls={displayed.retailerSearchUrls}
+                    urls={{
+                      ...displayed.retailerSearchUrls,
+                      // Override search URLs with direct listing URLs when live
+                      // pricing returned a specific product match. Falls back to
+                      // the search URL automatically when pricing is null/absent.
+                      ...(pricing?.ebay?.url    ? { ebay:    pricing.ebay.url    } : {}),
+                      ...(pricing?.bestbuy?.url ? { bestbuy: pricing.bestbuy.url } : {}),
+                    }}
+                    prices={{
+                      ebay:    pricing?.ebay?.price    ?? null,
+                      bestbuy: pricing?.bestbuy?.price ?? null,
+                    }}
                     platforms={displayed.platforms}
                     variant="detail"
                     guideUrls={displayed.guideSearchUrls}

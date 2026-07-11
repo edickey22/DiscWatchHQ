@@ -32,6 +32,7 @@ import {
   buildEbayStrategyGuideUrl, buildAmazonStrategyGuideUrl,
 } from "../lib/affiliateConfig";
 import { logger } from "../lib/logger";
+import { fetchLivePricing } from "../lib/catalogLivePricing";
 
 const router = Router();
 const PAGE_SIZE = 20;
@@ -800,6 +801,48 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
 
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.json({ covers: arr });
+});
+
+/**
+ * GET /api/games/live-pricing/:sourceId?title=Game+Title
+ *
+ * Returns live price + direct listing URL for eBay and/or Best Buy for the
+ * given catalog game, fetched from the respective retailer APIs.
+ *
+ * Results are served from a 4-hour in-process cache — the first open after
+ * a cache miss triggers the real API calls; subsequent opens within 4 h are
+ * instantaneous. The modal fires this endpoint in parallel with /detail so
+ * prices populate without blocking the initial modal render.
+ *
+ * When a retailer's credentials are not configured its key is absent from
+ * the response (frontend falls back to the generic search URL).
+ * When configured but no match found the key is present with value null.
+ *
+ * Response shape:
+ *   {
+ *     ebay?:    { price: number; url: string; cachedAt: number } | null,
+ *     bestbuy?: { price: number; url: string; cachedAt: number } | null,
+ *   }
+ */
+router.get("/games/live-pricing/:sourceId", async (req, res): Promise<void> => {
+  const sourceId = decodeURIComponent(req.params.sourceId);
+  const title    = String(req.query.title ?? "").trim();
+
+  if (!title) {
+    res.json({});
+    return;
+  }
+
+  try {
+    const result = await fetchLivePricing(sourceId, title);
+    // No HTTP caching — in-process cache handles deduplication. The client
+    // must not cache stale prices across sessions or on CDN edge nodes.
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (err) {
+    logger.warn({ err, sourceId, title }, "Live pricing request failed");
+    res.json({});
+  }
 });
 
 /**

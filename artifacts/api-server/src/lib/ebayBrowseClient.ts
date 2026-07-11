@@ -121,6 +121,92 @@ export async function getEbayLowestPrice(title: string): Promise<number | null> 
   }
 }
 
+/**
+ * Returns the cheapest active Buy-It-Now listing for a catalog game —
+ * both the price AND the direct eBay item URL.
+ *
+ * Unlike getEbayLowestPrice (price-only, used by the boutique release
+ * scheduler), this function is designed for the catalog live-pricing path
+ * where the frontend needs a direct link to replace the generic search URL.
+ *
+ * The returned URL has EPN affiliate params appended when EBAY_CAMPAIGN_ID
+ * is set, so every click-through earns the affiliate commission.
+ *
+ * Returns null when:
+ *   - credentials are not configured
+ *   - no active Fixed-Price listings found
+ *   - the API call fails or times out
+ */
+export async function getEbayListingForCatalog(
+  title: string,
+): Promise<{ price: number; url: string } | null> {
+  if (!ebayBrowseConfigured) return null;
+
+  try {
+    const token = await getAccessToken();
+    if (!token) return null;
+
+    const q = encodeURIComponent(title);
+    const apiUrl =
+      `https://api.ebay.com/buy/browse/v1/item_summary/search` +
+      `?q=${q}&category_ids=139973&sort=price&limit=5` +
+      `&filter=buyingOptions%3A%7BFIXED_PRICE%7D`;
+
+    const res = await fetch(apiUrl, {
+      headers: {
+        Authorization:             `Bearer ${token}`,
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        "Content-Type":            "application/json",
+      },
+      signal: AbortSignal.timeout(6_000),
+    });
+
+    if (!res.ok) {
+      console.warn("[eBay Browse] Catalog listing search failed", res.status, title);
+      return null;
+    }
+
+    const data = (await res.json()) as {
+      itemSummaries?: Array<{
+        price?:      { value?: string; currency?: string };
+        itemWebUrl?: string;
+      }>;
+    };
+
+    // Find cheapest item that has both a parseable price and a URL
+    const candidates = (data.itemSummaries ?? [])
+      .map(item => ({
+        price: parseFloat(item.price?.value ?? ""),
+        url:   item.itemWebUrl ?? "",
+      }))
+      .filter(c => !isNaN(c.price) && c.price > 0 && c.url);
+
+    if (candidates.length === 0) return null;
+
+    const cheapest = candidates.reduce((a, b) => (b.price < a.price ? b : a));
+    return {
+      price: cheapest.price,
+      url:   _applyEpnParams(cheapest.url),
+    };
+  } catch (err) {
+    console.warn("[eBay Browse] Catalog listing error:", err);
+    return null;
+  }
+}
+
+/**
+ * Append EPN affiliate tracking params to any eBay item or search URL.
+ * When EBAY_CAMPAIGN_ID is not set the URL is returned unchanged.
+ */
+function _applyEpnParams(ebayUrl: string): string {
+  const campaignId = (process.env.EBAY_CAMPAIGN_ID ?? "").trim();
+  if (!campaignId) return ebayUrl;
+  const ROTATION_ID = "711-53200-19255-0";
+  const TOOL_ID     = "10001";
+  const sep = ebayUrl.includes("?") ? "&" : "?";
+  return `${ebayUrl}${sep}mkcid=1&mkrid=${ROTATION_ID}&siteid=0&campid=${campaignId}&toolid=${TOOL_ID}&mkevt=1`;
+}
+
 /** Reset OAuth token cache (used in tests / forced re-auth). */
 export function clearEbayTokenCache(): void {
   tokenCache = null;
