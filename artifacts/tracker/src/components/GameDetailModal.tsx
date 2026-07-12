@@ -273,6 +273,9 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
   const [error,         setError]         = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pricing,       setPricing]       = useState<LivePricing | null>(null)
+  // Selected platform tag — threads into the retailer search URLs below so
+  // outbound searches are platform-qualified. No selection = today's default.
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
 
   // Reset all transient state whenever a different game is opened
   useEffect(() => {
@@ -280,6 +283,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
     setError(null)
     setLightboxIndex(null)
     setPricing(null)
+    setSelectedPlatform(null)
 
     if (!game) return
 
@@ -378,14 +382,25 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
 
                   {displayed && displayed.platforms.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {displayed.platforms.map(p => (
-                        <span
-                          key={p}
-                          className="text-[9px] font-mono uppercase tracking-wide bg-secondary border border-border/50 text-muted-foreground px-1.5 py-0.5 rounded"
-                        >
-                          {p}
-                        </span>
-                      ))}
+                      {displayed.platforms.map(p => {
+                        const isSelected = selectedPlatform === p
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            aria-pressed={isSelected}
+                            title={isSelected ? `Clear ${p} filter` : `Search retailers for ${displayed.title} on ${p}`}
+                            onClick={() => setSelectedPlatform(cur => (cur === p ? null : p))}
+                            className={`text-[11px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-secondary border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -393,27 +408,35 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                 {displayed && <ScoreBadge game={displayed} />}
               </div>
 
-              {displayed && (
-                <div className="mt-3">
-                  <RetailerLinks
-                    urls={{
-                      ...displayed.retailerSearchUrls,
-                      // Override search URLs with direct listing URLs when live
-                      // pricing returned a specific product match. Falls back to
-                      // the search URL automatically when pricing is null/absent.
-                      ...(pricing?.ebay?.url    ? { ebay:    pricing.ebay.url    } : {}),
-                      ...(pricing?.bestbuy?.url ? { bestbuy: pricing.bestbuy.url } : {}),
-                    }}
-                    prices={{
-                      ebay:    pricing?.ebay?.price    ?? null,
-                      bestbuy: pricing?.bestbuy?.price ?? null,
-                    }}
-                    platforms={displayed.platforms}
-                    variant="detail"
-                    guideUrls={displayed.guideSearchUrls}
-                  />
-                </div>
-              )}
+              {displayed && (() => {
+                const platformUrls = selectedPlatform
+                  ? displayed.retailerSearchUrlsByPlatform?.[selectedPlatform]
+                  : undefined
+                return (
+                  <div className="mt-3">
+                    <RetailerLinks
+                      urls={platformUrls ?? {
+                        ...displayed.retailerSearchUrls,
+                        // Override search URLs with direct listing URLs when live
+                        // pricing returned a specific product match. Falls back to
+                        // the search URL automatically when pricing is null/absent.
+                        // Skipped entirely once a platform tag is selected — the
+                        // platform-qualified search takes priority over the
+                        // unqualified live-pricing match.
+                        ...(pricing?.ebay?.url    ? { ebay:    pricing.ebay.url    } : {}),
+                        ...(pricing?.bestbuy?.url ? { bestbuy: pricing.bestbuy.url } : {}),
+                      }}
+                      prices={platformUrls ? {} : {
+                        ebay:    pricing?.ebay?.price    ?? null,
+                        bestbuy: pricing?.bestbuy?.price ?? null,
+                      }}
+                      platforms={displayed.platforms}
+                      variant="detail"
+                      guideUrls={displayed.guideSearchUrls}
+                    />
+                  </div>
+                )
+              })()}
             </div>
 
             {/* ── Loading / error states ── */}

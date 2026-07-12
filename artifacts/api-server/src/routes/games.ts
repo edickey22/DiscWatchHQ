@@ -30,6 +30,7 @@ import {
   buildEbaySearchUrl, buildAmazonSearchUrl,
   buildGameStopSearchUrl, buildBestBuySearchUrl,
   buildEbayStrategyGuideUrl, buildAmazonStrategyGuideUrl,
+  buildPlatformSearchUrls,
 } from "../lib/affiliateConfig";
 import { logger } from "../lib/logger";
 import { fetchLivePricing } from "../lib/catalogLivePricing";
@@ -72,6 +73,11 @@ function formatRow(row: CatalogGameRow) {
       gamestop: buildGameStopSearchUrl(row.title),
       bestbuy:  buildBestBuySearchUrl(row.title),
     },
+    // Per-platform-qualified variants (e.g. "Stardew Valley Switch") — used
+    // when the visitor explicitly selects one of the platform tags on a card,
+    // so the outbound search is precise instead of generic. Falls back to the
+    // unqualified urls above by default.
+    retailerSearchUrlsByPlatform: buildPlatformSearchUrls(row.title, row.platforms),
     guideSearchUrls: {
       ebay:   buildEbayStrategyGuideUrl(row.title),
       amazon: buildAmazonStrategyGuideUrl(row.title),
@@ -324,6 +330,7 @@ router.get("/games/search", async (req, res): Promise<void> => {
               gamestop: buildGameStopSearchUrl(r.title),
               bestbuy:  buildBestBuySearchUrl(r.title),
             },
+            retailerSearchUrlsByPlatform: buildPlatformSearchUrls(r.title, r.platforms ?? []),
             guideSearchUrls: {
               ebay:   buildEbayStrategyGuideUrl(r.title),
               amazon: buildAmazonStrategyGuideUrl(r.title),
@@ -628,6 +635,7 @@ router.get("/games/tgdb/:id", async (req, res): Promise<void> => {
         gamestop: buildGameStopSearchUrl(r.title),
         bestbuy:  buildBestBuySearchUrl(r.title),
       },
+      retailerSearchUrlsByPlatform: buildPlatformSearchUrls(r.title, r.platforms ?? []),
       guideSearchUrls: {
         ebay:   buildEbayStrategyGuideUrl(r.title),
         amazon: buildAmazonStrategyGuideUrl(r.title),
@@ -898,6 +906,7 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
           ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
           gamestop: buildGameStopSearchUrl(sourceId), bestbuy: buildBestBuySearchUrl(sourceId),
         },
+        retailerSearchUrlsByPlatform: {} as Record<string, { ebay: string; amazon: string; gamestop: string; bestbuy: string }>,
         guideSearchUrls: {
           ebay: buildEbayStrategyGuideUrl(sourceId),
           amazon: buildAmazonStrategyGuideUrl(sourceId),
@@ -964,6 +973,7 @@ router.get("/games/detail/:sourceId", async (req, res): Promise<void> => {
         ebay: buildEbaySearchUrl(sourceId), amazon: buildAmazonSearchUrl(sourceId),
         gamestop: buildGameStopSearchUrl(sourceId), bestbuy: buildBestBuySearchUrl(sourceId),
       },
+      retailerSearchUrlsByPlatform: {} as Record<string, { ebay: string; amazon: string; gamestop: string; bestbuy: string }>,
       guideSearchUrls: {
         ebay:   buildEbayStrategyGuideUrl(sourceId),
         amazon: buildAmazonStrategyGuideUrl(sourceId),

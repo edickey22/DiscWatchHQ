@@ -27,6 +27,15 @@ export interface CatalogGame {
   retailerSearchUrls: {
     ebay: string; amazon: string; gamestop: string; bestbuy: string
   }
+  /**
+   * Per-platform-qualified search URLs, keyed by platform name (e.g. "Switch").
+   * Populated server-side (affiliate IDs never touch the client) so selecting
+   * a platform tag can thread it into the outbound search — "Stardew Valley
+   * Switch" instead of just "Stardew Valley" — for a more precise result.
+   */
+  retailerSearchUrlsByPlatform?: Record<string, {
+    ebay: string; amazon: string; gamestop: string; bestbuy: string
+  }>
   guideSearchUrls?: {
     ebay: string; amazon: string
   }
@@ -119,6 +128,16 @@ export function CatalogGameCard({
     : null
   const [imgFailed, setImgFailed] = useState(false)
 
+  // Selected platform tag, if any — threads into the retailer search URLs
+  // below so outbound searches are platform-qualified (e.g. "... Switch").
+  // No selection = today's default behaviour (unqualified title search).
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
+
+  const platformUrls = selectedPlatform
+    ? game.retailerSearchUrlsByPlatform?.[selectedPlatform]
+    : undefined
+  const effectiveRetailerUrls = platformUrls ?? game.retailerSearchUrls
+
   return (
     <article
       className="group bg-card border border-card-border rounded-lg overflow-hidden flex flex-col hover:border-primary/30 transition-colors duration-150 cursor-pointer"
@@ -175,28 +194,44 @@ export function CatalogGameCard({
           )}
         </div>
 
-        {/* Platform chips — cap at 4 */}
+        {/* Platform chips — cap at 4. Clickable: selecting one narrows the
+            retailer searches below to that platform (e.g. "... Switch"). */}
         {game.platforms.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {game.platforms.slice(0, 4).map(p => (
-              <span
-                key={p}
-                className="text-[8px] font-mono uppercase tracking-wide bg-secondary border border-border/50 text-muted-foreground px-1 py-0.5 rounded"
-              >
-                {p}
-              </span>
-            ))}
+            {game.platforms.slice(0, 4).map(p => {
+              const isSelected = selectedPlatform === p
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={isSelected}
+                  title={isSelected ? `Clear ${p} filter` : `Search retailers for ${game.title} on ${p}`}
+                  onClick={e => {
+                    e.stopPropagation()
+                    setSelectedPlatform(cur => (cur === p ? null : p))
+                  }}
+                  className={`text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            })}
             {game.platforms.length > 4 && (
-              <span className="text-[8px] font-mono text-muted-foreground/90 leading-tight py-0.5">
+              <span className="text-[10px] font-mono text-muted-foreground/90 leading-tight py-0.5">
                 +{game.platforms.length - 4}
               </span>
             )}
           </div>
         )}
 
-        {/* Retailer buttons — platform-aware (retro = eBay + GameStop only) */}
+        {/* Retailer buttons — platform-aware (retro = eBay + GameStop only).
+            Uses the platform-qualified search URLs when a tag above is selected. */}
         <div className="mt-auto pt-1">
-          <RetailerLinks urls={game.retailerSearchUrls} platforms={game.platforms} guideUrls={game.guideSearchUrls} />
+          <RetailerLinks urls={effectiveRetailerUrls} platforms={game.platforms} guideUrls={game.guideSearchUrls} />
         </div>
       </div>
     </article>

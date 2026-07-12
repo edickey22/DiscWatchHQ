@@ -200,6 +200,32 @@ export function buildBestBuyDirectUrl(productUrl: string): string {
   return `https://bestbuy.7eer.net/c/${affiliateId}/${programId}?url=${encodeURIComponent(productUrl)}`;
 }
 
+/**
+ * Build a { ebay, amazon, gamestop, bestbuy } search-URL set for every given
+ * platform, keyed by platform name — e.g. "Stardew Valley" + ["Switch", "PC"]
+ * → { Switch: { ebay: ".../sch/i.html?_nkw=Stardew%20Valley%20Switch"...}, PC: {...} }.
+ * Lets the frontend request a platform-qualified search (more precise outbound
+ * results) without exposing affiliate IDs client-side — the wrapping/tagging
+ * logic here is the same single source of truth used for the unqualified
+ * per-title URLs above.
+ */
+export function buildPlatformSearchUrls(
+  title: string,
+  platforms: string[],
+): Record<string, { ebay: string; amazon: string; gamestop: string; bestbuy: string }> {
+  const out: Record<string, { ebay: string; amazon: string; gamestop: string; bestbuy: string }> = {};
+  for (const platform of platforms) {
+    const q = `${title} ${platform}`.trim();
+    out[platform] = {
+      ebay:     buildEbaySearchUrl(q),
+      amazon:   buildAmazonSearchUrl(q),
+      gamestop: buildGameStopSearchUrl(q),
+      bestbuy:  buildBestBuySearchUrl(q),
+    };
+  }
+  return out;
+}
+
 /** Returns true if any affiliate channel is active. */
 export function isAnyAffiliateConfigured(): boolean {
   return !!(
