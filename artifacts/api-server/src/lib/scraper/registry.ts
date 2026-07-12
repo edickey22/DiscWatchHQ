@@ -6,6 +6,8 @@ import { superRareScraper } from "./publishers/superRare";
 import { fangamerScraper } from "./publishers/fangamer";
 import { xboxGameStudiosScraper } from "./publishers/xboxGameStudios";
 import { blizzardGearScraper } from "./publishers/blizzardGear";
+import { eastasiasoftScraper } from "./publishers/eastasiasoft";
+import { redArtGamesScraper } from "./publishers/redArtGames";
 
 /**
  * Registry of all active publisher scrapers.
@@ -23,6 +25,8 @@ import { blizzardGearScraper } from "./publishers/blizzardGear";
  *   Fangamer                  fangamer.com                  Shopify JSON  ✓ HIGH
  *   Xbox Game Studios Shop    shop.xboxgamestudios.com      Shopify JSON  ✓ HIGH
  *   Blizzard Gear Store       gear.blizzard.com             Shopify JSON  ✓ HIGH
+ *   eastasiasoft               shop.eastasiasoft.com         Shopify JSON  ✓ HIGH
+ *   Red Art Games             redartgames.com               HTML parsing ⚠ MEDIUM
  *
  * ── Seeded / disabled (no scraper yet) ──────────────────────────────────────
  *
@@ -40,6 +44,8 @@ const scrapers: PublisherScraper[] = [
   fangamerScraper,           // fangamer.com                 — Shopify JSON /collections/physical-games
   xboxGameStudiosScraper,    // shop.xboxgamestudios.com     — Shopify JSON /collections/collector-editions
   blizzardGearScraper,       // gear.blizzard.com            — Shopify JSON /collections/limited-edition
+  eastasiasoftScraper,       // shop.eastasiasoft.com        — Shopify JSON /collections/games
+  redArtGamesScraper,        // redartgames.com              — HTML parsing of /33-games listing pages
 ];
 
 export function getScraperBySlug(slug: string): PublisherScraper | undefined {

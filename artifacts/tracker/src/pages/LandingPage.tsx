@@ -57,6 +57,8 @@ const PUBLISHERS = [
   "Fangamer",
   "Xbox Game Studios Shop",
   "Blizzard Gear Store",
+  "eastasiasoft",
+  "Red Art Games",
 ]
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -267,7 +269,7 @@ export default function LandingPage() {
                 className="h-14 px-7 text-base font-bold gap-2 border-foreground/20 hover:border-foreground/40"
               >
                 <Link href="/consoles">
-                  <ControllerIcon size={18} strokeWidth={2.5} />
+                  <ControllerIcon size={18} strokeWidth={2.5} color="currentColor" />
                   Consoles
                 </Link>
               </Button>
@@ -441,7 +443,7 @@ export default function LandingPage() {
               </div>
               <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-5">
-                Real-time scarcity tracking for limited-run physical releases from 7
+                Real-time scarcity tracking for limited-run physical releases from 9
                 boutique publishers. Preorder windows, countdowns, and secondary-market
                 links for sold-out titles.
               </p>
