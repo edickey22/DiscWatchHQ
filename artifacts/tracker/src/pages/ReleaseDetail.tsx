@@ -225,13 +225,47 @@ export default function ReleaseDetail() {
                       </Button>
                     )}
 
-                    {/* ── PRIMARY: affiliate retailer buttons (monetized — always shown first) ── */}
+                    {/* ── PRIMARY: order direct from the publisher. This is a specific
+                        limited-run / boutique exclusive, so the publisher's own store
+                        is the actual correct place to buy it — generic retailer
+                        searches below likely won't even carry an exclusive like this.
+                        Shown first and largest even though it earns no affiliate
+                        revenue: getting the visitor to the right place matters more
+                        than funneling them into a search that probably comes up empty. ── */}
                     <div className="mb-4">
-                      {(isAvailable || isComingSoon) && (
-                        <p className="text-[10px] font-mono text-muted-foreground/90 uppercase tracking-widest mb-3">
-                          {isAvailable ? "Buy this game" : "Search retailers"}
-                        </p>
-                      )}
+                      <p className="text-[10px] font-mono text-muted-foreground/90 uppercase tracking-widest mb-3">
+                        {isAvailable ? "Buy this game" : isSoldOut ? "Original listing" : "Coming soon"}
+                      </p>
+                      <a
+                        href={release.productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 bg-primary hover:bg-primary/90 active:bg-primary/80 shadow-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-display font-bold text-[15px] leading-none text-primary-foreground">
+                            {isAvailable && `Order direct from ${release.publisherName}`}
+                            {isSoldOut && `View original listing · ${release.publisherName}`}
+                            {isComingSoon && `View on ${release.publisherName}`}
+                          </span>
+                          <span className="font-mono text-[10px] leading-none text-primary-foreground/70 mt-1.5">
+                            Official store · exclusive release
+                          </span>
+                        </div>
+                        <ExternalLink
+                          size={18}
+                          className="shrink-0 text-primary-foreground/80 group-hover:text-primary-foreground group-hover:translate-x-0.5 transition-all duration-150"
+                        />
+                      </a>
+                    </div>
+
+                    {/* ── SECONDARY: generic affiliate retailer searches — a fallback,
+                        not the primary path, since a boutique exclusive may not turn
+                        up on these at all. ── */}
+                    <div className="pt-3 border-t border-border/20">
+                      <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">
+                        Also try searching
+                      </p>
                       <RetailerLinks
                         urls={release.retailerSearchUrls}
                         prices={release.retailerPrices}
@@ -239,43 +273,6 @@ export default function ReleaseDetail() {
                         platforms={release.platforms ?? []}
                         guideUrls={release.guideSearchUrls}
                       />
-                    </div>
-
-                    {/* ── SECONDARY: publisher direct link (no affiliate revenue — visually subordinate) ── */}
-                    <div className="pt-3 border-t border-border/20 text-center">
-                      {isAvailable && (
-                        <a
-                          href={release.productUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-                        >
-                          <ExternalLink size={10} />
-                          Order direct from {release.publisherName}
-                        </a>
-                      )}
-                      {isSoldOut && (
-                        <a
-                          href={release.productUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-                        >
-                          <ExternalLink size={10} />
-                          View original listing · {release.publisherName}
-                        </a>
-                      )}
-                      {isComingSoon && (
-                        <a
-                          href={release.productUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
-                        >
-                          <ExternalLink size={10} />
-                          View on {release.publisherName}
-                        </a>
-                      )}
                     </div>
                   </div>
                 </>
