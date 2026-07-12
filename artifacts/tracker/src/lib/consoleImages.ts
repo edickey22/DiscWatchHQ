@@ -32,6 +32,9 @@ export const CONSOLE_IMAGES: Record<string, string> = {
   "n64":           "/consoles/n64.jpg",
   "3ds":           "/consoles/3ds.jpg",
   "ds":            "/consoles/ds.jpg",
+  "ps3":           "/consoles/ps3.jpg",
+  "dreamcast":     "/consoles/dreamcast.jpg",
+  "xbox-360":      "/consoles/xbox-360.jpg",
 }
 
 /** Every self-hosted console photo, for the auto-scrolling hero marquee. */
