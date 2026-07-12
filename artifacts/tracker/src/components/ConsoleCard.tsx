@@ -48,27 +48,18 @@ const CONDITION_STYLES: Record<ConsoleCondition, string> = {
  * simply stops being null and this component renders the live variant.
  */
 /**
- * Renders a photo "fully" (no cropped-off edges) without ever showing bare
- * blank space: a blurred, scaled-up copy of the same photo fills the tile
- * as a backdrop, and the real photo sits on top with `object-contain` so
- * its full frame is always visible.
+ * Fills the tile edge-to-edge (object-cover). Starts slightly zoomed in so
+ * the crop reads intentional, then zooms back out to reveal more of the
+ * frame on hover.
  */
 function FramedImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <>
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60"
-      />
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className="relative h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-      />
-    </>
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="h-full w-full object-cover scale-110 transition-transform duration-500 group-hover:scale-100"
+    />
   )
 }
 
