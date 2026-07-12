@@ -31,7 +31,7 @@
  *   the compliance restriction above.
  */
 
-import { ArrowUpRight, BookOpen } from "lucide-react"
+import { ArrowUpRight, BookOpen, ShoppingBag } from "lucide-react"
 
 // ── Retro platform detection ──────────────────────────────────────────────────
 
@@ -137,33 +137,42 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
           </p>
         )}
 
-        {/* ── eBay — its own isolated slot. Shows eBay's own live price
-            (permitted) but is never ranked/badged against other retailers'
-            prices (eBay API license compliance). ── */}
+        {/* ── eBay — its own isolated slot, styled with the same solid-fill
+            weight as the GameStop/Amazon/Best Buy buttons below so it reads
+            as an intentional, equally prominent option — while staying in
+            its own row, outside the comparison grid and its "BEST" ranking
+            logic (eBay API license compliance, see note above). Shows
+            eBay's own live price (permitted) but is never ranked/badged
+            against other retailers' prices. ── */}
         <a
           href={ebayUrl}
           target="_blank"
           rel="noopener noreferrer sponsored"
           onClick={e => e.stopPropagation()}
-          className="group relative flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 mb-2.5 border border-dashed border-primary/30 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group relative flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 mb-2.5 bg-primary hover:bg-primary/90 active:bg-primary/80 shadow-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <div className="flex flex-col gap-0.5">
-            <span className="font-display font-bold text-[14px] leading-none text-foreground">
-              eBay
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+              <ShoppingBag size={15} className="text-primary-foreground" />
             </span>
-            {ebayPrice !== null ? (
-              <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary mt-1">
-                ${ebayPrice.toFixed(2)}
+            <div className="flex flex-col gap-0.5">
+              <span className="font-display font-bold text-[14px] leading-none text-primary-foreground">
+                eBay
               </span>
-            ) : (
-              <span className="font-mono text-[10px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors mt-1">
-                {retro ? "Best source for retro →" : "Search →"}
-              </span>
-            )}
+              {ebayPrice !== null ? (
+                <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary-foreground mt-1">
+                  ${ebayPrice.toFixed(2)}
+                </span>
+              ) : (
+                <span className="font-mono text-[10px] leading-none text-primary-foreground/70 mt-1">
+                  {retro ? "Best source for retro →" : "Search →"}
+                </span>
+              )}
+            </div>
           </div>
           <ArrowUpRight
             size={16}
-            className="shrink-0 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
+            className="shrink-0 text-primary-foreground/70 group-hover:text-primary-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
           />
         </a>
 
@@ -266,25 +275,30 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
   // ── card variant ────────────────────────────────────────────────────────────
   return (
     <div className="pt-2.5 border-t border-border/20">
-      {/* ── eBay — its own isolated slot, never ranked/badged against other
-          retailers (eBay API license compliance). Its own live price
-          (when available) is still shown — that part is permitted. ── */}
+      {/* ── eBay — its own isolated slot, styled as a solid-fill button on
+          par with the retailer grid below, but kept in its own row outside
+          the grid/BEST ranking (eBay API license compliance, see note
+          above). Its own live price (when available) is still shown —
+          that part is permitted. ── */}
       <a
         href={ebayUrl}
         target="_blank"
         rel="noopener noreferrer sponsored"
         onClick={e => e.stopPropagation()}
-        className="group flex items-center justify-between gap-2 rounded border border-dashed border-primary/25 bg-secondary/20 px-2.5 py-2 mb-1.5 hover:border-primary/40 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="group flex items-center justify-between gap-2 rounded bg-primary hover:bg-primary/90 active:bg-primary/80 px-2.5 py-2 mb-1.5 shadow-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80">
-          eBay
+        <span className="flex items-center gap-1.5 min-w-0">
+          <ShoppingBag size={11} className="shrink-0 text-primary-foreground/85" />
+          <span className="font-display font-semibold leading-none truncate text-[10px] text-primary-foreground">
+            eBay
+          </span>
         </span>
         {ebayPrice !== null ? (
-          <span className="font-mono font-bold leading-none text-[11px] text-primary">
+          <span className="font-mono font-bold leading-none text-[11px] text-primary-foreground">
             ${ebayPrice.toFixed(2)}
           </span>
         ) : (
-          <span className="font-mono leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors text-[9px]">
+          <span className="font-mono leading-none text-primary-foreground/75 group-hover:text-primary-foreground transition-colors text-[9px]">
             {retro ? "Best →" : "Search →"}
           </span>
         )}

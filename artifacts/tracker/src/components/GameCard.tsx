@@ -3,7 +3,7 @@ import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { Release, ReleaseStatus } from "@workspace/api-client-react"
 import { daysUntil } from "@/lib/utils"
-import { Clock } from "lucide-react"
+import { Clock, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ControllerIcon } from "@/components/ControllerIcon"
 
@@ -105,16 +105,17 @@ export function GameCard({ release, priority = false }: GameCardProps) {
           {release.publisherName}
         </p>
 
-        <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-          <span className="font-display tabular-nums text-sm font-semibold text-foreground/90 shrink-0">
+        <div className="mt-auto pt-2 flex flex-col gap-2">
+          <span className="font-display tabular-nums text-sm font-semibold text-foreground/90">
             {release.price || "TBA"}
           </span>
           {isAvailable && (
             <Link
               href={`/releases/${release.id}`}
-              className="text-xs font-semibold text-primary uppercase tracking-wider hover:underline underline-offset-4 shrink-0"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider py-2.5 shadow-sm hover:bg-primary/90 active:bg-primary/80 transition-colors"
             >
-              Order Now →
+              Order Now
+              <ArrowUpRight size={14} />
             </Link>
           )}
         </div>
