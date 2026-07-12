@@ -9,3 +9,4 @@
 - [Catalog quality filters](catalog-quality-filters.md) — RAWG + TGDB both need junk-entry filters; \btest\b alone causes false positives; GameStop search param is "q" not "searchTerm"
 - [Dark theme text contrast](dark-theme-contrast.md) — muted-foreground/primary/white text at opacity ≤60% on the near-black bg fails WCAG AA; only safe below ~90% opacity on true black
 - [Unsplash image sourcing](unsplash-image-sourcing.md) — imageSearch titles are unreliable, always visually verify downloaded candidates before use; self-host, never hotlink
+- [Screenshot tool vs min-h-screen hero](screenshot-tool-min-h-screen.md) — a full-viewport hero always fills the entire requested viewportSize, so content below it never appears in an appPreview screenshot

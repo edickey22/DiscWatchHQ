@@ -399,7 +399,7 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="py-16 border-t border-border/30">
         <div className="container mx-auto max-w-6xl px-4">
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
             {/* Browse Games — primary */}
             <Link
@@ -447,6 +447,30 @@ export default function LandingPage() {
               </p>
               <div className="text-xs font-mono text-muted-foreground/90 uppercase tracking-wider">
                 {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
+              </div>
+            </Link>
+
+            {/* Consoles — tertiary */}
+            <Link
+              href="/consoles"
+              className="group block rounded-2xl border border-border/40 bg-card hover:border-border hover:bg-secondary/30 transition-all duration-200 p-8"
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <ControllerIcon size={22} strokeWidth={1.75} />
+                </div>
+                <ChevronRight
+                  className="text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all mt-1"
+                  size={20}
+                />
+              </div>
+              <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
+                Live eBay listings for hardware across every era — current-gen flagships
+                down to 16-bit retro — with condition always clearly labeled.
+              </p>
+              <div className="text-xs font-mono text-muted-foreground/90 uppercase tracking-wider">
+                24 console models tracked →
               </div>
             </Link>
 

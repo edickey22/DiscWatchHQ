@@ -10,19 +10,23 @@
  * UI falls back to the themed ControllerIcon placeholder for those.
  */
 export const CONSOLE_IMAGES: Record<string, string> = {
-  "switch-2":    "/consoles/switch-2.jpg",
-  "ps5":         "/consoles/ps5.jpg",
-  "ps4":         "/consoles/ps4.jpg",
-  "xbox-one":    "/consoles/xbox-one.jpg",
-  "switch":      "/consoles/switch.jpg",
-  "snes":        "/consoles/snes.jpg",
-  "genesis":     "/consoles/genesis.jpg",
-  "gamecube":    "/consoles/gamecube.jpg",
-  "wii":         "/consoles/wii.jpg",
-  "ps1":         "/consoles/ps1.jpg",
-  "ps2":         "/consoles/ps2.jpg",
-  "xbox":        "/consoles/xbox.jpg",
-  "gba":         "/consoles/gba.jpg",
+  "switch-2":      "/consoles/switch-2.jpg",
+  "ps5":           "/consoles/ps5.jpg",
+  "ps4":           "/consoles/ps4.jpg",
+  "xbox-series-x": "/consoles/xbox-series-x.jpg",
+  "xbox-series-s": "/consoles/xbox-series-s.jpg",
+  "switch-oled":   "/consoles/switch-oled.jpg",
+  "switch-lite":   "/consoles/switch-lite.jpg",
+  "xbox-one":      "/consoles/xbox-one.jpg",
+  "switch":        "/consoles/switch.jpg",
+  "snes":          "/consoles/snes.jpg",
+  "genesis":       "/consoles/genesis.jpg",
+  "gamecube":      "/consoles/gamecube.jpg",
+  "wii":           "/consoles/wii.jpg",
+  "ps1":           "/consoles/ps1.jpg",
+  "ps2":           "/consoles/ps2.jpg",
+  "xbox":          "/consoles/xbox.jpg",
+  "gba":           "/consoles/gba.jpg",
 }
 
 /** Every self-hosted console photo, for the auto-scrolling hero marquee. */
