@@ -47,6 +47,31 @@ const CONDITION_STYLES: Record<ConsoleCondition, string> = {
  * are set and the Browse API returns a result for this model, `listing`
  * simply stops being null and this component renders the live variant.
  */
+/**
+ * Renders a photo "fully" (no cropped-off edges) without ever showing bare
+ * blank space: a blurred, scaled-up copy of the same photo fills the tile
+ * as a backdrop, and the real photo sits on top with `object-contain` so
+ * its full frame is always visible.
+ */
+function FramedImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <>
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60"
+      />
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className="relative h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+      />
+    </>
+  )
+}
+
 export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) {
   const { id, name, generation, listing, searchUrl } = item
   const stockPhoto = CONSOLE_IMAGES[id]
@@ -56,19 +81,9 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
       {/* Image */}
       <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
         {listing?.imageUrl ? (
-          <img
-            src={listing.imageUrl}
-            alt={`${name} — ${listing.condition}`}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
+          <FramedImage src={listing.imageUrl} alt={`${name} — ${listing.condition}`} />
         ) : stockPhoto ? (
-          <img
-            src={stockPhoto}
-            alt={name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
+          <FramedImage src={stockPhoto} alt={name} />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-secondary">
             <ControllerIcon size={46} strokeWidth={2.5} className="opacity-45" />

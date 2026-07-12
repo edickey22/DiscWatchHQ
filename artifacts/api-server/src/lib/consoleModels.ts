@@ -46,4 +46,6 @@ export const CONSOLE_MODELS: ConsoleModel[] = [
   { id: "xbox-360",     name: "Xbox 360",              generation: "retro", query: "Xbox 360 console" },
   { id: "xbox",         name: "Xbox",                  generation: "retro", query: "Microsoft Xbox console -360 -\"Series\" -\"One\"" },
   { id: "gba",          name: "Game Boy Advance",      generation: "retro", query: "Game Boy Advance console" },
+  { id: "3ds",          name: "Nintendo 3DS",          generation: "retro", query: "Nintendo 3DS console" },
+  { id: "ds",           name: "Nintendo DS",           generation: "retro", query: "Nintendo DS console -3DS" },
 ];
