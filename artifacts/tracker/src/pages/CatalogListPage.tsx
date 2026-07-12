@@ -164,7 +164,7 @@ export default function CatalogListPage({ kind }: CatalogListPageProps) {
         </div>
 
         {/* ── Grid ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-8">
           {isLoading
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => <GameCardSkeleton key={i} />)
             : results.map(game => (

@@ -345,27 +345,27 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
         })}
       </div>
 
-      {/* ── Strategy guides — compact text links, clearly secondary ── */}
+      {/* ── Strategy guides — compact but clearly legible, not washed out ── */}
       {guideUrls && (
-        <div className="mt-1.5 pt-1.5 border-t border-border/15 flex items-center gap-1.5">
-          <BookOpen size={8} className="text-muted-foreground/30 shrink-0" />
+        <div className="mt-1.5 pt-1.5 border-t border-border/20 flex items-center gap-1.5">
+          <BookOpen size={9} className="text-muted-foreground/60 shrink-0" />
           <div className="flex items-center gap-1.5 min-w-0">
             <a
               href={guideUrls.ebay}
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors underline underline-offset-2 decoration-muted-foreground/20 truncate"
+              className="text-[9px] font-mono font-semibold text-foreground/75 hover:text-foreground transition-colors underline underline-offset-2 decoration-foreground/25 truncate"
             >
               Guide · eBay
             </a>
-            <span className="text-muted-foreground/20 text-[8px] shrink-0">·</span>
+            <span className="text-muted-foreground/40 text-[8px] shrink-0">·</span>
             <a
               href={guideUrls.amazon}
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="text-[9px] font-mono text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors underline underline-offset-2 decoration-muted-foreground/20 truncate"
+              className="text-[9px] font-mono font-semibold text-foreground/75 hover:text-foreground transition-colors underline underline-offset-2 decoration-foreground/25 truncate"
             >
               Amazon
             </a>

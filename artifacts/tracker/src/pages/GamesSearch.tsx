@@ -25,7 +25,7 @@ import { Link } from "wouter"
 import {
   Search, ChevronLeft, ChevronRight,
   ExternalLink, AlertCircle, Star, CalendarDays,
-  ChevronDown, ArrowRight, X, SlidersHorizontal,
+  ArrowRight, X, SlidersHorizontal,
 } from "lucide-react"
 
 import { Header } from "@/components/Header"
@@ -309,6 +309,31 @@ function buildVariedHeroImages(pools: CatalogGame[][], max = 16): string[] {
   return picked
 }
 
+// ── Responsive column count ──────────────────────────────────────────────────
+// Mirrors the `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` breakpoints used by
+// the pre-populated sections below, so each section can always show exactly
+// three full rows (columns × 3) for whatever the current column count is —
+// never a ragged/partial last row.
+
+function computeSectionColumns(width: number): number {
+  if (width >= 768) return 4
+  if (width >= 640) return 3
+  return 2
+}
+
+function useSectionColumns(): number {
+  const [columns, setColumns] = useState(() =>
+    typeof window === "undefined" ? 4 : computeSectionColumns(window.innerWidth),
+  )
+  useEffect(() => {
+    const handleResize = () => setColumns(computeSectionColumns(window.innerWidth))
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+  return columns
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GamesSearch() {
@@ -319,10 +344,10 @@ export default function GamesSearch() {
   const [sort,         setSort]         = useState<SortValue>("best_rated")
   const [page,         setPage]         = useState(1)
   const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null)
-  // Show-more state for pre-populated sections (12 → 24)
-  const [popularShown,  setPopularShown]  = useState(12)
-  const [newShown,      setNewShown]      = useState(12)
-  const [upcomingShown, setUpcomingShown] = useState(12)
+  // Current column count for the pre-populated sections — drives how many
+  // cards are shown (columns × 3 rows) so each section always renders
+  // exactly three full rows, never a ragged/partial last row.
+  const sectionColumns = useSectionColumns()
 
   const debouncedSearch = useDebounce(search, 400)
   // Longer debounce dedicated to analytics — the 400ms search debounce fires on
@@ -422,9 +447,10 @@ export default function GamesSearch() {
   const allPopular       = popularData?.results  ?? []
   const allNew           = newData?.results      ?? []
   const allUpcoming      = upcomingData?.results ?? []
-  const popularCards     = allPopular.slice(0, popularShown)
-  const newReleasesCards = allNew.slice(0, newShown)
-  const upcomingCards    = allUpcoming.slice(0, upcomingShown)
+  const sectionCardLimit = sectionColumns * 3
+  const popularCards     = allPopular.slice(0, sectionCardLimit)
+  const newReleasesCards = allNew.slice(0, sectionCardLimit)
+  const upcomingCards    = allUpcoming.slice(0, sectionCardLimit)
   const popularTotal     = popularData?.count  ?? 0
   const newTotal         = newData?.count      ?? 0
   const upcomingTotal    = upcomingData?.count ?? 0
@@ -577,36 +603,27 @@ export default function GamesSearch() {
               />
 
               {isPopularLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : popularCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {popularCards.map((game, i) => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} priority={i < 4} />
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-5">
-                    {popularShown < 24 && allPopular.length > popularShown ? (
-                      <button
-                        onClick={() => setPopularShown(Math.min(24, allPopular.length))}
-                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ChevronDown size={15} />
-                        Show {Math.min(12, allPopular.length - popularShown)} more
-                      </button>
-                    ) : <span />}
-                    {(popularShown >= 24 || popularTotal > 24) && (
+                  {popularTotal > sectionCardLimit && (
+                    <div className="flex items-center justify-end mt-5">
                       <Link
                         href="/games/popular"
                         className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                       >
                         View all Most Popular <ArrowRight size={14} />
                       </Link>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
@@ -624,36 +641,27 @@ export default function GamesSearch() {
               />
 
               {isNewLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : newReleasesCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {newReleasesCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-5">
-                    {newShown < 24 && allNew.length > newShown ? (
-                      <button
-                        onClick={() => setNewShown(Math.min(24, allNew.length))}
-                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ChevronDown size={15} />
-                        Show {Math.min(12, allNew.length - newShown)} more
-                      </button>
-                    ) : <span />}
-                    {(newShown >= 24 || newTotal > 24) && (
+                  {newTotal > sectionCardLimit && (
+                    <div className="flex items-center justify-end mt-5">
                       <Link
                         href="/games/new-releases"
                         className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                       >
                         View all Recently Released <ArrowRight size={14} />
                       </Link>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
@@ -671,36 +679,27 @@ export default function GamesSearch() {
               />
 
               {isUpcomingLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-                  {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : upcomingCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {upcomingCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-5">
-                    {upcomingShown < 24 && allUpcoming.length > upcomingShown ? (
-                      <button
-                        onClick={() => setUpcomingShown(Math.min(24, allUpcoming.length))}
-                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ChevronDown size={15} />
-                        Show {Math.min(12, allUpcoming.length - upcomingShown)} more
-                      </button>
-                    ) : <span />}
-                    {(upcomingShown >= 24 || upcomingTotal > 24) && (
+                  {upcomingTotal > sectionCardLimit && (
+                    <div className="flex items-center justify-end mt-5">
                       <Link
                         href="/games/upcoming"
                         className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                       >
                         View all Upcoming <ArrowRight size={14} />
                       </Link>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground py-8 text-center">
@@ -781,7 +780,7 @@ export default function GamesSearch() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
               {isSearchLoading
                 ? Array.from({ length: 20 }).map((_, i) => <GameCardSkeleton key={i} />)
                 : searchData?.results.map(game => (

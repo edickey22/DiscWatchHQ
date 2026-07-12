@@ -172,32 +172,39 @@ export function CatalogGameCard({
       </div>
 
       {/* Body */}
-      <div className="p-3 flex flex-col gap-1.5 flex-1 min-h-0">
+      <div className="p-3 flex flex-col flex-1 min-h-0">
 
-        {/* Title */}
-        <h3 className="font-display font-bold text-[0.82rem] leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-          {game.title}
-        </h3>
+        {/* Above-the-buttons content gets a fixed min-height reservation so the
+            retailer buttons below always start at the same vertical offset,
+            regardless of title length or platform-chip wrapping. Without this,
+            a 2-line title or a wrapped chip row would push buttons down
+            inconsistently from card to card in the same row. */}
+        <div className="flex flex-col gap-1.5 min-h-[5.5rem]">
+          {/* Title */}
+          <h3 className="font-display font-bold text-[0.82rem] leading-snug line-clamp-2 min-h-[2.3rem] text-foreground group-hover:text-primary transition-colors">
+            {game.title}
+          </h3>
 
-        {/* Publisher + year on the same line */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {game.publisherName && (
-            <span className="text-[9px] font-mono text-primary/95 truncate max-w-[120px]">
-              {game.publisherName}
-            </span>
-          )}
-          {game.publisherName && year && (
-            <span className="text-[9px] text-muted-foreground/30">·</span>
-          )}
-          {year && (
-            <span className="text-[12px] font-mono text-muted-foreground/90">{year}</span>
-          )}
-        </div>
+          {/* Publisher + year on the same line */}
+          <div className="flex items-center gap-1.5 flex-wrap min-h-[1rem]">
+            {game.publisherName && (
+              <span className="text-[9px] font-mono text-primary/95 truncate max-w-[120px]">
+                {game.publisherName}
+              </span>
+            )}
+            {game.publisherName && year && (
+              <span className="text-[9px] text-muted-foreground/30">·</span>
+            )}
+            {year && (
+              <span className="text-[12px] font-mono text-muted-foreground/90">{year}</span>
+            )}
+          </div>
 
-        {/* Platform chips — cap at 4. Clickable: selecting one narrows the
-            retailer searches below to that platform (e.g. "... Switch"). */}
-        {game.platforms.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          {/* Platform chips — cap at 4. Clickable: selecting one narrows the
+              retailer searches below to that platform (e.g. "... Switch").
+              min-h reserves room for up to 2 wrapped rows so the buttons
+              below never shift based on how many chips a card has. */}
+          <div className="flex flex-wrap gap-1 min-h-[1.75rem] content-start">
             {game.platforms.slice(0, 4).map(p => {
               const isSelected = selectedPlatform === p
               return (
@@ -210,7 +217,7 @@ export function CatalogGameCard({
                     e.stopPropagation()
                     setSelectedPlatform(cur => (cur === p ? null : p))
                   }}
-                  className={`text-[12px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
+                  className={`text-[12px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors h-fit ${
                     isSelected
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-secondary border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -226,11 +233,16 @@ export function CatalogGameCard({
               </span>
             )}
           </div>
-        )}
+        </div>
 
         {/* Retailer buttons — platform-aware (retro = eBay + GameStop only).
-            Uses the platform-qualified search URLs when a tag above is selected. */}
-        <div className="mt-auto pt-1">
+            Uses the platform-qualified search URLs when a tag above is selected.
+            Anchored right after the reserved content block above (not pushed
+            to the card's bottom edge), so buttons line up at a consistent
+            height across every card in a row. Any extra height a taller card
+            in the row forces onto this card renders as blank space below the
+            buttons instead of shifting the buttons themselves. */}
+        <div className="pt-1">
           <RetailerLinks urls={effectiveRetailerUrls} platforms={game.platforms} guideUrls={game.guideSearchUrls} />
         </div>
       </div>
