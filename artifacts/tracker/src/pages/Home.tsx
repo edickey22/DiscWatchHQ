@@ -182,7 +182,7 @@ export default function Home() {
                   </span>
                   Currently Available
                 </h2>
-                <p className="text-muted-foreground mt-1 font-mono text-sm">Open preorders & in-stock drops</p>
+                <p className="text-muted-foreground mt-1 font-mono text-base">Open preorders & in-stock drops</p>
               </div>
               <div className="text-sm font-mono text-muted-foreground bg-secondary px-3 py-1 rounded-full">
                 {isLoadingAvailable ? "…" : (availableData?.total ?? 0)}
@@ -212,7 +212,7 @@ export default function Home() {
                 <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
                   Coming Soon
                 </h2>
-                <p className="text-muted-foreground mt-1 font-mono text-sm">Announced, waiting for drop</p>
+                <p className="text-muted-foreground mt-1 font-mono text-base">Announced, waiting for drop</p>
               </div>
               <div className="text-sm font-mono text-muted-foreground bg-secondary px-3 py-1 rounded-full">
                 {isLoadingComingSoon ? "…" : (comingSoonData?.total ?? 0)}
@@ -244,7 +244,7 @@ export default function Home() {
                 <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
                   Recently Sold Out
                 </h2>
-                <p className="text-muted-foreground mt-1 font-mono text-sm">Missed it</p>
+                <p className="text-muted-foreground mt-1 font-mono text-base">Missed it</p>
               </div>
               <div className="text-sm font-mono text-muted-foreground bg-secondary px-3 py-1 rounded-full">
                 {isLoadingSoldOut ? "…" : (soldOutData?.total ?? 0)}

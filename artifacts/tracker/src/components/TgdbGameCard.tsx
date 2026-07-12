@@ -163,7 +163,7 @@ export function CatalogGameCard({
         {/* Publisher + year on the same line */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {game.publisherName && (
-            <span className="text-[9px] font-mono text-primary/60 truncate max-w-[120px]">
+            <span className="text-[9px] font-mono text-primary/95 truncate max-w-[120px]">
               {game.publisherName}
             </span>
           )}
@@ -171,7 +171,7 @@ export function CatalogGameCard({
             <span className="text-[9px] text-muted-foreground/30">·</span>
           )}
           {year && (
-            <span className="text-[10px] font-mono text-muted-foreground/50">{year}</span>
+            <span className="text-[10px] font-mono text-muted-foreground/90">{year}</span>
           )}
         </div>
 
@@ -187,7 +187,7 @@ export function CatalogGameCard({
               </span>
             ))}
             {game.platforms.length > 4 && (
-              <span className="text-[8px] font-mono text-muted-foreground/40 leading-tight py-0.5">
+              <span className="text-[8px] font-mono text-muted-foreground/90 leading-tight py-0.5">
                 +{game.platforms.length - 4}
               </span>
             )}

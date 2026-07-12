@@ -139,7 +139,7 @@ export default function CatalogListPage({ kind }: CatalogListPageProps) {
           {/* Back link */}
           <Link
             href="/games"
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/60 hover:text-primary transition-colors mb-4"
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-primary transition-colors mb-4"
           >
             <ArrowLeft size={12} /> Browse Games
           </Link>
@@ -149,14 +149,14 @@ export default function CatalogListPage({ kind }: CatalogListPageProps) {
               {cfg.icon}
               {cfg.title}
             </h1>
-            <p className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+            <p className="text-[11px] font-mono text-muted-foreground/90 uppercase tracking-wider">
               {cfg.attribution}
             </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1.5">{cfg.description}</p>
+          <p className="text-base text-muted-foreground mt-1.5">{cfg.description}</p>
 
           {total > 0 && (
-            <p className="text-xs font-mono text-muted-foreground/50 mt-1">
+            <p className="text-xs font-mono text-muted-foreground/90 mt-1">
               {total.toLocaleString()} games
               {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
             </p>
@@ -202,13 +202,13 @@ export default function CatalogListPage({ kind }: CatalogListPageProps) {
 
         {/* ── Attribution ── */}
         <div className="border-t border-border/20 pt-4 mt-8">
-          <p className="text-xs text-muted-foreground/60 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <p className="text-xs text-muted-foreground/90 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span>Data from</span>
             <a
               href="https://rawg.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-primary/70 hover:text-primary underline underline-offset-2 transition-colors font-medium"
+              className="inline-flex items-center gap-0.5 text-primary/95 hover:text-primary underline underline-offset-2 transition-colors font-medium"
             >
               RAWG <ExternalLink size={9} />
             </a>

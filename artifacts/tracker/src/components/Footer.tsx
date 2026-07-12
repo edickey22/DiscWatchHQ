@@ -38,7 +38,7 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
           </div>
 
           {lastScraped ? (
-            <p className="text-xs font-mono text-muted-foreground/60 flex items-center gap-2">
+            <p className="text-xs font-mono text-muted-foreground/90 flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
@@ -49,7 +49,7 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
         </div>
 
         {/* ── Legal links ── */}
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground/50">
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground/90">
           <Link
             href="/privacy"
             className="hover:text-muted-foreground transition-colors underline underline-offset-2"
@@ -69,13 +69,13 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
 
         {/* ── Catalog attribution (shown on Browse Games page) ── */}
         {showCatalogAttribution && (
-          <p className="text-[11px] text-muted-foreground/50 text-center md:text-left flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <p className="text-[11px] text-muted-foreground/90 text-center md:text-left flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             Game catalog data provided by{" "}
             <a
               href="https://thegamesdb.net"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-primary/60 hover:text-primary/90 underline underline-offset-2 transition-colors font-medium"
+              className="inline-flex items-center gap-0.5 text-primary/95 hover:text-primary underline underline-offset-2 transition-colors font-medium"
               aria-label="TheGamesDB — community-run open game database (opens in new tab)"
             >
               TheGamesDB <ExternalLink size={9} />
@@ -85,7 +85,7 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
               href="https://rawg.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-primary/60 hover:text-primary/90 underline underline-offset-2 transition-colors font-medium"
+              className="inline-flex items-center gap-0.5 text-primary/95 hover:text-primary underline underline-offset-2 transition-colors font-medium"
               aria-label="RAWG Video Games Database (opens in new tab)"
             >
               RAWG <ExternalLink size={9} />

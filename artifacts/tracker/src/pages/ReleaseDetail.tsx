@@ -228,7 +228,7 @@ export default function ReleaseDetail() {
                     {/* ── PRIMARY: affiliate retailer buttons (monetized — always shown first) ── */}
                     <div className="mb-4">
                       {(isAvailable || isComingSoon) && (
-                        <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-3">
+                        <p className="text-[10px] font-mono text-muted-foreground/90 uppercase tracking-widest mb-3">
                           {isAvailable ? "Buy this game" : "Search retailers"}
                         </p>
                       )}
@@ -248,7 +248,7 @@ export default function ReleaseDetail() {
                           href={release.productUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/50 hover:text-muted-foreground/80 underline underline-offset-4 transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
                         >
                           <ExternalLink size={10} />
                           Order direct from {release.publisherName}
@@ -259,7 +259,7 @@ export default function ReleaseDetail() {
                           href={release.productUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/40 hover:text-muted-foreground/70 underline underline-offset-4 transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
                         >
                           <ExternalLink size={10} />
                           View original listing · {release.publisherName}
@@ -270,7 +270,7 @@ export default function ReleaseDetail() {
                           href={release.productUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/40 hover:text-muted-foreground/70 underline underline-offset-4 transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground/90 hover:text-muted-foreground underline underline-offset-4 transition-colors"
                         >
                           <ExternalLink size={10} />
                           View on {release.publisherName}
@@ -298,7 +298,7 @@ export default function ReleaseDetail() {
               <p className="text-muted-foreground leading-relaxed max-w-2xl font-mono text-sm">
                 {buildReleaseDescriptiveCopy(release)}
               </p>
-              <p className="text-muted-foreground/50 leading-relaxed max-w-2xl font-mono text-xs mt-4">
+              <p className="text-muted-foreground/90 leading-relaxed max-w-2xl font-mono text-xs mt-4">
                 DiscWatchHQ automatically tracks new and upcoming limited-run physical game
                 releases from {release.publisherName} and other boutique publishers — so you
                 never miss a drop.

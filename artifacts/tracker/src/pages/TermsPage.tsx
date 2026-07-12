@@ -24,7 +24,7 @@ export default function TermsPage() {
           <h1 className="text-3xl md:text-4xl font-display font-bold tracking-tight text-foreground mb-3">
             Terms of Service
           </h1>
-          <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
+          <p className="text-base text-muted-foreground">Last updated: {LAST_UPDATED}</p>
         </div>
 
         <div className="prose-legal">

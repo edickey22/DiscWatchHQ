@@ -316,13 +316,13 @@ export default function LandingPage() {
 
             {/* RAWG attribution — required by RAWG API ToS for pages displaying their data */}
             {hasTiles && (
-              <p className="mt-8 text-[10px] font-mono text-muted-foreground/35 flex items-center gap-1">
+              <p className="mt-8 text-[10px] font-mono text-muted-foreground/90 flex items-center gap-1">
                 Background art powered by{" "}
                 <a
                   href="https://rawg.io"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground/50 hover:text-primary underline underline-offset-2 inline-flex items-center gap-0.5 transition-colors"
+                  className="text-muted-foreground/90 hover:text-primary underline underline-offset-2 inline-flex items-center gap-0.5 transition-colors"
                 >
                   RAWG <ExternalLink size={8} />
                 </a>
@@ -404,7 +404,7 @@ export default function LandingPage() {
                 Explore the full game catalog — popular titles, new releases, every
                 platform from NES to PS5 — with direct retailer buy links.
               </p>
-              <div className="text-xs font-mono text-primary/60 uppercase tracking-wider">
+              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
                 {catalogStats?.count?.toLocaleString() ?? "—"} games in catalog →
               </div>
             </Link>
@@ -429,7 +429,7 @@ export default function LandingPage() {
                 boutique publishers. Preorder windows, countdowns, and secondary-market
                 links for sold-out titles.
               </p>
-              <div className="text-xs font-mono text-muted-foreground/50 uppercase tracking-wider">
+              <div className="text-xs font-mono text-muted-foreground/90 uppercase tracking-wider">
                 {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
               </div>
             </Link>
@@ -443,14 +443,14 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="py-10 border-t border-border/20">
         <div className="container mx-auto max-w-6xl px-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 mb-4">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/90 mb-4">
             Boutique publishers we monitor
           </p>
           <div className="flex flex-wrap gap-2.5">
             {PUBLISHERS.map(pub => (
               <span
                 key={pub}
-                className="text-xs font-mono text-muted-foreground/50 border border-border/25 px-3 py-1.5 rounded-full"
+                className="text-xs font-mono text-muted-foreground/90 border border-border/25 px-3 py-1.5 rounded-full"
               >
                 {pub}
               </span>

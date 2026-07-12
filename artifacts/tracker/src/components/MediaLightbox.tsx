@@ -322,7 +322,7 @@ export function MediaLightbox({ slides, initialIndex, onClose }: MediaLightboxPr
         )}
         {/* Video label */}
         {isVideo && (
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/70">
             trailer
           </span>
         )}

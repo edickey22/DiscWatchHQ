@@ -95,7 +95,7 @@ function ScoreBadge({ game }: { game: CatalogGame }) {
         >
           {game.metacritic}
         </span>
-        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 leading-none">
+        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/90 leading-none">
           Metacritic
         </span>
       </div>
@@ -114,7 +114,7 @@ function ScoreBadge({ game }: { game: CatalogGame }) {
         >
           {letter}
         </span>
-        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 leading-none">
+        <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/90 leading-none">
           ESRB
         </span>
       </div>
@@ -164,7 +164,7 @@ function Gallery({
 
   return (
     <section>
-      <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-2">
+      <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/90 mb-3 flex items-center gap-2">
         <ImageIcon size={12} /> Screenshots
       </h3>
 
@@ -201,7 +201,7 @@ function Gallery({
 function Attribution({ source }: { source: "rawg" | "tgdb" }) {
   return (
     <div className="border-t border-border/20 pt-4 mt-2">
-      <p className="text-xs text-muted-foreground/70 flex flex-wrap items-center gap-1.5">
+      <p className="text-xs text-muted-foreground/90 flex flex-wrap items-center gap-1.5">
         {source === "rawg" ? (
           <>
             <span>Powered by</span>
@@ -364,7 +364,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
 
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
                     {displayed?.publisherName && (
-                      <span className="text-xs font-mono text-primary/70">
+                      <span className="text-xs font-mono text-primary/95">
                         {displayed.publisherName}
                       </span>
                     )}
@@ -372,7 +372,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                       <span className="text-muted-foreground/30 text-xs">·</span>
                     )}
                     {year && (
-                      <span className="text-xs font-mono text-muted-foreground/60">{year}</span>
+                      <span className="text-xs font-mono text-muted-foreground/90">{year}</span>
                     )}
                   </div>
 
@@ -424,7 +424,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
             )}
 
             {error && !loading && (
-              <div className="px-5 py-2 text-xs text-muted-foreground/60">
+              <div className="px-5 py-2 text-xs text-muted-foreground/90">
                 Could not load additional details.
               </div>
             )}
@@ -434,7 +434,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
               <div className="px-5 pb-2 space-y-6 mt-2">
                 {detail.description && (
                   <section>
-                    <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">
+                    <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/90 mb-3">
                       About this game
                     </h3>
                     <Description text={detail.description} />

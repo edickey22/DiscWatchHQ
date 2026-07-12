@@ -79,7 +79,7 @@ export function RawgGameCard({ game }: { game: RawgGame }) {
             {game.name}
           </h3>
           {year && (
-            <span className="text-[10px] font-mono text-muted-foreground/50">{year}</span>
+            <span className="text-[10px] font-mono text-muted-foreground/90">{year}</span>
           )}
         </div>
 
@@ -95,7 +95,7 @@ export function RawgGameCard({ game }: { game: RawgGame }) {
               </span>
             ))}
             {game.platforms.length > 4 && (
-              <span className="text-[8px] font-mono text-muted-foreground/40 leading-tight py-0.5">
+              <span className="text-[8px] font-mono text-muted-foreground/90 leading-tight py-0.5">
                 +{game.platforms.length - 4}
               </span>
             )}

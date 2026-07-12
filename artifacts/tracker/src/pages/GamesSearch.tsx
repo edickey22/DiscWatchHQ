@@ -199,7 +199,7 @@ function SectionHeader({
         {icon}
         {label}
       </h2>
-      <p className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+      <p className="text-[11px] font-mono text-muted-foreground/90 uppercase tracking-wider">
         {attribution}
       </p>
     </div>
@@ -213,18 +213,18 @@ function CatalogAttribution({ sources }: { sources?: { rawg: boolean; tgdb: bool
   const showTgdb = sources?.tgdb ?? true
   if (!showRawg && !showTgdb) return null
   return (
-    <p className="text-xs text-muted-foreground/60 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+    <p className="text-xs text-muted-foreground/90 flex flex-wrap items-center gap-x-2 gap-y-0.5">
       <span>Data from</span>
       {showTgdb && (
         <a href="https://thegamesdb.net" target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-primary/70 hover:text-primary underline underline-offset-2 transition-colors font-medium">
+          className="inline-flex items-center gap-0.5 text-primary/95 hover:text-primary underline underline-offset-2 transition-colors font-medium">
           TheGamesDB <ExternalLink size={9} />
         </a>
       )}
       {showRawg && showTgdb && <span className="text-muted-foreground/40">&amp;</span>}
       {showRawg && (
         <a href="https://rawg.io" target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-primary/70 hover:text-primary underline underline-offset-2 transition-colors font-medium">
+          className="inline-flex items-center gap-0.5 text-primary/95 hover:text-primary underline underline-offset-2 transition-colors font-medium">
           RAWG <ExternalLink size={9} />
         </a>
       )}
@@ -397,7 +397,7 @@ export default function GamesSearch() {
               <h1 className="font-display font-bold text-2xl md:text-3xl text-foreground tracking-tight">
                 {debouncedSearch.trim() ? <>Results for &ldquo;{debouncedSearch.trim()}&rdquo;</> : "Browse Games"}
               </h1>
-              <p className="text-muted-foreground text-sm mt-1">
+              <p className="text-muted-foreground text-base mt-1">
                 {isSearchMode && searchData?.count && !searchData.empty
                   ? `${searchData.count.toLocaleString()} results${debouncedSearch.trim() ? ` for "${debouncedSearch}"` : ""}`
                   : "Popular titles, new releases, and the full game catalog."}

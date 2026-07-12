@@ -52,7 +52,7 @@ export default function Consoles() {
               </span>
               Consoles
             </h1>
-            <p className="text-muted-foreground mt-1 font-mono text-sm">
+            <p className="text-muted-foreground mt-1 font-mono text-base">
               Live eBay listings for hardware, every platform and every era. Condition is always shown — never broken, never for parts.
             </p>
           </div>
@@ -70,7 +70,7 @@ export default function Consoles() {
                     <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
                       {section.label}
                     </h2>
-                    <p className="text-muted-foreground mt-1 font-mono text-sm">{section.blurb}</p>
+                    <p className="text-muted-foreground mt-1 font-mono text-base">{section.blurb}</p>
                   </div>
                 </div>
 

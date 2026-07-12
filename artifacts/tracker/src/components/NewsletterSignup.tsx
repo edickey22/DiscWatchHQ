@@ -81,7 +81,7 @@ export function NewsletterSignup() {
           </form>
         )}
         
-        <p className="text-center text-xs text-muted-foreground/60 mt-8 font-mono">
+        <p className="text-center text-xs text-muted-foreground/90 mt-8 font-mono">
           A Beehiiv embed will replace this form once the newsletter account is set up.
         </p>
       </div>

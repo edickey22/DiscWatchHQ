@@ -132,7 +132,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
     return (
       <>
         {retro && (
-          <p className="text-[10px] font-mono text-primary/60 uppercase tracking-widest mb-2.5">
+          <p className="text-[10px] font-mono text-primary/95 uppercase tracking-widest mb-2.5">
             Best bets for retro
           </p>
         )}
@@ -156,7 +156,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 ${ebayPrice.toFixed(2)}
               </span>
             ) : (
-              <span className="font-mono text-[10px] leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors mt-1">
+              <span className="font-mono text-[10px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors mt-1">
                 {retro ? "Best source for retro →" : "Search →"}
               </span>
             )}
@@ -223,7 +223,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
         {/* ── Strategy guides — secondary discovery, not a primary CTA ── */}
         {guideUrls && (
           <div className="mt-3 pt-2.5 border-t border-border/15">
-            <p className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-2">
+            <p className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/90 uppercase tracking-widest mb-2">
               <BookOpen size={10} className="opacity-70 shrink-0" />
               Strategy Guides
             </p>
@@ -238,7 +238,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
                   eBay
                 </span>
-                <span className="font-mono text-[9px] leading-none text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                <span className="font-mono text-[9px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors">
                   Used / out-of-print →
                 </span>
               </a>
@@ -252,7 +252,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
                   Amazon
                 </span>
-                <span className="font-mono text-[9px] leading-none text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                <span className="font-mono text-[9px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors">
                   New releases →
                 </span>
               </a>
@@ -284,7 +284,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
             ${ebayPrice.toFixed(2)}
           </span>
         ) : (
-          <span className="font-mono leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors text-[9px]">
+          <span className="font-mono leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors text-[9px]">
             {retro ? "Best →" : "Search →"}
           </span>
         )}
@@ -322,7 +322,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                   From ${price.toFixed(2)}
                 </span>
               ) : (
-                <span className="font-mono leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors text-[9px]">
+                <span className="font-mono leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors text-[9px]">
                   Search →
                 </span>
               )}
