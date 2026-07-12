@@ -21,6 +21,7 @@ import { GameCard, GameCardSkeleton } from "@/components/GameCard"
 import { NewsletterSignup } from "@/components/NewsletterSignup"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
+import { HeroMarquee } from "@/components/HeroMarquee"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
@@ -89,16 +90,41 @@ export default function Home() {
   const hasActiveFilters =
     search !== "" || platform !== "_all" || publisher !== "_all" || sort !== "updated"
 
+  // Hero marquee — real photos of currently-available and coming-soon boutique
+  // items (already fetched for the grids below), so the strip reflects live
+  // drops rather than stale/sold-out stock. Deduped and capped for variety.
+  const heroImages = useMemo(() => {
+    const covers = [
+      ...(availableData?.releases  ?? []),
+      ...(comingSoonData?.releases ?? []),
+    ]
+      .map(r => r.coverImageUrl)
+      .filter((url): url is string => !!url)
+    return Array.from(new Set(covers)).slice(0, 16)
+  }, [availableData, comingSoonData])
+
   return (
     <div className="min-h-[100dvh] flex flex-col">
       <Header />
 
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden border-b bg-card">
+        <HeroMarquee images={heroImages} className="opacity-90" />
+        <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+          <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+            </span>
+            Boutique Tracker
+          </h1>
+          <p className="text-muted-foreground mt-1 font-mono text-base">
+            Limited-run physical releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, Fangamer, and more.
+          </p>
+        </div>
+      </section>
+
       <main className="flex-1">
-        {/* Visually-hidden H1 — one H1 per page for accessibility + SEO.
-            The Boutique page uses H2s for its three content sections (Currently
-            Available, Coming Soon, Sold Out). Adding a matching H1 here keeps
-            the document outline correct without altering the visual layout. */}
-        <h1 className="sr-only">Boutique Tracker — Limited-Run Physical Game Releases</h1>
 
         {/* Filter + Sort bar */}
         <section className="bg-card border-b sticky top-16 z-30 shadow-sm">

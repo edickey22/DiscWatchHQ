@@ -19,7 +19,7 @@
  *   RAWG       — required by their free-tier API terms
  */
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "wouter"
 import {
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select"
 import { CatalogGameCard, type CatalogGame } from "@/components/TgdbGameCard"
 import { GameDetailModal } from "@/components/GameDetailModal"
+import { HeroMarquee } from "@/components/HeroMarquee"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
@@ -264,6 +265,50 @@ function FilterSelect({
   )
 }
 
+// ── Hero marquee sampling ─────────────────────────────────────────────────────
+
+/**
+ * Picks a visually varied sample of cover art for the hero marquee — spread
+ * across genres and across the three pre-populated lists (popular/new/
+ * upcoming) rather than just the top few "Most Popular" entries, which
+ * would otherwise skew toward one era/style of box art. Greedily takes one
+ * game per not-yet-seen genre first, then tops up with remaining unique
+ * covers once every genre bucket has been touched once.
+ */
+function buildVariedHeroImages(pools: CatalogGame[][], max = 16): string[] {
+  const seenGenres = new Set<string>()
+  const seenCovers = new Set<string>()
+  const picked: string[] = []
+  const leftovers: string[] = []
+
+  // Interleave the pools (one from each, round-robin) so no single list dominates.
+  const interleaved: CatalogGame[] = []
+  const maxLen = Math.max(0, ...pools.map(p => p.length))
+  for (let i = 0; i < maxLen; i++) {
+    for (const pool of pools) if (pool[i]) interleaved.push(pool[i])
+  }
+
+  for (const game of interleaved) {
+    if (!game.coverImageUrl || seenCovers.has(game.coverImageUrl)) continue
+    const primaryGenre = game.genres?.[0]
+    if (primaryGenre && !seenGenres.has(primaryGenre)) {
+      seenGenres.add(primaryGenre)
+      seenCovers.add(game.coverImageUrl)
+      picked.push(game.coverImageUrl)
+    } else {
+      seenCovers.add(game.coverImageUrl)
+      leftovers.push(game.coverImageUrl)
+    }
+    if (picked.length >= max) break
+  }
+
+  while (picked.length < max && leftovers.length > 0) {
+    picked.push(leftovers.shift()!)
+  }
+
+  return picked
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GamesSearch() {
@@ -384,9 +429,34 @@ export default function GamesSearch() {
   const newTotal         = newData?.count      ?? 0
   const upcomingTotal    = upcomingData?.count ?? 0
 
+  // Hero marquee — mixed, genre-varied sample from the three already-fetched
+  // lists (not just "Most Popular" by score), so the strip reads as broad
+  // catalog variety rather than a duplicate of the ranking shown below.
+  const heroImages = useMemo(
+    () => buildVariedHeroImages([allPopular, allNew, allUpcoming]),
+    [popularData, newData, upcomingData],
+  )
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
+
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden border-b bg-card">
+        <HeroMarquee images={heroImages} className="opacity-90" />
+        <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+          <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+            </span>
+            Browse Games
+          </h1>
+          <p className="text-muted-foreground mt-1 font-mono text-base">
+            Popular titles, new releases, and 900,000+ physical games across every platform and era.
+          </p>
+        </div>
+      </section>
 
       <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">
 
@@ -394,13 +464,13 @@ export default function GamesSearch() {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
             <div>
-              <h1 className="font-display font-bold text-2xl md:text-3xl text-foreground tracking-tight">
-                {debouncedSearch.trim() ? <>Results for &ldquo;{debouncedSearch.trim()}&rdquo;</> : "Browse Games"}
-              </h1>
+              <h2 className="font-display font-bold text-xl md:text-2xl text-foreground tracking-tight">
+                {debouncedSearch.trim() ? <>Results for &ldquo;{debouncedSearch.trim()}&rdquo;</> : "All Games"}
+              </h2>
               <p className="text-muted-foreground text-base mt-1">
                 {isSearchMode && searchData?.count && !searchData.empty
                   ? `${searchData.count.toLocaleString()} results${debouncedSearch.trim() ? ` for "${debouncedSearch}"` : ""}`
-                  : "Popular titles, new releases, and the full game catalog."}
+                  : "Search or filter the full catalog below."}
               </p>
             </div>
             {isSearchMode && <CatalogAttribution sources={searchData?.sources} />}
