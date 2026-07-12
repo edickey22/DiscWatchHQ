@@ -233,7 +233,10 @@ export default function LandingPage() {
               <span className="text-foreground font-medium">GameStop</span>,{" "}
               <span className="text-foreground font-medium">Amazon</span>,{" "}
               <span className="text-foreground font-medium">eBay</span>, and{" "}
-              <span className="text-foreground font-medium">Best Buy</span>.
+              <span className="text-foreground font-medium">Best Buy</span>. Need hardware
+              too? Browse live{" "}
+              <span className="text-foreground font-medium">console listings</span>, from
+              current-gen to retro.
             </p>
 
             {/* CTAs */}
@@ -285,6 +288,15 @@ export default function LandingPage() {
                 </div>
                 <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
                   Retailers Linked
+                </div>
+              </div>
+              <div className="w-px h-10 bg-border hidden sm:block" />
+              <div>
+                <div className="text-3xl sm:text-4xl font-display font-black text-foreground/60 tabular-nums">
+                  22
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
+                  Console Models
                 </div>
               </div>
               {stats && stats.available > 0 && (

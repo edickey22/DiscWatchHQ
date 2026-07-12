@@ -1,7 +1,22 @@
+import { useState } from "react"
 import { Link, useLocation } from "wouter"
 import { useQuery } from "@tanstack/react-query"
+import { Menu } from "lucide-react"
 import { ControllerIcon } from "@/components/ControllerIcon"
 import { useGetReleaseStats } from "@workspace/api-client-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+
+const NAV_ITEMS = [
+  { href: "/games",    label: "Browse Games" },
+  { href: "/boutique", label: "Boutique" },
+  { href: "/consoles", label: "Consoles" },
+]
 
 async function fetchCatalogStats(): Promise<{ count: number }> {
   const res = await fetch("/api/catalog/stats")
@@ -17,6 +32,7 @@ export function Header() {
     staleTime: 5 * 60 * 1_000,
   })
   const [location] = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const navLink = (href: string, label: string, exact = true) => {
     const isActive = exact ? location === href : location.startsWith(href)
@@ -62,6 +78,49 @@ export function Header() {
           {navLink("/boutique", "Boutique")}
           {navLink("/consoles", "Consoles")}
         </nav>
+
+        {/* ── Mobile nav trigger ───────────────────────────────────────── */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Open menu"
+              className="sm:hidden inline-flex items-center justify-center rounded-md h-9 w-9 text-foreground/80 hover:text-foreground hover:bg-secondary/50 transition-colors"
+            >
+              <Menu size={22} />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-4/5 max-w-xs bg-background border-border p-0 flex flex-col">
+            <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/60 text-left">
+              <SheetTitle className="flex items-center gap-2">
+                <ControllerIcon size={22} />
+                <span className="font-display font-bold">
+                  <span className="text-foreground">Disc</span>
+                  <span className="text-primary">Watch</span>
+                </span>
+              </SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col p-3 gap-1">
+              {NAV_ITEMS.map(({ href, label }) => {
+                const isActive = location === href
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-4 py-3 rounded-md text-base font-medium transition-colors ${
+                      isActive
+                        ? "text-foreground bg-primary/10 border border-primary/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
 
         {/* ── Live stats ────────────────────────────────────────────────── */}
         <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0">
