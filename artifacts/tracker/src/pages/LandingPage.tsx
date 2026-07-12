@@ -23,6 +23,7 @@
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
+import { ControllerIcon } from "@/components/ControllerIcon"
 
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
@@ -239,21 +240,36 @@ export default function LandingPage() {
               current-gen to retro.
             </p>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap gap-4 mb-16">
+            {/* CTAs — one consistent button group: same height, padding, weight and
+                icon treatment across all three, with visual hierarchy carried by
+                fill/outline rather than mismatched sizing. */}
+            <div className="flex flex-wrap gap-3 mb-16">
               <Button
                 asChild size="lg"
-                className="h-14 px-8 text-base font-bold gap-2 shadow-lg shadow-primary/25"
+                className="h-14 px-7 text-base font-bold gap-2 shadow-lg shadow-primary/25"
               >
                 <Link href="/games">
-                  Browse Games <ChevronRight size={18} />
+                  <Library size={18} />
+                  Browse Games
                 </Link>
               </Button>
               <Button
                 asChild size="lg" variant="outline"
-                className="h-14 px-8 text-base font-semibold border-foreground/20 hover:border-foreground/40"
+                className="h-14 px-7 text-base font-bold gap-2 border-foreground/20 hover:border-foreground/40"
               >
-                <Link href="/boutique">Boutique Tracker</Link>
+                <Link href="/boutique">
+                  <Bell size={18} />
+                  Boutique Tracker
+                </Link>
+              </Button>
+              <Button
+                asChild size="lg" variant="outline"
+                className="h-14 px-7 text-base font-bold gap-2 border-foreground/20 hover:border-foreground/40"
+              >
+                <Link href="/consoles">
+                  <ControllerIcon size={18} strokeWidth={2.5} />
+                  Consoles
+                </Link>
               </Button>
             </div>
 

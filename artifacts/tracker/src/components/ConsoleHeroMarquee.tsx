@@ -35,16 +35,20 @@ export function ConsoleHeroMarquee({
             <img
               src={src}
               alt=""
-              className="h-full w-full object-cover grayscale-[15%]"
+              className="h-full w-full object-cover"
               loading={i < CONSOLE_HERO_IMAGES.length ? "eager" : "lazy"}
             />
           </div>
         ))}
       </div>
 
-      {/* Dark gradient overlay — keeps header title/text readable at AA contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background" />
+      {/* Readability treatment — a bottom-weighted scrim (not a flat dark wash)
+          so the photos stay clearly visible up top while the header text at the
+          bottom still hits AA contrast. Faint primary-tinted edges echo the
+          site's green accent instead of looking like a plain dark box. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/25 via-background/55 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-background/70" />
+      <div className="absolute inset-0 bg-primary/10 mix-blend-overlay" />
     </div>
   )
 }
