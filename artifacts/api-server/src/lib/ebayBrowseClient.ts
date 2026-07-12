@@ -19,6 +19,8 @@
  * handled at the DB layer by the scheduler's 72-hour refresh interval.
  */
 
+import { applyEbayEpnParams } from "./affiliateConfig";
+
 const APP_ID     = (process.env.EBAY_APP_ID     ?? "").trim();
 const APP_SECRET = (process.env.EBAY_CLIENT_SECRET ?? "").trim();
 
@@ -33,7 +35,11 @@ interface TokenCache {
 
 let tokenCache: TokenCache | null = null;
 
-async function getAccessToken(): Promise<string | null> {
+/**
+ * Exported so other Browse API clients (e.g. ebayConsolesClient.ts) can
+ * reuse the same cached OAuth token instead of requesting their own.
+ */
+export async function getAccessToken(): Promise<string | null> {
   if (tokenCache && Date.now() < tokenCache.expiresAt - 60_000) {
     return tokenCache.token;
   }
@@ -186,25 +192,12 @@ export async function getEbayListingForCatalog(
     const cheapest = candidates.reduce((a, b) => (b.price < a.price ? b : a));
     return {
       price: cheapest.price,
-      url:   _applyEpnParams(cheapest.url),
+      url:   applyEbayEpnParams(cheapest.url),
     };
   } catch (err) {
     console.warn("[eBay Browse] Catalog listing error:", err);
     return null;
   }
-}
-
-/**
- * Append EPN affiliate tracking params to any eBay item or search URL.
- * When EBAY_CAMPAIGN_ID is not set the URL is returned unchanged.
- */
-function _applyEpnParams(ebayUrl: string): string {
-  const campaignId = (process.env.EBAY_CAMPAIGN_ID ?? "").trim();
-  if (!campaignId) return ebayUrl;
-  const ROTATION_ID = "711-53200-19255-0";
-  const TOOL_ID     = "10001";
-  const sep = ebayUrl.includes("?") ? "&" : "?";
-  return `${ebayUrl}${sep}mkcid=1&mkrid=${ROTATION_ID}&siteid=0&campid=${campaignId}&toolid=${TOOL_ID}&mkevt=1`;
 }
 
 /** Reset OAuth token cache (used in tests / forced re-auth). */

@@ -7,6 +7,7 @@ import Home from '@/pages/Home';
 import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
+import Consoles from '@/pages/Consoles';
 import PrivacyPage from '@/pages/PrivacyPage';
 import TermsPage from '@/pages/TermsPage';
 
@@ -67,6 +68,8 @@ function AppRouter() {
       </Route>
       {/* Boutique Tracker — scarcity-tracking for limited-run physical releases */}
       <Route path="/boutique" component={Home} />
+      {/* Consoles — live eBay hardware listings, separate from games/boutique */}
+      <Route path="/consoles" component={Consoles} />
       {/* Release detail pages */}
       <Route path="/releases/:id" component={ReleaseDetail} />
       {/* Legal */}

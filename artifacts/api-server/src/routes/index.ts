@@ -10,6 +10,7 @@ import gamesRouter from "./games";
 import catalogRouter from "./catalog";
 import seoRouter from "./seo";
 import socialRouter from "./social";
+import consolesRouter from "./consoles";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(affiliateRouter);
 router.use(gamesRouter);
 router.use(catalogRouter);
 router.use(seoRouter);
+router.use(consolesRouter);
 
 export default router;

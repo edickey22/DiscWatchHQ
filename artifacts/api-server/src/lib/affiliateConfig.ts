@@ -89,6 +89,21 @@ export function buildEbaySearchUrl(title: string): string {
 }
 
 /**
+ * Append EPN affiliate tracking params to any eBay item or search URL.
+ * Single source of truth for the query-string shape — used by both the
+ * static search-URL builders above and the eBay Browse API clients
+ * (ebayBrowseClient.ts, ebayConsolesClient.ts) which wrap direct item URLs
+ * returned from live API calls.
+ * When EBAY_CAMPAIGN_ID is not set the URL is returned unchanged.
+ */
+export function applyEbayEpnParams(ebayUrl: string): string {
+  if (!affiliateConfig.ebay.campaignId || !ebayUrl) return ebayUrl;
+  const { campaignId, rotationId, toolId } = affiliateConfig.ebay;
+  const sep = ebayUrl.includes("?") ? "&" : "?";
+  return `${ebayUrl}${sep}mkcid=1&mkrid=${rotationId}&siteid=0&campid=${campaignId}&toolid=${toolId}&mkevt=1`;
+}
+
+/**
  * Amazon search URL.
  * Appends Associates tag when AMAZON_ASSOCIATES_TAG is set.
  */

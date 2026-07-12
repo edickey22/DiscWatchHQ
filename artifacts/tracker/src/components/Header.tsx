@@ -60,6 +60,7 @@ export function Header() {
         <nav className="hidden sm:flex items-center gap-1">
           {navLink("/games",    "Browse Games")}
           {navLink("/boutique", "Boutique")}
+          {navLink("/consoles", "Consoles")}
         </nav>
 
         {/* ── Live stats ────────────────────────────────────────────────── */}
