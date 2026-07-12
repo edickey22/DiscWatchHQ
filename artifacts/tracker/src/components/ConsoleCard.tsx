@@ -54,7 +54,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
   return (
     <div className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/40 transition-all hover:bg-card/70 hover:border-border">
       {/* Image */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md bg-muted shadow-sm">
+      <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
         {listing?.imageUrl ? (
           <img
             src={listing.imageUrl}
@@ -71,7 +71,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-secondary">
-            <ControllerIcon size={40} strokeWidth={2.5} className="opacity-45" />
+            <ControllerIcon size={46} strokeWidth={2.5} className="opacity-45" />
           </div>
         )}
 
@@ -138,7 +138,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
 export function ConsoleCardSkeleton() {
   return (
     <div className="flex flex-col space-y-3 p-3">
-      <div className="aspect-[4/3] w-full animate-pulse rounded-md bg-muted/60" />
+      <div className="aspect-[5/4] w-full animate-pulse rounded-md bg-muted/60" />
       <div className="space-y-2">
         <div className="h-5 w-3/4 animate-pulse rounded bg-muted/60" />
         <div className="h-6 w-1/3 animate-pulse rounded bg-muted/60" />
