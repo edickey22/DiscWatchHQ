@@ -36,8 +36,7 @@ export default function Consoles() {
     staleTime: 60 * 60_000, // 1h client-side — server already caches 4h
   })
 
-  const consoles     = data?.consoles ?? []
-  const notConfigured = !isLoading && data && !data.configured
+  const consoles = data?.consoles ?? []
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
@@ -60,15 +59,7 @@ export default function Consoles() {
         </section>
 
         <div className="container mx-auto max-w-6xl px-4 py-8 space-y-16">
-          {notConfigured && (
-            <div className="rounded-xl border border-dashed bg-card/30 py-10 text-center">
-              <p className="text-muted-foreground font-mono">
-                Live console pricing is coming soon — hardware listings will appear here once eBay API access is connected.
-              </p>
-            </div>
-          )}
-
-          {!notConfigured && SECTIONS.map(section => {
+          {SECTIONS.map(section => {
             const items = consoles.filter(c => c.generation === section.generation)
             if (!isLoading && items.length === 0) return null
 

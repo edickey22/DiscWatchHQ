@@ -9,9 +9,18 @@
 import { logger } from "./logger";
 import { CONSOLE_MODELS, type ConsoleModel } from "./consoleModels";
 import { getEbayConsoleListing, ebayConsolesConfigured, type ConsoleListing } from "./ebayConsolesClient";
+import { buildEbaySearchUrl } from "./affiliateConfig";
 
 export interface ConsoleWithListing extends ConsoleModel {
-  listing: ConsoleListing | null; // null = configured, but no qualifying listing found
+  listing: ConsoleListing | null; // null = no live listing (not configured, zero results, or fetch failure)
+  /**
+   * Static, EPN-tagged eBay search URL for this console model — built from
+   * the same buildEbaySearchUrl/EPN-params pattern used sitewide (Browse
+   * Games "eBay Search" buttons). Only requires EBAY_CAMPAIGN_ID, so it's
+   * always present and functional regardless of Browse API credentials.
+   * The frontend uses this as the fallback CTA whenever `listing` is null.
+   */
+  searchUrl: string;
 }
 
 interface CacheEntry {
@@ -46,12 +55,17 @@ async function fetchOne(model: ConsoleModel): Promise<ConsoleListing | null> {
  */
 export async function fetchAllConsoleListings(): Promise<ConsoleWithListing[]> {
   if (!ebayConsolesConfigured) {
-    return CONSOLE_MODELS.map(model => ({ ...model, listing: null }));
+    return CONSOLE_MODELS.map(model => ({
+      ...model,
+      listing:   null,
+      searchUrl: buildEbaySearchUrl(model.query),
+    }));
   }
 
   const settled = await Promise.allSettled(CONSOLE_MODELS.map(fetchOne));
   return CONSOLE_MODELS.map((model, i) => ({
     ...model,
-    listing: settled[i].status === "fulfilled" ? settled[i].value : null,
+    listing:   settled[i].status === "fulfilled" ? settled[i].value : null,
+    searchUrl: buildEbaySearchUrl(model.query),
   }));
 }
