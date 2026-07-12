@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { ConsoleCard, ConsoleCardSkeleton, type ConsoleWithListing } from "@/components/ConsoleCard"
+import { ConsoleHeroMarquee } from "@/components/ConsoleHeroMarquee"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 
@@ -43,8 +44,9 @@ export default function Consoles() {
       <Header />
 
       <main className="flex-1">
-        <section className="bg-card border-b">
-          <div className="container mx-auto max-w-6xl px-4 py-8">
+        <section className="relative overflow-hidden border-b bg-card">
+          <ConsoleHeroMarquee className="opacity-90" />
+          <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
             <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />

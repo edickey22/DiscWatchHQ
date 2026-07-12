@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { ControllerIcon } from "@/components/ControllerIcon"
+import { CONSOLE_IMAGES } from "@/lib/consoleImages"
 import { cn } from "@/lib/utils"
 import { ExternalLink, Search } from "lucide-react"
 
@@ -47,7 +48,8 @@ const CONDITION_STYLES: Record<ConsoleCondition, string> = {
  * simply stops being null and this component renders the live variant.
  */
 export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) {
-  const { name, generation, listing, searchUrl } = item
+  const { id, name, generation, listing, searchUrl } = item
+  const stockPhoto = CONSOLE_IMAGES[id]
 
   return (
     <div className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/40 transition-all hover:bg-card/70 hover:border-border">
@@ -57,6 +59,13 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
           <img
             src={listing.imageUrl}
             alt={`${name} — ${listing.condition}`}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : stockPhoto ? (
+          <img
+            src={stockPhoto}
+            alt={name}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />

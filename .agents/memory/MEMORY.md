@@ -8,3 +8,4 @@
 - [LRG merch filter](scraper-registry.md) — isGame() blocks known merch product_types (lowercase-normalized) + title keyword fallback; wired in addProducts loop
 - [Catalog quality filters](catalog-quality-filters.md) — RAWG + TGDB both need junk-entry filters; \btest\b alone causes false positives; GameStop search param is "q" not "searchTerm"
 - [Dark theme text contrast](dark-theme-contrast.md) — muted-foreground/primary/white text at opacity ≤60% on the near-black bg fails WCAG AA; only safe below ~90% opacity on true black
+- [Unsplash image sourcing](unsplash-image-sourcing.md) — imageSearch titles are unreliable, always visually verify downloaded candidates before use; self-host, never hotlink
