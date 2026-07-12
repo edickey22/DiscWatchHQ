@@ -444,7 +444,7 @@ export default function GamesSearch() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b bg-card">
         <HeroMarquee images={heroImages} className="opacity-90" />
-        <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+        <div className="container relative mx-auto max-w-[1600px] px-4 py-10 md:py-14">
           <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
@@ -458,7 +458,7 @@ export default function GamesSearch() {
         </div>
       </section>
 
-      <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">
+      <main className="flex-1 container mx-auto max-w-[1600px] px-4 py-8">
 
         {/* ── Page header ── */}
         <div className="mb-8">
@@ -577,12 +577,12 @@ export default function GamesSearch() {
               />
 
               {isPopularLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                   {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : popularCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                     {popularCards.map((game, i) => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} priority={i < 4} />
                     ))}
@@ -624,12 +624,12 @@ export default function GamesSearch() {
               />
 
               {isNewLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                   {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : newReleasesCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                     {newReleasesCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
@@ -671,12 +671,12 @@ export default function GamesSearch() {
               />
 
               {isUpcomingLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                   {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : upcomingCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                     {upcomingCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
@@ -781,7 +781,7 @@ export default function GamesSearch() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 mb-8">
               {isSearchLoading
                 ? Array.from({ length: 20 }).map((_, i) => <GameCardSkeleton key={i} />)
                 : searchData?.results.map(game => (

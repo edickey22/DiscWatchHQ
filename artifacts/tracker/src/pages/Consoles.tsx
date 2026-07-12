@@ -46,7 +46,7 @@ export default function Consoles() {
       <main className="flex-1">
         <section className="relative overflow-hidden border-b bg-card">
           <ConsoleHeroMarquee className="opacity-90" />
-          <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+          <div className="container relative mx-auto max-w-[1600px] px-4 py-10 md:py-14">
             <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
@@ -60,7 +60,7 @@ export default function Consoles() {
           </div>
         </section>
 
-        <div className="container mx-auto max-w-6xl px-4 pt-6">
+        <div className="container mx-auto max-w-[1600px] px-4 pt-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-mono text-primary/90">
             <span className="relative flex h-1.5 w-1.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
@@ -70,7 +70,7 @@ export default function Consoles() {
           </div>
         </div>
 
-        <div className="container mx-auto max-w-6xl px-4 py-8 space-y-16">
+        <div className="container mx-auto max-w-[1600px] px-4 py-8 space-y-16">
           {SECTIONS.map(section => {
             const items = consoles.filter(c => c.generation === section.generation)
             if (!isLoading && items.length === 0) return null
@@ -86,7 +86,7 @@ export default function Consoles() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
                   {isLoading ? (
                     Array.from({ length: 4 }).map((_, i) => <ConsoleCardSkeleton key={i} />)
                   ) : (
