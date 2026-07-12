@@ -9,14 +9,26 @@
  * Platform-aware retro mode:
  *   When ALL of a game's platforms are in the RETRO_PLATFORMS set
  *   (pre-2010 discontinued hardware), Amazon and Best Buy are hidden —
- *   they realistically carry no stock for these titles. eBay leads (best
- *   source for retro), followed by GameStop (used/trade-in stock).
+ *   they realistically carry no stock for these titles. GameStop
+ *   (used/trade-in stock) is the remaining grid retailer; eBay is always
+ *   rendered separately (see below) and calls out as the best retro source.
+ *
+ * eBay Developer Program API License compliance:
+ *   eBay Content may not be combined with third-party information to
+ *   suggest/model a cross-retailer price comparison. eBay's own live price
+ *   is still shown when available (that's just eBay's own real listing
+ *   price, which is permitted) — but it is never included in the
+ *   GameStop/Amazon/Best Buy "BEST" ranking grid, and it renders in its own
+ *   visually distinct block rather than inside the shared comparison grid.
+ *   Do not add eBay back into `OTHER_RETAILERS` / the bestKey computation.
  *
  * Strategy guide links (optional):
  *   When guideUrls is provided, a visually secondary "Strategy Guides"
  *   section appears below the main buttons — eBay (used/OOP) and Amazon
  *   (new releases from Prima / Future Press). Styled as ghost buttons in
- *   the detail variant and compact text links in the card variant.
+ *   the detail variant and compact text links in the card variant. These
+ *   are plain search links (no eBay price data), so they're unaffected by
+ *   the compliance restriction above.
  */
 
 import { ArrowUpRight, BookOpen } from "lucide-react"
@@ -70,42 +82,47 @@ interface RetailerLinksProps {
   guideUrls?:  GuideSearchUrls
 }
 
-// All four retailers in default display order
-const ALL_RETAILERS = [
+// Non-eBay retailers — the only ones eligible for cross-retailer "BEST"
+// comparison. eBay is rendered separately below (see eBaySlot) and is never
+// part of this list or its ranking — see the compliance note above.
+const OTHER_RETAILERS = [
   { key: "gamestop" as const, label: "GameStop" },
-  { key: "ebay"     as const, label: "eBay"     },
   { key: "amazon"   as const, label: "Amazon"   },
   { key: "bestbuy"  as const, label: "Best Buy" },
 ] as const
 
-// Retro mode: eBay first (best for retro), then GameStop
-const RETRO_RETAILERS = [
-  { key: "ebay"     as const, label: "eBay"     },
+// Retro mode: Amazon/Best Buy realistically carry no stock, so only
+// GameStop remains in the comparison grid.
+const RETRO_OTHER_RETAILERS = [
   { key: "gamestop" as const, label: "GameStop" },
 ] as const
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function RetailerLinks({ urls, prices, variant = "card", platforms, guideUrls }: RetailerLinksProps) {
-  const retro    = isRetroGame(platforms ?? [])
-  const RETAILERS = retro ? RETRO_RETAILERS : ALL_RETAILERS
+  const retro     = isRetroGame(platforms ?? [])
+  const RETAILERS = retro ? RETRO_OTHER_RETAILERS : OTHER_RETAILERS
 
-  // Collect confirmed prices (skip null/undefined)
-  const confirmedPrices: Partial<Record<typeof ALL_RETAILERS[number]["key"], number>> = {}
-  if (typeof prices?.ebay     === "number") confirmedPrices.ebay     = prices.ebay
+  const ebayUrl   = urls.ebay
+  const ebayPrice = typeof prices?.ebay === "number" ? prices.ebay : null
+
+  // Collect confirmed prices for the non-eBay comparison group only.
+  // eBay is intentionally excluded — its price must never be ranked or
+  // badged against another retailer's price (eBay API license compliance).
+  const confirmedPrices: Partial<Record<typeof OTHER_RETAILERS[number]["key"], number>> = {}
   if (typeof prices?.amazon   === "number") confirmedPrices.amazon   = prices.amazon
   if (typeof prices?.bestbuy  === "number") confirmedPrices.bestbuy  = prices.bestbuy
 
-  // Lowest confirmed price wins the "BEST" badge
-  let bestKey: typeof ALL_RETAILERS[number]["key"] | null = null
+  // Lowest confirmed price among non-eBay retailers wins the "BEST" badge
+  let bestKey: typeof OTHER_RETAILERS[number]["key"] | null = null
   if (Object.keys(confirmedPrices).length > 0) {
-    bestKey = (Object.entries(confirmedPrices) as [typeof ALL_RETAILERS[number]["key"], number][])
+    bestKey = (Object.entries(confirmedPrices) as [typeof OTHER_RETAILERS[number]["key"], number][])
       .reduce((a, b) => (b[1] < a[1] ? b : a))[0]
   }
 
   // ── detail variant ──────────────────────────────────────────────────────────
   if (variant === "detail") {
-    // Sort cheapest-priced retailer to the front
+    // Sort cheapest-priced retailer to the front (eBay excluded — fixed slot)
     const sorted = [...RETAILERS].sort((a, b) => {
       const pa = confirmedPrices[a.key] ?? Infinity
       const pb = confirmedPrices[b.key] ?? Infinity
@@ -119,7 +136,38 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
             Best bets for retro
           </p>
         )}
-        <div className={`grid gap-2.5 ${retro ? "grid-cols-2" : "grid-cols-2"}`}>
+
+        {/* ── eBay — its own isolated slot. Shows eBay's own live price
+            (permitted) but is never ranked/badged against other retailers'
+            prices (eBay API license compliance). ── */}
+        <a
+          href={ebayUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          onClick={e => e.stopPropagation()}
+          className="group relative flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 mb-2.5 border border-dashed border-primary/30 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="font-display font-bold text-[14px] leading-none text-foreground">
+              eBay
+            </span>
+            {ebayPrice !== null ? (
+              <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary mt-1">
+                ${ebayPrice.toFixed(2)}
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors mt-1">
+                {retro ? "Best source for retro →" : "Search →"}
+              </span>
+            )}
+          </div>
+          <ArrowUpRight
+            size={16}
+            className="shrink-0 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
+          />
+        </a>
+
+        <div className="grid gap-2.5 grid-cols-2">
           {sorted.map(({ key, label }) => {
             const url    = urls[key]
             const price  = confirmedPrices[key] ?? null
@@ -164,7 +212,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                   </span>
                 ) : (
                   <span className="font-mono text-[10px] leading-none text-primary-foreground/50 group-hover:text-primary-foreground/70 transition-colors">
-                    {retro && key === "ebay" ? "Best source →" : "Search →"}
+                    Search →
                   </span>
                 )}
               </a>
@@ -218,7 +266,31 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
   // ── card variant ────────────────────────────────────────────────────────────
   return (
     <div className="pt-2.5 border-t border-border/20">
-      <div className={`grid gap-1.5 ${retro ? "grid-cols-2" : "grid-cols-2"}`}>
+      {/* ── eBay — its own isolated slot, never ranked/badged against other
+          retailers (eBay API license compliance). Its own live price
+          (when available) is still shown — that part is permitted. ── */}
+      <a
+        href={ebayUrl}
+        target="_blank"
+        rel="noopener noreferrer sponsored"
+        onClick={e => e.stopPropagation()}
+        className="group flex items-center justify-between gap-2 rounded border border-dashed border-primary/25 bg-secondary/20 px-2.5 py-2 mb-1.5 hover:border-primary/40 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80">
+          eBay
+        </span>
+        {ebayPrice !== null ? (
+          <span className="font-mono font-bold leading-none text-[11px] text-primary">
+            ${ebayPrice.toFixed(2)}
+          </span>
+        ) : (
+          <span className="font-mono leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors text-[9px]">
+            {retro ? "Best →" : "Search →"}
+          </span>
+        )}
+      </a>
+
+      <div className="grid gap-1.5 grid-cols-2">
         {RETAILERS.map(({ key, label }) => {
           const url    = urls[key]
           const price  = confirmedPrices[key] ?? null
@@ -251,7 +323,7 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 </span>
               ) : (
                 <span className="font-mono leading-none text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors text-[9px]">
-                  {retro && key === "ebay" ? "Best →" : "Search →"}
+                  Search →
                 </span>
               )}
             </a>
