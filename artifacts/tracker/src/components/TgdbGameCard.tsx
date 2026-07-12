@@ -190,7 +190,7 @@ export function CatalogGameCard({
             <span className="text-[9px] text-muted-foreground/30">·</span>
           )}
           {year && (
-            <span className="text-[10px] font-mono text-muted-foreground/90">{year}</span>
+            <span className="text-[12px] font-mono text-muted-foreground/90">{year}</span>
           )}
         </div>
 
@@ -210,7 +210,7 @@ export function CatalogGameCard({
                     e.stopPropagation()
                     setSelectedPlatform(cur => (cur === p ? null : p))
                   }}
-                  className={`text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
+                  className={`text-[12px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
                     isSelected
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-secondary border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -221,7 +221,7 @@ export function CatalogGameCard({
               )
             })}
             {game.platforms.length > 4 && (
-              <span className="text-[10px] font-mono text-muted-foreground/90 leading-tight py-0.5">
+              <span className="text-[12px] font-mono text-muted-foreground/90 leading-tight py-0.5">
                 +{game.platforms.length - 4}
               </span>
             )}

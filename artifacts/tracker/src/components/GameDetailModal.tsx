@@ -376,7 +376,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                       <span className="text-muted-foreground/30 text-xs">·</span>
                     )}
                     {year && (
-                      <span className="text-xs font-mono text-muted-foreground/90">{year}</span>
+                      <span className="text-sm font-mono text-muted-foreground/90">{year}</span>
                     )}
                   </div>
 
@@ -391,7 +391,7 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                             aria-pressed={isSelected}
                             title={isSelected ? `Clear ${p} filter` : `Search retailers for ${displayed.title} on ${p}`}
                             onClick={() => setSelectedPlatform(cur => (cur === p ? null : p))}
-                            className={`text-[11px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
+                            className={`text-[12px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border transition-colors ${
                               isSelected
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-secondary border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
