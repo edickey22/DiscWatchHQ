@@ -60,6 +60,16 @@ export default function Consoles() {
           </div>
         </section>
 
+        <div className="container mx-auto max-w-6xl px-4 pt-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-mono text-primary/90">
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+            </span>
+            Live pricing &amp; listings coming soon — tap "Search on eBay" to browse current listings in the meantime.
+          </div>
+        </div>
+
         <div className="container mx-auto max-w-6xl px-4 py-8 space-y-16">
           {SECTIONS.map(section => {
             const items = consoles.filter(c => c.generation === section.generation)
