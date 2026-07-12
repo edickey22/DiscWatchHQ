@@ -18,11 +18,34 @@ import {
   buildCanonicalUrl,
 } from "@/lib/seo"
 
+// ── Publishers whose own storefront has a verified, working native
+// back-in-stock / "notify me when available" email capture on the product
+// page (checked directly against each live site — not assumed from the
+// platform they run on). We only ever link out to a mechanism that already
+// exists; we do not build our own notification system. Neither Fangamer's
+// nor Xbox Game Studios Shop's widget has its own deep-linkable URL — it's a
+// JS-triggered modal on the product page itself, so linking to the product
+// page (release.productUrl) is the correct target for both.
+//
+//   Publisher                 Notify-me feature?   Evidence
+//   ─────────────────────────────────────────────────────────────────────
+//   Limited Run Games         No                   no notify widget on PDP
+//   Strictly Limited Games    No                   no notify widget on PDP
+//   iam8bit                   No                   no notify widget on PDP
+//   Super Rare Games          No                   no notify widget on PDP
+//   Fangamer                  Yes                  "Notify Me" button + modal on PDP
+//   Xbox Game Studios Shop    Yes                  "Notify Me" button + modal on PDP
+//   Blizzard Gear Store       No                   Klaviyo used for marketing only, no PDP widget
+//   eastasiasoft               No                   no back-in-stock app installed
+//   Red Art Games             No                   PrestaShop store, no notify widget on PDP
+const PUBLISHERS_WITH_NOTIFY_FEATURE = new Set(["fangamer", "xbox-game-studios"])
+
 export default function ReleaseDetail() {
   const [, params] = useRoute("/releases/:id")
   const id = params?.id ? parseInt(params.id, 10) : 0
 
   const { data: release, isLoading, isError } = useGetRelease(id)
+  const publisherHasNotifyFeature = !!release?.publisherSlug && PUBLISHERS_WITH_NOTIFY_FEATURE.has(release.publisherSlug)
 
   // ── SEO — injected once data is loaded ─────────────────────────────────────
   const canonical = buildCanonicalUrl(`/releases/${id}`)
@@ -213,16 +236,22 @@ export default function ReleaseDetail() {
                       )}
                     </div>
 
-                    {/* ── Coming Soon: notify button first, then retailer search ── */}
-                    {isComingSoon && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="w-full text-base font-bold h-14 border-primary/20 mb-4"
-                        onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-                      >
-                        Notify Me
-                      </Button>
+                    {/* ── Coming Soon: "Notify Me" only where the publisher's own
+                        storefront actually has a native back-in-stock / notify-me
+                        email capture on the product page (verified per-publisher —
+                        see PUBLISHERS_WITH_NOTIFY_FEATURE). We never build our own
+                        notification system; where the publisher has no such feature,
+                        the button is hidden entirely rather than shown non-functional. ── */}
+                    {isComingSoon && publisherHasNotifyFeature && (
+                      <a href={release.productUrl} target="_blank" rel="noopener noreferrer">
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="w-full text-base font-bold h-14 border-primary/20 mb-4"
+                        >
+                          Notify Me on {release.publisherName}
+                        </Button>
+                      </a>
                     )}
 
                     {/* ── PRIMARY: order direct from the publisher. This is a specific
