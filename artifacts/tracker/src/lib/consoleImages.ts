@@ -11,7 +11,6 @@
  */
 export const CONSOLE_IMAGES: Record<string, string> = {
   "switch-2":      "/consoles/switch-2.jpg",
-  "ps5-pro":       "/consoles/ps5-pro.jpg",
   "ps5":           "/consoles/ps5.jpg",
   "ps4":           "/consoles/ps4.jpg",
   "xbox-series-x": "/consoles/xbox-series-x.jpg",
