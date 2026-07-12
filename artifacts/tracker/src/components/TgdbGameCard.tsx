@@ -181,7 +181,7 @@ export function CatalogGameCard({
             inconsistently from card to card in the same row. */}
         <div className="flex flex-col gap-1.5 min-h-[5.5rem]">
           {/* Title */}
-          <h3 className="font-display font-bold text-[0.82rem] leading-snug line-clamp-2 min-h-[2.3rem] text-foreground group-hover:text-primary transition-colors">
+          <h3 className="font-display font-bold text-[0.95rem] leading-snug line-clamp-2 min-h-[2.6rem] text-foreground group-hover:text-primary transition-colors">
             {game.title}
           </h3>
 
