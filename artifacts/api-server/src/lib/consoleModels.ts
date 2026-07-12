@@ -18,6 +18,8 @@ export interface ConsoleModel {
 
 export const CONSOLE_MODELS: ConsoleModel[] = [
   // ── Current-gen ──────────────────────────────────────────────────────────
+  { id: "switch-2",      name: "Nintendo Switch 2",     generation: "current", query: "Nintendo Switch 2 console" },
+  { id: "ps5-pro",       name: "PlayStation 5 Pro",     generation: "current", query: "PlayStation 5 Pro console" },
   { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console" },
   { id: "xbox-series-x", name: "Xbox Series X",        generation: "current", query: "Xbox Series X console" },
   { id: "xbox-series-s", name: "Xbox Series S",        generation: "current", query: "Xbox Series S console" },

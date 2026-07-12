@@ -62,7 +62,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleWithListing }) 
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-secondary">
-            <ControllerIcon size={40} className="opacity-20" />
+            <ControllerIcon size={40} strokeWidth={2.5} className="opacity-45" />
           </div>
         )}
 

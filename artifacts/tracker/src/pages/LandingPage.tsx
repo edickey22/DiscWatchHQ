@@ -293,7 +293,7 @@ export default function LandingPage() {
               <div className="w-px h-10 bg-border hidden sm:block" />
               <div>
                 <div className="text-3xl sm:text-4xl font-display font-black text-foreground/60 tabular-nums">
-                  22
+                  24
                 </div>
                 <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
                   Console Models
