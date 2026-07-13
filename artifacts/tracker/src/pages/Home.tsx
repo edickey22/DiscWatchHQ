@@ -129,56 +129,57 @@ export default function Home() {
         {/* Filter + Sort bar */}
         <section className="bg-card border-b sticky top-16 z-30 shadow-sm">
           <div className="container mx-auto max-w-[1600px] px-4 py-4">
-            <div className="flex flex-col md:flex-row gap-3 items-center">
 
-              {/* Search */}
-              <div className="relative flex-1 w-full">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none"
-                  size={15}
-                />
-                <Input
-                  placeholder="Search titles or publishers..."
-                  className="pl-9 bg-card border-card-border"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
+            {/* ── Row 1: Search box ── */}
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none"
+                size={15}
+              />
+              <Input
+                placeholder="Search titles or publishers..."
+                className="pl-9 bg-card border-card-border"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
 
-              <div className="flex gap-2 w-full md:w-auto flex-wrap">
-                {/* Platform filter */}
-                <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger className="w-full md:w-[165px] bg-background">
-                    <SelectValue placeholder="Platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">All Platforms</SelectItem>
-                    {platforms?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
-                      <SelectItem key={p.name} value={p.name}>
-                        {p.name} ({p.releaseCount})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* ── Row 2: Filter dropdowns ── */}
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {/* Platform filter */}
+              <Select value={platform} onValueChange={setPlatform}>
+                <SelectTrigger className="w-full md:w-[165px] bg-background">
+                  <SelectValue placeholder="Platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Platforms</SelectItem>
+                  {platforms?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                    <SelectItem key={p.name} value={p.name}>
+                      {p.name} ({p.releaseCount})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {/* Publisher filter */}
-                <Select value={publisher} onValueChange={setPublisher}>
-                  <SelectTrigger className="w-full md:w-[200px] bg-background">
-                    <SelectValue placeholder="Publisher" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">All Publishers</SelectItem>
-                    {publishers?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
-                      <SelectItem key={p.slug} value={p.slug}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Publisher filter */}
+              <Select value={publisher} onValueChange={setPublisher}>
+                <SelectTrigger className="w-full md:w-[200px] bg-background">
+                  <SelectValue placeholder="Publisher" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Publishers</SelectItem>
+                  {publishers?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                    <SelectItem key={p.slug} value={p.slug}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {/* Sort */}
+              {/* Sort — pushed to right end, mirrors Browse Games layout */}
+              <div className="md:ml-auto w-full md:w-auto flex items-center gap-2">
                 <Select value={sort} onValueChange={v => setSort(v as SortOption)}>
                   <SelectTrigger className="w-full md:w-[185px] bg-background">
                     <SelectValue placeholder="Sort by" />
