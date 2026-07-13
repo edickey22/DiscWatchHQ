@@ -518,9 +518,14 @@ router.get("/games/upcoming", async (req, res): Promise<void> => {
 
   // Strict future: release_date > today. Excludes all games already released,
   // including those that released earlier in the current calendar year.
+  // Also requires at least one known platform — RAWG sometimes returns
+  // placeholder/unannounced entries with a future date but no platform data
+  // yet (no confirmed hardware to actually buy this on), which read as
+  // broken/empty cards in the "Upcoming" section, so they're filtered out.
   const upcomingFilter = sql`
     ${catalogGamesTable.releaseDate} IS NOT NULL
     AND ${catalogGamesTable.releaseDate} > ${today}
+    AND cardinality(${catalogGamesTable.platforms}) > 0
   `;
 
   const [dbRows, [{ total }]] = await Promise.all([

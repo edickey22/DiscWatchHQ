@@ -122,32 +122,44 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
-        {/* ── Live stats ────────────────────────────────────────────────── */}
+        {/* ── Live stats ────────────────────────────────────────────────────
+            Two distinct data sources, kept visually grouped so the numbers
+            read as "what we track" (boutique limited-run releases) vs.
+            "what we can look up" (the full searchable game catalog) rather
+            than one flat undifferentiated row. */}
         <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0">
           {stats && (
-            <>
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Available</span>
+            <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
+              <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+                Boutique
+              </span>
+              <div className="flex flex-col items-center" title="Open for order right now">
+                <span className="text-muted-foreground text-[10px] uppercase">In Stock</span>
                 <span className="text-primary font-bold">{stats.available}</span>
               </div>
               <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center" title="Announced, not yet open for order">
                 <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
                 <span className="text-foreground font-semibold">{stats.comingSoon}</span>
               </div>
               <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center">
-                <span className="text-muted-foreground text-[10px] uppercase">Boutique</span>
-                <span className="text-foreground/80">{stats.totalTracked}</span>
+              <div className="flex flex-col items-center" title="Previously tracked, no longer available new — check eBay">
+                <span className="text-muted-foreground text-[10px] uppercase">Sold Out</span>
+                <span className="text-foreground/80">{stats.soldOut}</span>
               </div>
-            </>
+            </div>
           )}
           {catalogStats && catalogStats.count > 0 && (
             <>
-              <div className="w-px h-6 bg-border" />
-              <div className="flex flex-col items-center" title="Games indexed locally — full 899K+ catalog searchable via live lookup">
-                <span className="text-muted-foreground text-[10px] uppercase">Indexed</span>
-                <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
+              <div className="w-px h-7 bg-border/80" />
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  Catalog
+                </span>
+                <div className="flex flex-col items-center" title="Games indexed locally — full 900K+ catalog searchable via live lookup on Browse Games">
+                  <span className="text-muted-foreground text-[10px] uppercase">Indexed</span>
+                  <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
+                </div>
               </div>
             </>
           )}

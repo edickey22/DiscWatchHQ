@@ -29,11 +29,25 @@
  *   result entirely (the frontend falls back to its existing search URL).
  *   When credentials are present but the API returns no match, the entry is
  *   explicitly null (the frontend knows to skip the "From $X" display).
+ *
+ * ── eBay is intentionally excluded from live pricing ────────────────────────
+ *
+ *   eBay's Browse API has no reliable way to confirm a `q=<title>` keyword
+ *   match is actually the specific game (no UPC/catalog-id matching like
+ *   Best Buy's Products API) — sorting by lowest price on a bare keyword
+ *   search tends to surface accessories, unrelated bundles, or entirely
+ *   different games that happen to share words with the title. That showed
+ *   up as catalog game cards linking to "random items" instead of the game
+ *   itself. Best Buy's Products API matches by catalog identity, not raw
+ *   keywords, so it stays. eBay always falls back to the plain, always-
+ *   correct affiliate search URL (`buildEbaySearchUrl`) — see RetailerLinks/
+ *   the frontend, which already renders that URL whenever `pricing.ebay` is
+ *   absent. Do not re-add a `getEbayListingForCatalog` call here without a
+ *   real per-item match signal (e.g. GTIN/UPC) to back it.
  */
 
 import { logger } from "./logger";
-import { getEbayListingForCatalog, ebayBrowseConfigured } from "./ebayBrowseClient";
-import { getBestBuyProduct,         bestbuyConfigured    } from "./bestbuyClient";
+import { getBestBuyProduct, bestbuyConfigured } from "./bestbuyClient";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,7 +58,11 @@ export interface LiveListing {
 }
 
 export interface LivePricingResult {
-  ebay?:    LiveListing | null;   // null = configured but no result; absent = not configured
+  // eBay is never populated here — see the module doc comment above.
+  // Kept as an optional/nullable field so the frontend type & fallback
+  // logic (RetailerLinks / GameDetailModal) still compile and behave
+  // correctly if this ever changes.
+  ebay?:    LiveListing | null;
   bestbuy?: LiveListing | null;
 }
 
@@ -87,23 +105,11 @@ export async function fetchLivePricing(
   // Each retailer fetch is individually guarded — one failure doesn't kill both.
   const now = Date.now();
 
-  const [ebaySettled, bestbuySettled] = await Promise.allSettled([
-    ebayBrowseConfigured   ? getEbayListingForCatalog(title)  : Promise.resolve(undefined),
-    bestbuyConfigured      ? getBestBuyProduct(title)         : Promise.resolve(undefined),
+  const [bestbuySettled] = await Promise.allSettled([
+    bestbuyConfigured ? getBestBuyProduct(title) : Promise.resolve(undefined),
   ]);
 
   const result: LivePricingResult = {};
-
-  if (ebayBrowseConfigured) {
-    if (ebaySettled.status === "fulfilled" && ebaySettled.value != null) {
-      result.ebay = { price: ebaySettled.value.price, url: ebaySettled.value.url, cachedAt: now };
-    } else {
-      result.ebay = null; // configured, but no listing found or fetch failed
-      if (ebaySettled.status === "rejected") {
-        logger.warn({ err: ebaySettled.reason, sourceId, title }, "eBay listing fetch failed");
-      }
-    }
-  }
 
   if (bestbuyConfigured) {
     if (bestbuySettled.status === "fulfilled" && bestbuySettled.value != null) {
@@ -122,7 +128,7 @@ export async function fetchLivePricing(
 
   _cache.set(sourceId, { result, expiresAt: now + TTL_MS });
   logger.debug(
-    { sourceId, ebay: result.ebay?.price ?? null, bestbuy: result.bestbuy?.price ?? null },
+    { sourceId, bestbuy: result.bestbuy?.price ?? null },
     "catalogLivePricing: fetched and cached",
   );
 
