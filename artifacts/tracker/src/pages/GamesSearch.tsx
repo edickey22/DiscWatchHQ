@@ -245,18 +245,28 @@ function FilterSelect({
   value,
   onValueChange,
   placeholder,
-  minWidth = "min-w-[150px]",
+  // Pass the full responsive class string here (must already include the
+  // "sm:" prefix) — Tailwind's JIT scanner only picks up literal class
+  // strings it can find verbatim in source, so building "sm:" + minWidth
+  // at runtime silently fails to generate the CSS. Default mirrors the
+  // common case used across most filters below.
+  smWidthClass = "sm:w-auto sm:min-w-[150px]",
   children,
 }: {
   value: string
   onValueChange: (v: string) => void
   placeholder: string
-  minWidth?: string
+  smWidthClass?: string
   children: React.ReactNode
 }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className={`w-auto ${minWidth} bg-card border-card-border shrink-0 text-sm`}>
+      {/* Full-width below sm so each filter stacks on its own row on mobile
+          (matches the Boutique page's w-full md:w-[Npx] pattern) — a bare
+          min-width lets flex-wrap pack two ~150px selects per row on a
+          narrow screen, which wraps unevenly (2, then 1 alone, then sort
+          alone) instead of a clean single-column stack. */}
+      <SelectTrigger className={`w-full ${smWidthClass} bg-card border-card-border sm:shrink-0 text-sm`}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -534,7 +544,7 @@ export default function GamesSearch() {
               value={platform}
               onValueChange={v => { setPlatform(v); setPage(1) }}
               placeholder="All platforms"
-              minWidth="min-w-[155px]"
+              smWidthClass="sm:w-auto sm:min-w-[155px]"
             >
               <SelectItem value="all">All platforms</SelectItem>
               {(platformsData?.platforms ?? []).map(p => (
@@ -547,7 +557,7 @@ export default function GamesSearch() {
               value={genre}
               onValueChange={v => { setGenre(v); setPage(1) }}
               placeholder="All genres"
-              minWidth="min-w-[135px]"
+              smWidthClass="sm:w-auto sm:min-w-[135px]"
             >
               <SelectItem value="all">All genres</SelectItem>
               {(genresData?.genres ?? []).map(g => (
@@ -560,7 +570,7 @@ export default function GamesSearch() {
               value={era}
               onValueChange={v => { setEra(v as EraValue); setPage(1) }}
               placeholder="All eras"
-              minWidth="min-w-[165px]"
+              smWidthClass="sm:w-auto sm:min-w-[165px]"
             >
               {ERA_OPTIONS.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -580,13 +590,13 @@ export default function GamesSearch() {
               </button>
             )}
 
-            {/* Sort — pushed to right end */}
-            <div className="ml-auto">
+            {/* Sort — pushed to right end on sm+; stacks full-width on mobile */}
+            <div className="w-full sm:w-auto sm:ml-auto">
               <FilterSelect
                 value={sort}
                 onValueChange={v => setSort(v as SortValue)}
                 placeholder="Best Rated"
-                minWidth="min-w-[155px]"
+                smWidthClass="sm:w-auto sm:min-w-[155px]"
               >
                 {SORT_OPTIONS.map(opt => (
                   <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
