@@ -38,7 +38,13 @@ const CONDITION_STYLES: Record<ConsoleCondition, string> = {
 export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
   return (
     <div className="group flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/40 transition-all hover:bg-card/70 hover:border-border">
-      <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
+      <a
+        href={listing.url}
+        target="_blank"
+        rel="noopener noreferrer sponsored"
+        aria-label={`View "${listing.title}" on eBay`}
+        className="relative block aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm"
+      >
         {listing.imageUrl ? (
           <img
             src={listing.imageUrl}
@@ -68,7 +74,7 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
             </Badge>
           )}
         </div>
-      </div>
+      </a>
 
       <div className="flex flex-col flex-1 space-y-1.5">
         <p className="text-sm text-foreground/90 leading-snug line-clamp-2" title={listing.title}>

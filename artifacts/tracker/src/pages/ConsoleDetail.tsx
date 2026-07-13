@@ -10,6 +10,7 @@ import { CONSOLE_SORT_OPTIONS, sortConsoleListings, type ConsoleSortValue } from
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
+import { GENERATION_LABELS, GENERATION_TEXT_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
 import { ArrowLeft, Search, ChevronDown, ArrowUpDown } from "lucide-react"
 
 /** How many listings render initially, and how many more each "Show more" click reveals. */
@@ -18,7 +19,7 @@ const LISTINGS_PAGE_SIZE = 24
 interface ConsoleDetailData {
   id:         string
   name:       string
-  generation: "current" | "previous" | "retro"
+  generation: ConsoleGeneration
   query:      string
   searchUrl:  string
   listings:   ConsoleListing[]
@@ -35,12 +36,6 @@ async function fetchConsoleDetail(id: string): Promise<ConsoleDetailResponse> {
   if (res.status === 404) return { configured: true, console: null }
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
-}
-
-const GENERATION_LABELS: Record<ConsoleDetailData["generation"], string> = {
-  current:  "Current-Gen",
-  previous: "Previous-Gen",
-  retro:    "Retro",
 }
 
 export default function ConsoleDetail() {
@@ -130,7 +125,7 @@ export default function ConsoleDetail() {
                     <div className="h-8 w-64 animate-pulse rounded bg-muted/60" />
                   ) : (
                     <>
-                      <span className="inline-block text-xs font-mono uppercase tracking-wide text-primary/90 mb-1.5">
+                      <span className={`inline-block text-xs font-mono uppercase tracking-wide mb-1.5 ${consoleData ? GENERATION_TEXT_STYLES[consoleData.generation] : "text-primary"}`}>
                         {consoleData && GENERATION_LABELS[consoleData.generation]}
                       </span>
                       <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground">

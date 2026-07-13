@@ -2,28 +2,15 @@ import { Link } from "wouter"
 import { Badge } from "@/components/ui/badge"
 import { ControllerIcon } from "@/components/ControllerIcon"
 import { CONSOLE_IMAGES } from "@/lib/consoleImages"
+import { GENERATION_LABELS, GENERATION_BADGE_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
 import { ListChecks } from "lucide-react"
 
 export interface ConsoleSummary {
   id:           string
   name:         string
-  generation:   "current" | "previous" | "retro"
+  generation:   ConsoleGeneration
   hasFetched:   boolean
   listingCount: number
-}
-
-const GENERATION_LABELS: Record<ConsoleSummary["generation"], string> = {
-  current:  "Current-Gen",
-  previous: "Previous-Gen",
-  retro:    "Retro",
-}
-
-// Current-Gen gets the primary brand green so it stands out as the newest
-// hardware; Previous-Gen/Retro stay neutral so they don't compete with it.
-const GENERATION_BADGE_STYLES: Record<ConsoleSummary["generation"], string> = {
-  current:  "bg-primary text-primary-foreground border-primary/60",
-  previous: "bg-secondary/80 text-muted-foreground border-border",
-  retro:    "bg-secondary/80 text-muted-foreground border-border",
 }
 
 /**
