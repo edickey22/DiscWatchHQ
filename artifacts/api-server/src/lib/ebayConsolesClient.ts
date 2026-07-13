@@ -48,7 +48,9 @@
  */
 
 import { applyEbayEpnParams } from "./affiliateConfig";
-import { getAccessToken, ebayBrowseConfigured } from "./ebayBrowseClient";
+import { getAccessToken, ebayBrowseConfigured, EbayRateLimitError } from "./ebayBrowseClient";
+import { checkAndReserveEbayCall } from "./ebayBudget";
+import { logger } from "./logger";
 import type { ConsoleModel, ConsoleGeneration } from "./consoleModels";
 
 export const ebayConsolesConfigured = ebayBrowseConfigured;
@@ -94,7 +96,8 @@ const NON_CONSOLE_TERMS = [
   "charger only", "charging cable", "cable only", "power supply only",
   "psu only", "carrying case", "storage bag", "travel case", "stand only",
   "mount only", "cartridge only", "cart only", "disc only", "game only",
-  "tablet only", "screen only", "digital only",
+  "tablet only", "screen only", "digital only", "no console",
+  "console not included", "console excluded", "without console",
 
   // Non-hardware collectibles that share keywords
   "keychain", "plush", "funko", "replica", "figure", "mini figure",
@@ -191,9 +194,14 @@ export interface ConsoleListing {
  */
 export async function getEbayConsoleListings(
   model: ConsoleModel,
-  limit = 16,
+  limit = 36,
 ): Promise<ConsoleListing[]> {
   if (!ebayConsolesConfigured) return [];
+
+  if (!(await checkAndReserveEbayCall("console"))) {
+    logger.debug({ consoleId: model.id }, "[eBay Consoles] Daily call budget exhausted — skipping refresh");
+    return [];
+  }
 
   try {
     const token = await getAccessToken();
@@ -206,7 +214,13 @@ export async function getEbayConsoleListings(
     // the raw fetch window. Best-match relevance (the API's default when no
     // `sort` param is given) reliably surfaces the actual console model
     // being searched for; we sort by price ourselves *after* filtering.
-    const rawLimit = 60; // over-fetch — filtering still drops a meaningful share as junk
+    //
+    // rawLimit=200 is the Browse API's maximum page size — pulling the full
+    // page costs exactly the same 1 API call as pulling 60 did, so raising
+    // it is free. It just gives the filtering step below a much bigger pool
+    // of real candidates to keep, instead of throwing away extra genuine
+    // matches purely because we stopped asking eBay for them.
+    const rawLimit = 200;
     const q = encodeURIComponent(model.query);
     const apiUrl =
       `https://api.ebay.com/buy/browse/v1/item_summary/search` +
@@ -221,6 +235,11 @@ export async function getEbayConsoleListings(
       },
       signal: AbortSignal.timeout(8_000),
     });
+
+    if (res.status === 429) {
+      logger.error({ consoleId: model.id }, "[eBay Consoles] Rate limited (429) — signaling caller to back off");
+      throw new EbayRateLimitError(`console listings for "${model.id}"`);
+    }
 
     if (!res.ok) {
       console.warn("[eBay Consoles] Search failed", res.status, model.query);
@@ -282,6 +301,7 @@ export async function getEbayConsoleListings(
       ...(c.isAuction ? { bidCount: c.bidCount, endsAt: c.endsAt ?? null } : {}),
     }));
   } catch (err) {
+    if (err instanceof EbayRateLimitError) throw err; // let the scheduler's loop see it and back off
     console.warn("[eBay Consoles] Lookup error:", err);
     return [];
   }

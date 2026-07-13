@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useParams } from "wouter"
 import { Header } from "@/components/Header"
@@ -7,7 +8,10 @@ import { CONSOLE_IMAGES } from "@/lib/consoleImages"
 import { ConsoleListingCard, ConsoleListingCardSkeleton, type ConsoleListing } from "@/components/ConsoleListingCard"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
-import { ArrowLeft, Search } from "lucide-react"
+import { ArrowLeft, Search, ChevronDown } from "lucide-react"
+
+/** How many listings render initially, and how many more each "Show more" click reveals. */
+const LISTINGS_PAGE_SIZE = 16
 
 interface ConsoleDetailData {
   id:         string
@@ -50,6 +54,17 @@ export default function ConsoleDetail() {
   const consoleData = data?.console ?? null
   const configured  = data?.configured ?? false
   const stockPhoto  = consoleData ? CONSOLE_IMAGES[consoleData.id] : undefined
+
+  // Reveals more of the already-fetched/already-filtered cached listings —
+  // purely client-side, no additional API calls. Resets whenever the console
+  // changes so navigating between detail pages doesn't carry over state.
+  const [visibleCount, setVisibleCount] = useState(LISTINGS_PAGE_SIZE)
+  useEffect(() => {
+    setVisibleCount(LISTINGS_PAGE_SIZE)
+  }, [slug])
+
+  const visibleListings = consoleData?.listings.slice(0, visibleCount) ?? []
+  const hasMore = !!consoleData && consoleData.listings.length > visibleCount
 
   useDocumentHead({
     title:       consoleData
@@ -134,11 +149,36 @@ export default function ConsoleDetail() {
                   {Array.from({ length: 8 }).map((_, i) => <ConsoleListingCardSkeleton key={i} />)}
                 </div>
               ) : consoleData && consoleData.listings.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {consoleData.listings.map((listing, i) => (
-                    <ConsoleListingCard key={`${listing.url}-${i}`} listing={listing} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                    {visibleListings.map((listing, i) => (
+                      <ConsoleListingCard key={`${listing.url}-${i}`} listing={listing} />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div className="flex flex-col items-center gap-2 mt-8">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount(c => c + LISTINGS_PAGE_SIZE)}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/40 text-foreground/80 text-xs font-semibold uppercase tracking-wider px-5 py-2.5 hover:border-primary/50 hover:bg-secondary/60 transition-colors"
+                      >
+                        Show more
+                        <ChevronDown size={14} />
+                      </button>
+                      <p className="text-muted-foreground font-mono text-xs">
+                        Showing {visibleListings.length} of {consoleData.listings.length} — or{" "}
+                        <a
+                          href={consoleData.searchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="text-primary hover:underline"
+                        >
+                          search all on eBay
+                        </a>
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="flex flex-col items-center text-center gap-4 py-12 border border-dashed border-border rounded-lg">
                   <p className="text-foreground font-semibold">

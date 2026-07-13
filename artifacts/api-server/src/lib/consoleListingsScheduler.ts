@@ -1,37 +1,36 @@
 /**
  * Console Listings Scheduler — background job that refreshes multi-listing
- * live eBay data for every curated console model on a fixed, quota-conscious
- * interval.
+ * live eBay data for every curated console model on a fixed interval, with
+ * an enforced daily call budget.
  *
  * ── Design rationale ────────────────────────────────────────────────────────
  *
- * This is the ONLY code that calls the eBay Browse API for console listings.
- * Visitor-facing request handlers (routes/consoles.ts) read exclusively from
+ * This is the ONLY code that calls getEbayConsoleListings(). Visitor-facing
+ * request handlers (routes/consoles.ts) read exclusively from
  * consoleListingsCache.ts. No visitor action (page load, navigating to a
  * console detail page, etc.) can trigger an eBay API call.
  *
- * One Browse API call fetches up to 30 raw candidates for a model in a
- * single request — showing multiple listings per console costs no extra
- * API calls versus the previous single-cheapest-listing design; the cost is
- * exactly 1 call per model per refresh cycle.
+ * One Browse API call fetches up to 200 raw candidates for a model in a
+ * single request (the Browse API's max page size) — showing more listings
+ * per console costs no extra API calls; the cost is exactly 1 call per
+ * model per refresh cycle regardless of how many raw candidates or filtered
+ * results come back.
  *
- * ── Quota calculation ───────────────────────────────────────────────────────
+ * ── Quota enforcement ───────────────────────────────────────────────────────
  *
- *   eBay Browse API quota: 5,000 calls / month, shared with ebayPriceScheduler
- *   (which uses ~3,310 calls/month at its default 72h interval for ~331
- *   sold-out titles).
+ * The actual enforced ceiling is ebayBudget.ts's persisted daily call budget
+ * (see that file for why the old "5,000 calls / month, ~80% of quota"
+ * comment that used to live here was an unverified placeholder rather than
+ * a confirmed eBay limit). getEbayConsoleListings() checks and reserves
+ * against that budget before every call and returns [] once the "console"
+ * allocation is exhausted for the day.
  *
- *   Console models: 24 (see consoleModels.ts)
+ * An EbayRateLimitError (thrown by ebayConsolesClient.ts on an actual HTTP
+ * 429 from eBay) aborts the rest of the current run immediately instead of
+ * continuing to loop through the remaining console models.
  *
- *   Interval  │ Runs/month │ Calls/month │ Combined w/ price scheduler
- *   ──────────┼────────────┼─────────────┼──────────────────────────────────
- *   Every 6h  │    120     │    2,880    │ ✗ 6,190 total — exceeds quota
- *   Every 12h │     60     │    1,440    │ ✗ 4,750 total — too little headroom
- *   Every 24h │     30     │      720    │ ✓ 4,030 total — safe, ~80% of quota
- *
- *   Default interval: 24 hours. Console listings don't need to update more
- *   often than daily — override via CONSOLE_LISTINGS_REFRESH_INTERVAL_MS if
- *   the price scheduler's budget changes.
+ *   Console models: 24 (see consoleModels.ts). Default interval: 24 hours —
+ *   console listings don't need to update more often than daily.
  *
  * ── Override via env vars ───────────────────────────────────────────────────
  *
@@ -40,11 +39,14 @@
  *   EBAY_CALL_DELAY_MS                   — pause between individual model
  *                                          lookups (shared with the price
  *                                          scheduler's setting). Default: 2000.
+ *   EBAY_DAILY_CALL_BUDGET               — see ebayBudget.ts. Default: 500
+ *                                          total across price/console/catalog.
  */
 
 import { logger } from "./logger";
 import { CONSOLE_MODELS } from "./consoleModels";
 import { getEbayConsoleListings, ebayConsolesConfigured } from "./ebayConsolesClient";
+import { EbayRateLimitError } from "./ebayBrowseClient";
 import { setConsoleListings } from "./consoleListingsCache";
 
 /** Default refresh interval: 24 hours. */
@@ -65,9 +67,10 @@ async function refreshConsoleListings(): Promise<void> {
     "Console listings refresh starting",
   );
 
-  let updated = 0;
-  let empty   = 0;
-  let failed  = 0;
+  let updated     = 0;
+  let empty       = 0;
+  let failed      = 0;
+  let rateLimited = false;
 
   for (const model of CONSOLE_MODELS) {
     try {
@@ -75,6 +78,14 @@ async function refreshConsoleListings(): Promise<void> {
       setConsoleListings(model.id, listings);
       if (listings.length > 0) updated++; else empty++;
     } catch (err) {
+      if (err instanceof EbayRateLimitError) {
+        logger.error(
+          { consoleId: model.id, processed: updated + empty + failed, remaining: CONSOLE_MODELS.length - (updated + empty + failed) },
+          "Console listings refresh: rate limited by eBay — aborting rest of this run"
+        );
+        rateLimited = true;
+        break;
+      }
       logger.warn({ err, consoleId: model.id }, "Console listings fetch failed");
       failed++;
       // Still record an empty result so the cache reflects "fetched, no data"
@@ -85,7 +96,7 @@ async function refreshConsoleListings(): Promise<void> {
     await new Promise(r => setTimeout(r, CALL_DELAY_MS));
   }
 
-  logger.info({ updated, empty, failed, total: CONSOLE_MODELS.length },
+  logger.info({ updated, empty, failed, rateLimited, total: CONSOLE_MODELS.length },
     "Console listings refresh complete");
 }
 

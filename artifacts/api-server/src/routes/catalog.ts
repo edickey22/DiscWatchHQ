@@ -4,12 +4,20 @@
  * GET /catalog/stats        — total catalog_games count (used by header)
  * GET /catalog/platforms    — distinct platforms present in catalog_games
  * GET /catalog/tgdb-budget  — daily TGDB API call budget status (monitoring)
+ * GET /catalog/ebay-budget  — daily eBay Browse API call budget status (monitoring)
  */
 
 import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db, catalogGamesTable } from "@workspace/db";
 import { getTgdbBudgetStatus, DAILY_TOTAL, BACKFILL_ALLOC, SEARCH_ALLOC } from "../lib/tgdbBudget";
+import {
+  getEbayBudgetStatus,
+  DAILY_TOTAL as EBAY_DAILY_TOTAL,
+  PRICE_ALLOC,
+  CONSOLE_ALLOC,
+  CATALOG_ALLOC,
+} from "../lib/ebayBudget";
 
 const router = Router();
 
@@ -87,6 +95,28 @@ router.get("/catalog/genres", async (_req, res): Promise<void> => {
  *   "exhausted": false
  * }
  */
+/**
+ * GET /api/catalog/ebay-budget
+ *
+ * Returns the current state of the eBay Browse API's enforced daily call
+ * budget — shared across the price-backfill scheduler, the console-listings
+ * scheduler, and on-demand catalog live-pricing lookups. See ebayBudget.ts
+ * for why this is a self-imposed ceiling rather than a number pulled from
+ * eBay's own dashboard.
+ */
+router.get("/catalog/ebay-budget", async (_req, res): Promise<void> => {
+  const status = await getEbayBudgetStatus();
+  res.json({
+    ...status,
+    config: {
+      dailyTotal:    EBAY_DAILY_TOTAL,
+      priceAlloc:    PRICE_ALLOC,
+      consoleAlloc:  CONSOLE_ALLOC,
+      catalogAlloc:  CATALOG_ALLOC,
+    },
+  });
+});
+
 router.get("/catalog/tgdb-budget", async (_req, res): Promise<void> => {
   const status = await getTgdbBudgetStatus();
   res.json({

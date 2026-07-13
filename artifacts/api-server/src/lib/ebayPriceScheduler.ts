@@ -1,51 +1,58 @@
 /**
  * eBay Price Scheduler — background job that refreshes eBay prices for
- * sold-out releases on a fixed, quota-conscious interval.
+ * sold-out releases on a fixed interval, with an enforced daily call budget.
  *
  * ── Design rationale ────────────────────────────────────────────────────────
  *
- * eBay Browse API quota: 5,000 calls / month.
  * Prices are only meaningful for the "Recently Sold Out" category — collectors
  * look for secondary-market prices, not publisher prices (already shown for
  * available/pre-order titles). Currently-available releases already display the
  * publisher's own price, so eBay lookups there add no value.
  *
- * ── Quota calculation (as of current catalog size) ─────────────────────────
+ * ── Quota enforcement ───────────────────────────────────────────────────────
  *
- *   Sold-out titles:    ~331 (verified July 2026)
- *   Safety budget:      75% of 5,000 = 3,750 calls / month
+ * The actual enforced ceiling is ebayBudget.ts's persisted daily call budget
+ * (see that file — its own header explains why the previous "5,000 calls /
+ * month" comment here was an unverified placeholder, not a confirmed eBay
+ * limit). getEbayLowestPrice() checks and reserves against that budget on
+ * every call and returns null once the "price" allocation is exhausted for
+ * the day, so this scheduler degrades gracefully rather than needing its own
+ * separate quota math.
  *
- *   Interval  │ Runs/month │ Calls/month │ Status
- *   ──────────┼────────────┼─────────────┼──────────────────────────────────
- *   Every 24h │    30      │   9,930     │ ✗ exceeds quota
- *   Every 48h │    15      │   4,965     │ ✗ exceeds safety budget
- *   Every 72h │    10      │   3,310     │ ✓ safe  (headroom to ~375 titles)
- *   Every 96h │     7.5    │   2,483     │ ✓ safe  (headroom to ~500 titles)
+ * Two independent safety nets on top of the shared budget:
+ *   - MAX_TITLES_PER_RUN caps how many sold-out titles a single run will
+ *     process, regardless of how large the sold-out catalog grows.
+ *   - EbayRateLimitError (thrown by ebayBrowseClient.ts on an actual HTTP 429
+ *     from eBay) aborts the rest of the current run immediately instead of
+ *     continuing to hammer an API that's already throttling us.
  *
- *   Default interval: 72 hours. When the sold-out catalog exceeds ~375 titles,
- *   set EBAY_PRICE_REFRESH_INTERVAL_MS to 345600000 (96 h) via Replit Secrets.
+ *   Default interval: 72 hours. Sold-out titles as of July 2026: ~331.
  *
  * ── Traffic isolation ───────────────────────────────────────────────────────
  *
- *   This scheduler is the ONLY code that calls the eBay Browse API.
+ *   This scheduler is the ONLY code that calls getEbayLowestPrice().
  *   Visitor-facing request handlers read prices exclusively from the
  *   `releases.ebay_price` DB column written here. No visitor action of any
  *   kind (page load, search, filter, button click) can trigger an eBay API
- *   call.
+ *   call from this scheduler's code path.
  *
  * ── Override via env vars ───────────────────────────────────────────────────
  *
- *   EBAY_PRICE_REFRESH_INTERVAL_MS — override the refresh interval (ms).
- *                                    Default: 259200000 (72 h).
- *   EBAY_CALL_DELAY_MS             — pause between individual title lookups
- *                                    to avoid burst rate-limiting.
- *                                    Default: 2000 (2 s).
+ *   EBAY_PRICE_REFRESH_INTERVAL_MS  — override the refresh interval (ms).
+ *                                     Default: 259200000 (72 h).
+ *   EBAY_CALL_DELAY_MS              — pause between individual title lookups
+ *                                     to avoid burst rate-limiting.
+ *                                     Default: 2000 (2 s).
+ *   EBAY_PRICE_MAX_TITLES_PER_RUN   — hard cap on titles processed per run.
+ *                                     Default: 400.
+ *   EBAY_DAILY_CALL_BUDGET          — see ebayBudget.ts. Default: 500 total
+ *                                     across price/console/catalog callers.
  */
 
 import { eq } from "drizzle-orm";
 import { db, releasesTable } from "@workspace/db";
 import { logger } from "./logger";
-import { getEbayLowestPrice, ebayBrowseConfigured } from "./ebayBrowseClient";
+import { getEbayLowestPrice, ebayBrowseConfigured, EbayRateLimitError } from "./ebayBrowseClient";
 
 /** Default refresh interval: 72 hours. */
 const DEFAULT_INTERVAL_MS = 72 * 60 * 60 * 1_000;
@@ -57,6 +64,17 @@ const REFRESH_INTERVAL_MS =
 const CALL_DELAY_MS =
   parseInt(process.env.EBAY_CALL_DELAY_MS ?? "") || 2_000;
 
+/**
+ * Hard ceiling on how many sold-out titles a single run will process,
+ * independent of how large the sold-out catalog grows over time. Without
+ * this, catalog growth alone (no code change) would silently increase the
+ * API calls made per run forever. Titles beyond this cap simply wait for
+ * the next run rather than being processed in the same pass — a growing
+ * backlog is visible in logs (see `skipped` below) rather than invisible.
+ */
+const MAX_TITLES_PER_RUN =
+  parseInt(process.env.EBAY_PRICE_MAX_TITLES_PER_RUN ?? "") || 400;
+
 let ebayInterval: ReturnType<typeof setInterval> | null = null;
 
 // ── Core refresh logic ────────────────────────────────────────────────────────
@@ -64,19 +82,29 @@ let ebayInterval: ReturnType<typeof setInterval> | null = null;
 async function refreshEbayPrices(): Promise<void> {
   logger.info("eBay price refresh starting — querying sold-out titles");
 
-  const soldOut = await db
+  const allSoldOut = await db
     .select({ id: releasesTable.id, title: releasesTable.title })
     .from(releasesTable)
     .where(eq(releasesTable.status, "sold_out"));
 
+  const soldOut = allSoldOut.slice(0, MAX_TITLES_PER_RUN);
+  const skipped = allSoldOut.length - soldOut.length;
+
   logger.info(
-    { count: soldOut.length, intervalHours: REFRESH_INTERVAL_MS / 3_600_000 },
+    { count: soldOut.length, skipped, cap: MAX_TITLES_PER_RUN, intervalHours: REFRESH_INTERVAL_MS / 3_600_000 },
     "eBay price refresh: fetching prices for sold-out catalog"
   );
+  if (skipped > 0) {
+    logger.warn(
+      { skipped, cap: MAX_TITLES_PER_RUN },
+      "eBay price refresh: sold-out catalog exceeds per-run cap — excess titles deferred to next run"
+    );
+  }
 
-  let updated = 0;
-  let noData  = 0;
-  let failed  = 0;
+  let updated   = 0;
+  let noData    = 0;
+  let failed    = 0;
+  let rateLimited = false;
 
   for (const release of soldOut) {
     try {
@@ -88,6 +116,14 @@ async function refreshEbayPrices(): Promise<void> {
 
       if (price !== null) updated++; else noData++;
     } catch (err) {
+      if (err instanceof EbayRateLimitError) {
+        logger.error(
+          { releaseId: release.id, title: release.title, processed: updated + noData + failed, remaining: soldOut.length - (updated + noData + failed) },
+          "eBay price refresh: rate limited by eBay — aborting rest of this run"
+        );
+        rateLimited = true;
+        break;
+      }
       logger.warn({ err, releaseId: release.id, title: release.title },
         "eBay price fetch failed for title");
       failed++;
@@ -97,7 +133,7 @@ async function refreshEbayPrices(): Promise<void> {
     await new Promise(r => setTimeout(r, CALL_DELAY_MS));
   }
 
-  logger.info({ updated, noData, failed, total: soldOut.length },
+  logger.info({ updated, noData, failed, rateLimited, total: soldOut.length },
     "eBay price refresh complete");
 }
 

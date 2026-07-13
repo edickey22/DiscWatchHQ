@@ -20,11 +20,28 @@
  */
 
 import { applyEbayEpnParams } from "./affiliateConfig";
+import { checkAndReserveEbayCall } from "./ebayBudget";
+import { logger } from "./logger";
 
 const APP_ID     = (process.env.EBAY_APP_ID     ?? "").trim();
 const APP_SECRET = (process.env.EBAY_CLIENT_SECRET ?? "").trim();
 
 export const ebayBrowseConfigured = !!(APP_ID && APP_SECRET);
+
+/**
+ * Thrown when eBay responds 429 (rate limited) to a Browse API search call.
+ * Callers that loop over many items (schedulers) should catch this
+ * specifically and abort the REST of the current run immediately rather
+ * than continuing to hammer an API that's already throttling us — a plain
+ * `console.warn` per item would otherwise silently burn through the rest
+ * of the loop against a wall of 429s.
+ */
+export class EbayRateLimitError extends Error {
+  constructor(context: string) {
+    super(`eBay Browse API rate limit (429) hit during: ${context}`);
+    this.name = "EbayRateLimitError";
+  }
+}
 
 // ── OAuth token cache ─────────────────────────────────────────────────────────
 
@@ -85,6 +102,11 @@ export async function getAccessToken(): Promise<string | null> {
 export async function getEbayLowestPrice(title: string): Promise<number | null> {
   if (!ebayBrowseConfigured) return null;
 
+  if (!(await checkAndReserveEbayCall("price"))) {
+    logger.debug({ title }, "[eBay Browse] Daily call budget exhausted — skipping price lookup");
+    return null;
+  }
+
   try {
     const token = await getAccessToken();
     if (!token) return null;
@@ -107,6 +129,11 @@ export async function getEbayLowestPrice(title: string): Promise<number | null> 
       signal: AbortSignal.timeout(6_000),
     });
 
+    if (res.status === 429) {
+      logger.error({ title }, "[eBay Browse] Rate limited (429) — signaling caller to back off");
+      throw new EbayRateLimitError(`price lookup for "${title}"`);
+    }
+
     if (!res.ok) {
       console.warn("[eBay Browse] Search failed", res.status, title);
       return null;
@@ -122,6 +149,7 @@ export async function getEbayLowestPrice(title: string): Promise<number | null> 
 
     return prices.length > 0 ? Math.min(...prices) : null;
   } catch (err) {
+    if (err instanceof EbayRateLimitError) throw err; // let the caller's loop see it and back off
     console.warn("[eBay Browse] Lookup error:", err);
     return null;
   }
@@ -148,6 +176,14 @@ export async function getEbayListingForCatalog(
 ): Promise<{ price: number; url: string } | null> {
   if (!ebayBrowseConfigured) return null;
 
+  // This path is visitor-triggered (catalog game detail opens) rather than
+  // scheduler-driven, so it's the one call site here without a natural
+  // per-run ceiling — the daily "catalog" allocation is what keeps it bounded.
+  if (!(await checkAndReserveEbayCall("catalog"))) {
+    logger.debug({ title }, "[eBay Browse] Daily call budget exhausted — skipping catalog lookup");
+    return null;
+  }
+
   try {
     const token = await getAccessToken();
     if (!token) return null;
@@ -166,6 +202,11 @@ export async function getEbayListingForCatalog(
       },
       signal: AbortSignal.timeout(6_000),
     });
+
+    if (res.status === 429) {
+      logger.error({ title }, "[eBay Browse] Rate limited (429) on catalog lookup");
+      throw new EbayRateLimitError(`catalog listing lookup for "${title}"`);
+    }
 
     if (!res.ok) {
       console.warn("[eBay Browse] Catalog listing search failed", res.status, title);
@@ -195,6 +236,7 @@ export async function getEbayListingForCatalog(
       url:   applyEbayEpnParams(cheapest.url),
     };
   } catch (err) {
+    if (err instanceof EbayRateLimitError) throw err;
     console.warn("[eBay Browse] Catalog listing error:", err);
     return null;
   }
