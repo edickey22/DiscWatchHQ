@@ -114,7 +114,7 @@ export default function ConsoleDetail() {
               <div className="container relative mx-auto max-w-[1600px] px-4 py-8 md:py-10 flex flex-col md:flex-row gap-6 items-center md:items-center text-center md:text-left">
                 <div className="relative aspect-[5/4] w-full md:w-72 shrink-0 overflow-hidden rounded-md bg-muted shadow-sm">
                   {stockPhoto ? (
-                    <img src={stockPhoto} alt={consoleData?.name ?? ""} className="h-full w-full object-cover" />
+                    <img src={stockPhoto} alt={consoleData?.name ?? ""} className="h-full w-full object-contain" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-secondary">
                       <ControllerIcon size={64} strokeWidth={2.5} className="opacity-45" />
