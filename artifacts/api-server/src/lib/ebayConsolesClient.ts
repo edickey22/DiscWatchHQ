@@ -173,9 +173,20 @@ export interface ConsoleListing {
 /**
  * Search the eBay Browse API for one console model and return every
  * qualifying listing (safety-filtered, EPN-tagged, cheapest-first), capped
- * at `limit`. A single API call is made per invocation regardless of how
- * many listings are ultimately returned — the Browse API returns up to
+ * at `cacheLimit`. A single API call is made per invocation regardless of
+ * how many listings are ultimately returned — the Browse API returns up to
  * `rawLimit` candidates per call, which are then filtered down.
+ *
+ * IMPORTANT — `cacheLimit` is a storage ceiling, not a display ceiling.
+ * Everything this function returns gets written to the in-process cache
+ * (consoleListingsCache.ts) verbatim; the frontend then renders an initial
+ * page of that array and reveals more via "Show more" entirely client-side.
+ * Do NOT shrink `cacheLimit` to control how many listings a visitor sees at
+ * once — that's the frontend's LISTINGS_PAGE_SIZE's job. Conflating the two
+ * previously caused real, filtered, in-stock matches to be discarded at
+ * fetch time (never cached at all) purely because the display cap of the
+ * moment was set too low — "Show more" had nothing beyond that cap to page
+ * through since it was never saved anywhere.
  *
  * Includes both Buy It Now (FIXED_PRICE) and live AUCTION listings — for
  * auctions, `price` is the current bid (or starting bid if no bids yet),
@@ -194,7 +205,7 @@ export interface ConsoleListing {
  */
 export async function getEbayConsoleListings(
   model: ConsoleModel,
-  limit = 36,
+  cacheLimit = 100,
 ): Promise<ConsoleListing[]> {
   if (!ebayConsolesConfigured) return [];
 
@@ -290,16 +301,16 @@ export async function getEbayConsoleListings(
       )
       .sort((a, b) => a.price - b.price);
 
-    // Diagnostic-level visibility into the raw→filtered→capped funnel per
+    // Diagnostic-level visibility into the raw→filtered→cached funnel per
     // model, so "why do I only see N listings" is answerable from logs
     // instead of guesswork: is N the real total after filtering, or is the
-    // cap itself trimming a bigger surviving set?
+    // storage cap itself trimming a bigger surviving set?
     logger.debug(
-      { consoleId: model.id, rawCount: mapped.length, filteredCount: filtered.length, cap: limit },
-      "[eBay Consoles] Raw→filtered→capped funnel"
+      { consoleId: model.id, rawCount: mapped.length, filteredCount: filtered.length, cacheLimit },
+      "[eBay Consoles] Raw→filtered→cached funnel"
     );
 
-    const candidates = filtered.slice(0, limit);
+    const candidates = filtered.slice(0, cacheLimit);
 
     return candidates.map(c => ({
       title:     c.title,
