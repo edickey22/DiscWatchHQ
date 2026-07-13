@@ -97,6 +97,17 @@ const RETRO_OTHER_RETAILERS = [
   { key: "gamestop" as const, label: "GameStop" },
 ] as const
 
+// Per-retailer icon-badge accent (detail variant only) — gives each button
+// a distinct identity so the grid isn't a wall of identical green tiles.
+// eBay keeps the solid primary-green treatment as the one clear "main" CTA;
+// these three read as secondary, equally legitimate options via border +
+// icon-color contrast rather than competing for the same green.
+const RETAILER_ICON_STYLE: Record<typeof OTHER_RETAILERS[number]["key"], string> = {
+  gamestop: "bg-red-500/15 text-red-400",
+  amazon:   "bg-orange-500/15 text-orange-400",
+  bestbuy:  "bg-blue-500/15 text-blue-400",
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function RetailerLinks({ urls, prices, variant = "card", platforms, guideUrls }: RetailerLinksProps) {
@@ -190,37 +201,40 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 rel="noopener noreferrer sponsored"
                 onClick={e => e.stopPropagation()}
                 className={`
-                  group relative flex flex-col gap-1.5
+                  group relative flex flex-col gap-2
                   rounded-lg px-4 py-4
-                  bg-primary hover:bg-primary/90 active:bg-primary/80
+                  bg-card border-2
                   transition-all duration-150
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
                   ${isBest && price !== null
-                    ? "shadow-[0_0_20px_-4px_hsl(var(--primary)/0.6)] ring-1 ring-primary/40"
-                    : "shadow-md"
+                    ? "border-primary/70 shadow-[0_0_16px_-4px_hsl(var(--primary)/0.45)]"
+                    : "border-border/70 hover:border-foreground/40 shadow-sm"
                   }
                 `}
               >
                 {isBest && price !== null && (
-                  <span className="absolute top-2.5 right-3 text-[8px] font-mono font-bold tracking-[0.12em] uppercase text-primary-foreground/50">
+                  <span className="absolute top-2.5 right-3 text-[8px] font-mono font-bold tracking-[0.12em] uppercase text-primary">
                     BEST
                   </span>
                 )}
-                <div className="flex items-center justify-between gap-1">
-                  <span className="font-display font-bold text-[14px] leading-none text-primary-foreground">
+                <div className="flex items-center gap-2">
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${RETAILER_ICON_STYLE[key]}`}>
+                    <ShoppingBag size={13} />
+                  </span>
+                  <span className="font-display font-bold text-[14px] leading-none text-foreground">
                     {label}
                   </span>
                   <ArrowUpRight
                     size={14}
-                    className="shrink-0 text-primary-foreground/60 group-hover:text-primary-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
+                    className="ml-auto shrink-0 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
                   />
                 </div>
                 {price !== null ? (
-                  <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary-foreground">
+                  <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary">
                     From ${price.toFixed(2)}
                   </span>
                 ) : (
-                  <span className="font-mono text-[10px] leading-none text-primary-foreground/50 group-hover:text-primary-foreground/70 transition-colors">
+                  <span className="font-mono text-[10px] leading-none text-muted-foreground group-hover:text-foreground/70 transition-colors">
                     Search →
                   </span>
                 )}
@@ -345,29 +359,36 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
         })}
       </div>
 
-      {/* ── Strategy guides — compact but clearly legible, not washed out ── */}
+      {/* ── Strategy guides — same button weight as the retailer grid above,
+          not plain text, so they don't get missed next to it. ── */}
       {guideUrls && (
-        <div className="mt-1.5 pt-1.5 border-t border-border/20 flex items-center gap-1.5">
-          <BookOpen size={9} className="text-muted-foreground/60 shrink-0" />
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="mt-1.5 pt-1.5 border-t border-border/20">
+          <p className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground/70 uppercase tracking-widest mb-1">
+            <BookOpen size={8} className="opacity-70 shrink-0" />
+            Strategy Guides
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
             <a
               href={guideUrls.ebay}
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="text-[9px] font-mono font-semibold text-foreground/75 hover:text-foreground transition-colors underline underline-offset-2 decoration-foreground/25 truncate"
+              className="group flex items-center justify-center gap-1 rounded border border-border/40 bg-secondary/50 hover:border-border/70 hover:bg-secondary px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              Guide · eBay
+              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80 group-hover:text-foreground transition-colors">
+                Guide · eBay
+              </span>
             </a>
-            <span className="text-muted-foreground/40 text-[8px] shrink-0">·</span>
             <a
               href={guideUrls.amazon}
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="text-[9px] font-mono font-semibold text-foreground/75 hover:text-foreground transition-colors underline underline-offset-2 decoration-foreground/25 truncate"
+              className="group flex items-center justify-center gap-1 rounded border border-border/40 bg-secondary/50 hover:border-border/70 hover:bg-secondary px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              Amazon
+              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80 group-hover:text-foreground transition-colors">
+                Guide · Amazon
+              </span>
             </a>
           </div>
         </div>
