@@ -47,7 +47,7 @@ import { logger } from "./logger";
 import { CONSOLE_MODELS } from "./consoleModels";
 import { getEbayConsoleListings, ebayConsolesConfigured } from "./ebayConsolesClient";
 import { EbayRateLimitError } from "./ebayBrowseClient";
-import { setConsoleListings } from "./consoleListingsCache";
+import { setConsoleListings, getConsoleListingsEntry, loadPersistedConsoleListings } from "./consoleListingsCache";
 
 /** Default refresh interval: 24 hours. */
 const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1_000;
@@ -70,9 +70,20 @@ async function refreshConsoleListings(): Promise<void> {
   let updated     = 0;
   let empty       = 0;
   let failed      = 0;
+  let skipped     = 0;
   let rateLimited = false;
 
   for (const model of CONSOLE_MODELS) {
+    // Skip models refreshed recently enough to still be within the normal
+    // refresh cadence — this is what stops every dev restart from burning a
+    // fresh 26-call cycle out of the shared daily eBay budget for data that
+    // was already fetched an hour ago (see consoleListingsCache.ts).
+    const existing = getConsoleListingsEntry(model.id);
+    if (existing && Date.now() - existing.updatedAt < REFRESH_INTERVAL_MS) {
+      skipped++;
+      continue;
+    }
+
     try {
       const listings = await getEbayConsoleListings(model);
       setConsoleListings(model.id, listings);
@@ -96,7 +107,7 @@ async function refreshConsoleListings(): Promise<void> {
     await new Promise(r => setTimeout(r, CALL_DELAY_MS));
   }
 
-  logger.info({ updated, empty, failed, rateLimited, total: CONSOLE_MODELS.length },
+  logger.info({ updated, empty, failed, skipped, rateLimited, total: CONSOLE_MODELS.length },
     "Console listings refresh complete");
 }
 
@@ -114,11 +125,13 @@ export function startConsoleListingsScheduler(): void {
 
   // First run: wait 30s after startup — independent of the eBay price
   // scheduler's 90s delay so the two don't burst-call the API at the same
-  // instant on cold start.
+  // instant on cold start. Load the persisted snapshot first so a restart
+  // recognizes models refreshed earlier today as still-fresh instead of
+  // re-fetching all of them (see consoleListingsCache.ts).
   setTimeout(() => {
-    refreshConsoleListings().catch(err =>
-      logger.error({ err }, "Initial console listings refresh failed"),
-    );
+    loadPersistedConsoleListings()
+      .then(() => refreshConsoleListings())
+      .catch(err => logger.error({ err }, "Initial console listings refresh failed"));
   }, 30_000);
 
   consoleListingsInterval = setInterval(() => {

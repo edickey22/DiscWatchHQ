@@ -713,6 +713,16 @@ export async function upsertCatalogGames(rows: InsertCatalogGame[]): Promise<num
         genres:        sql`EXCLUDED.genres`,
         publisherName: sql`EXCLUDED.publisher_name`,
         coverImageUrl: sql`EXCLUDED.cover_image_url`,
+        // releaseDate/releaseYear must be kept in sync on every upsert — a
+        // title first indexed without a confirmed date (e.g. via search or
+        // backfill, where RAWG sometimes omits `released`) would otherwise
+        // keep a stale/blank release_date forever once a row exists for its
+        // sourceId, since ON CONFLICT DO UPDATE only overwrites columns
+        // listed here. That permanently hid it from "Upcoming" (which
+        // filters on release_date > today) even after RAWG later reported
+        // a real future date for the same game.
+        releaseDate:   sql`EXCLUDED.release_date`,
+        releaseYear:   sql`EXCLUDED.release_year`,
         metacritic:    sql`EXCLUDED.metacritic`,
         esrbRating:    sql`EXCLUDED.esrb_rating`,
         retailerUrls:  sql`EXCLUDED.retailer_urls`,

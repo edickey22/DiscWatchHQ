@@ -2,16 +2,35 @@
  * consoleListingsCache — in-process store for live eBay console listings,
  * keyed per console model.
  *
- * This module holds NO scheduling logic and makes NO API calls itself — it
- * is a plain read/write cache. Population happens exclusively in
+ * This module holds NO scheduling logic and makes NO eBay API calls itself —
+ * it is a read/write cache. Population happens exclusively in
  * consoleListingsScheduler.ts's background interval. Visitor-facing routes
  * (routes/consoles.ts) only ever read from here, so no amount of site
  * traffic can trigger an eBay API call.
+ *
+ * ── Persistence ──────────────────────────────────────────────────────────
+ * The cache is also mirrored to `system_kv` (key "console_listings_cache").
+ * This is NOT for visitor-facing durability alone — it's what lets the
+ * scheduler tell "still fresh from an earlier run today" apart from "never
+ * fetched", which matters because this in-memory Map is wiped on every
+ * process restart. Without persistence, every dev restart looked like a
+ * cold start to the scheduler, so it re-fetched all ~26 models from
+ * scratch regardless of how recently they'd actually been refreshed —
+ * burning through the shared daily eBay call budget (ebayBudget.ts) many
+ * times over in a single day of normal restarts, and starving whichever
+ * models happened to be last in CONSOLE_MODELS once the budget ran out
+ * (observed as those models permanently showing "no listings" for the
+ * rest of the day). Loading the persisted snapshot at startup means a
+ * restart can recognize recently-fetched models as fresh and skip
+ * re-fetching them entirely.
  */
 
+import { eq } from "drizzle-orm";
+import { db, systemKv } from "@workspace/db";
 import { CONSOLE_MODELS, type ConsoleModel } from "./consoleModels";
 import type { ConsoleListing } from "./ebayConsolesClient";
 import { buildEbaySearchUrl } from "./affiliateConfig";
+import { logger } from "./logger";
 
 interface CacheEntry {
   listings:  ConsoleListing[];
@@ -20,12 +39,45 @@ interface CacheEntry {
 
 const _cache = new Map<string, CacheEntry>();
 
+const KV_KEY = "console_listings_cache";
+
 export function setConsoleListings(id: string, listings: ConsoleListing[]): void {
   _cache.set(id, { listings, updatedAt: Date.now() });
+  persistCacheAsync();
 }
 
 export function getConsoleListingsEntry(id: string): CacheEntry | null {
   return _cache.get(id) ?? null;
+}
+
+/**
+ * Load the persisted snapshot from `system_kv` into the in-memory cache.
+ * Call once at startup, before the scheduler's first run, so a restart can
+ * recognize still-fresh models instead of treating every model as never
+ * fetched. Safe to call even if no snapshot exists yet (first-ever boot).
+ */
+export async function loadPersistedConsoleListings(): Promise<void> {
+  try {
+    const rows = await db.select().from(systemKv).where(eq(systemKv.key, KV_KEY)).limit(1);
+    if (!rows.length) return;
+    const stored = rows[0].value as Record<string, CacheEntry>;
+    for (const [id, entry] of Object.entries(stored)) {
+      if (entry && Array.isArray(entry.listings) && typeof entry.updatedAt === "number") {
+        _cache.set(id, entry);
+      }
+    }
+    logger.info({ restoredModels: _cache.size }, "Console listings cache restored from system_kv");
+  } catch (err) {
+    logger.warn({ err }, "consoleListingsCache: failed to load persisted snapshot — starting cold");
+  }
+}
+
+function persistCacheAsync(): void {
+  const value = Object.fromEntries(_cache.entries()) as unknown as Record<string, unknown>;
+  db.insert(systemKv)
+    .values({ key: KV_KEY, value, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: systemKv.key, set: { value, updatedAt: new Date() } })
+    .catch(err => logger.warn({ err }, "consoleListingsCache: DB persist failed — in-memory cache still current"));
 }
 
 export interface ConsoleSummary extends ConsoleModel {

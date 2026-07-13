@@ -89,6 +89,29 @@ function EsrbBadge({ rating }: { rating: string }) {
 
 // ── Placeholder ───────────────────────────────────────────────────────────────
 
+/**
+ * Format a catalog releaseDate for display. The API sends either a full
+ * "YYYY-MM-DD" string (when the source reported a confirmed date) or a
+ * bare 4-digit year string as a fallback for older/incomplete rows — see
+ * formatRow() in the api-server's games route. Show the full date when we
+ * have one; fall back to just the year otherwise.
+ */
+function formatReleaseDate(releaseDate: string | null): string | null {
+  if (!releaseDate) return null
+  const fullDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(releaseDate)
+  if (fullDateMatch) {
+    const parsed = new Date(releaseDate.replace(/-/g, "/"))
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+    }
+  }
+  const yearMatch = /^\d{4}$/.exec(releaseDate)
+  if (yearMatch) return releaseDate
+  // Unexpected format — try to salvage just the year rather than show nothing.
+  const year = new Date(releaseDate.replace(/-/g, "/")).getFullYear()
+  return isNaN(year) ? null : String(year)
+}
+
 function CoverPlaceholder() {
   return (
     <div className="w-full h-full flex items-center justify-center text-muted-foreground/15">
@@ -123,9 +146,7 @@ export function CatalogGameCard({
    */
   priority?: boolean
 }) {
-  const year = game.releaseDate
-    ? new Date(game.releaseDate.replace(/-/g, "/")).getFullYear()
-    : null
+  const displayDate = formatReleaseDate(game.releaseDate)
   const [imgFailed, setImgFailed] = useState(false)
 
   // Selected platform tag, if any — threads into the retailer search URLs
@@ -192,11 +213,11 @@ export function CatalogGameCard({
                 {game.publisherName}
               </span>
             )}
-            {game.publisherName && year && (
+            {game.publisherName && displayDate && (
               <span className="text-[9px] text-muted-foreground/30">·</span>
             )}
-            {year && (
-              <span className="text-[12px] font-mono text-muted-foreground/90">{year}</span>
+            {displayDate && (
+              <span className="text-[12px] font-mono text-muted-foreground/90">{displayDate}</span>
             )}
           </div>
 
