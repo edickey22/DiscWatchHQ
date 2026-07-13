@@ -128,7 +128,7 @@ export default function Home() {
 
         {/* Filter + Sort bar */}
         <section className="bg-card border-b sticky top-16 z-30 shadow-sm">
-          <div className="container mx-auto max-w-[1600px] px-4 py-4">
+          <div className="container mx-auto max-w-[1600px] px-4 pt-6 pb-4">
 
             {/* ── Row 1: Search box ── */}
             <div className="relative">
