@@ -85,7 +85,7 @@ export function Header() {
             <button
               type="button"
               aria-label="Open menu"
-              className="sm:hidden inline-flex items-center justify-center rounded-md h-9 w-9 text-foreground/80 hover:text-foreground hover:bg-secondary/50 transition-colors"
+              className="sm:hidden inline-flex items-center justify-center rounded-md h-9 w-9 text-primary hover:text-primary/80 hover:bg-secondary/50 transition-colors"
             >
               <Menu size={22} />
             </button>

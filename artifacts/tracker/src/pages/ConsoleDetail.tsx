@@ -93,7 +93,10 @@ export default function ConsoleDetail() {
 
       <main className="flex-1">
         <div className="container mx-auto max-w-[1600px] px-4 pt-6">
-          <Link href="/consoles" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono">
+          <Link
+            href="/consoles"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 hover:bg-primary/90 active:bg-primary/80 transition-colors font-mono"
+          >
             <ArrowLeft size={14} />
             All consoles
           </Link>
@@ -110,8 +113,10 @@ export default function ConsoleDetail() {
         ) : (
           <>
             <section className="relative overflow-hidden border-b bg-card mt-4">
-              <div className="container relative mx-auto max-w-[1600px] px-4 py-8 md:py-10 flex flex-col md:flex-row gap-6 items-start md:items-center">
-                <div className="relative aspect-[5/4] w-40 shrink-0 overflow-hidden rounded-md bg-muted shadow-sm">
+              {/* Mobile: image spans full width and text is centered below it;
+                  md+: reverts to the original side-by-side thumbnail layout. */}
+              <div className="container relative mx-auto max-w-[1600px] px-4 py-8 md:py-10 flex flex-col md:flex-row gap-6 items-center md:items-center text-center md:text-left">
+                <div className="relative aspect-[5/4] w-full md:w-40 shrink-0 overflow-hidden rounded-md bg-muted shadow-sm">
                   {stockPhoto ? (
                     <img src={stockPhoto} alt={consoleData?.name ?? ""} className="h-full w-full object-cover" />
                   ) : (
@@ -120,7 +125,7 @@ export default function ConsoleDetail() {
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="flex flex-col items-center md:items-start">
                   {isLoading ? (
                     <div className="h-8 w-64 animate-pulse rounded bg-muted/60" />
                   ) : (
