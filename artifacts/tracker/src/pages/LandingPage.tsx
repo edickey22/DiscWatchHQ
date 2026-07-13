@@ -49,6 +49,16 @@ async function fetchCatalogStats(): Promise<{ count: number }> {
   return res.json()
 }
 
+// Live console model count — never hardcode this; it drifts whenever
+// consoleModels.ts gains/loses an entry. Same summary endpoint the
+// Consoles page itself uses, so the two can never disagree.
+async function fetchConsolesCount(): Promise<number> {
+  const res = await fetch("/api/consoles")
+  if (!res.ok) return 0
+  const data = await res.json()
+  return Array.isArray(data.consoles) ? data.consoles.length : 0
+}
+
 const PUBLISHERS = [
   "Limited Run Games",
   "Strictly Limited Games",
@@ -140,6 +150,11 @@ export default function LandingPage() {
   const { data: catalogStats } = useQuery({
     queryKey:  ["catalog-stats"],
     queryFn:   fetchCatalogStats,
+    staleTime: 5 * 60_000,
+  })
+  const { data: consolesCount } = useQuery({
+    queryKey:  ["consoles-count"],
+    queryFn:   fetchConsolesCount,
     staleTime: 5 * 60_000,
   })
 
@@ -242,13 +257,14 @@ export default function LandingPage() {
               current-gen to retro.
             </p>
 
-            {/* CTAs — one consistent button group: same height, padding, weight and
-                icon treatment across all three, with visual hierarchy carried by
-                fill/outline rather than mismatched sizing. */}
-            <div className="flex flex-wrap gap-3 mb-16">
+            {/* CTAs — all three carry the same solid-fill treatment (equal visual
+                weight, no single section reads as "more important"). Deterministic
+                wrapping: full-width stack on mobile, equal-width row from sm up —
+                never a content-width-driven wrap that stacks 1-then-2 unevenly. */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-16">
               <Button
                 asChild size="lg"
-                className="h-14 px-7 text-base font-bold gap-2 shadow-lg shadow-primary/25"
+                className="h-14 px-7 text-base font-bold gap-2 shadow-lg shadow-primary/25 w-full sm:w-auto sm:flex-1"
               >
                 <Link href="/games">
                   <Library size={18} />
@@ -256,8 +272,8 @@ export default function LandingPage() {
                 </Link>
               </Button>
               <Button
-                asChild size="lg" variant="outline"
-                className="h-14 px-7 text-base font-bold gap-2 border-foreground/20 hover:border-foreground/40"
+                asChild size="lg"
+                className="h-14 px-7 text-base font-bold gap-2 shadow-lg shadow-primary/25 w-full sm:w-auto sm:flex-1"
               >
                 <Link href="/boutique">
                   <Bell size={18} />
@@ -265,8 +281,8 @@ export default function LandingPage() {
                 </Link>
               </Button>
               <Button
-                asChild size="lg" variant="outline"
-                className="h-14 px-7 text-base font-bold gap-2 border-foreground/20 hover:border-foreground/40"
+                asChild size="lg"
+                className="h-14 px-7 text-base font-bold gap-2 shadow-lg shadow-primary/25 w-full sm:w-auto sm:flex-1"
               >
                 <Link href="/consoles">
                   <ControllerIcon size={18} strokeWidth={2.5} color="currentColor" />
@@ -311,7 +327,7 @@ export default function LandingPage() {
               <div className="w-px h-10 bg-border hidden sm:block" />
               <div>
                 <div className="text-3xl sm:text-4xl font-display font-black text-foreground/60 tabular-nums">
-                  24
+                  {consolesCount && consolesCount > 0 ? consolesCount : 26}
                 </div>
                 <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
                   Console Models
@@ -401,9 +417,13 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="py-16 border-t border-border/30">
         <div className="container mx-auto max-w-6xl px-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Single column on mobile, straight to 3 columns at lg — no 2-column
+              intermediate step, so 3 cards never split into an uneven 2-then-1. */}
+          <div className="grid lg:grid-cols-3 gap-5">
 
-            {/* Browse Games — primary */}
+            {/* Browse Games — all three cards share identical primary-accent
+                treatment (border, background tint, icon badge, arrow, label
+                color) so none reads as more important than the others. */}
             <Link
               href="/games"
               className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
@@ -427,17 +447,17 @@ export default function LandingPage() {
               </div>
             </Link>
 
-            {/* Boutique Tracker — secondary */}
+            {/* Boutique Tracker */}
             <Link
               href="/boutique"
-              className="group block rounded-2xl border border-border/40 bg-card hover:border-border hover:bg-secondary/30 transition-all duration-200 p-8"
+              className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
             >
               <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                  <Bell className="text-foreground/70" size={22} />
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Bell className="text-primary" size={22} />
                 </div>
                 <ChevronRight
-                  className="text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all mt-1"
+                  className="text-primary/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
                   size={20}
                 />
               </div>
@@ -447,22 +467,22 @@ export default function LandingPage() {
                 boutique publishers. Preorder windows, countdowns, and secondary-market
                 links for sold-out titles.
               </p>
-              <div className="text-xs font-mono text-muted-foreground/90 uppercase tracking-wider">
+              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
                 {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
               </div>
             </Link>
 
-            {/* Consoles — tertiary */}
+            {/* Consoles */}
             <Link
               href="/consoles"
-              className="group block rounded-2xl border border-border/40 bg-card hover:border-border hover:bg-secondary/30 transition-all duration-200 p-8"
+              className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
             >
               <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                   <ControllerIcon size={22} strokeWidth={1.75} />
                 </div>
                 <ChevronRight
-                  className="text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all mt-1"
+                  className="text-primary/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
                   size={20}
                 />
               </div>
@@ -471,8 +491,8 @@ export default function LandingPage() {
                 Live eBay listings for hardware across every era — current-gen flagships
                 down to 16-bit retro — with condition always clearly labeled.
               </p>
-              <div className="text-xs font-mono text-muted-foreground/90 uppercase tracking-wider">
-                24 console models tracked →
+              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
+                {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
               </div>
             </Link>
 
