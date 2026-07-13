@@ -8,6 +8,7 @@ import ReleaseDetail from '@/pages/ReleaseDetail';
 import GamesSearch from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
 import Consoles from '@/pages/Consoles';
+import ConsoleDetail from '@/pages/ConsoleDetail';
 import PrivacyPage from '@/pages/PrivacyPage';
 import TermsPage from '@/pages/TermsPage';
 
@@ -70,6 +71,7 @@ function AppRouter() {
       <Route path="/boutique" component={Home} />
       {/* Consoles — live eBay hardware listings, separate from games/boutique */}
       <Route path="/consoles" component={Consoles} />
+      <Route path="/consoles/:slug" component={ConsoleDetail} />
       {/* Release detail pages */}
       <Route path="/releases/:id" component={ReleaseDetail} />
       {/* Legal */}

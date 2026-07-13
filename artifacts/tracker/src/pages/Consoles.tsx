@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
-import { ConsoleCard, ConsoleCardSkeleton, type ConsoleWithListing } from "@/components/ConsoleCard"
+import { ConsoleCard, ConsoleCardSkeleton, type ConsoleSummary } from "@/components/ConsoleCard"
 import { ConsoleHeroMarquee } from "@/components/ConsoleHeroMarquee"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 
 interface ConsolesResponse {
   configured: boolean
-  consoles:   ConsoleWithListing[]
+  consoles:   ConsoleSummary[]
 }
 
 async function fetchConsoles(): Promise<ConsolesResponse> {
@@ -17,7 +17,7 @@ async function fetchConsoles(): Promise<ConsolesResponse> {
   return res.json()
 }
 
-const SECTIONS: { generation: ConsoleWithListing["generation"]; label: string; blurb: string }[] = [
+const SECTIONS: { generation: ConsoleSummary["generation"]; label: string; blurb: string }[] = [
   { generation: "current",  label: "Current-Gen",  blurb: "This generation's flagship hardware" },
   { generation: "previous", label: "Previous-Gen",  blurb: "Still in wide circulation, secondhand and new" },
   { generation: "retro",    label: "Retro",         blurb: "Every era, from the 16-bit years to the last generation" },
@@ -34,7 +34,7 @@ export default function Consoles() {
   const { data, isLoading } = useQuery({
     queryKey: ["consoles"],
     queryFn:  fetchConsoles,
-    staleTime: 60 * 60_000, // 1h client-side — server already caches 4h
+    staleTime: 60 * 60_000, // 1h client-side — server-side scheduler refreshes every 24h
   })
 
   const consoles = data?.consoles ?? []
@@ -66,7 +66,7 @@ export default function Consoles() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
             </span>
-            Live pricing &amp; listings coming soon — tap "Search on eBay" to browse current listings in the meantime.
+            Tap any console to see multiple current listings — real hardware only, never manuals, parts, or accessories.
           </div>
         </div>
 

@@ -18,10 +18,10 @@ export interface ConsoleModel {
 
 export const CONSOLE_MODELS: ConsoleModel[] = [
   // ── Current-gen ──────────────────────────────────────────────────────────
-  { id: "switch-2",      name: "Nintendo Switch 2",     generation: "current", query: "Nintendo Switch 2 console" },
+  { id: "switch-2",      name: "Nintendo Switch 2",     generation: "current", query: "Nintendo Switch 2 console -OLED -Lite -HAC-001 -\"V2\"" },
   { id: "ps5-pro",       name: "PlayStation 5 Pro",     generation: "current", query: "PlayStation 5 Pro console" },
-  { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console" },
-  { id: "xbox-series-x", name: "Xbox Series X",        generation: "current", query: "Xbox Series X console" },
+  { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console -Vita -\"PS4\" -\"PS3\" -\"PS2\" -\"PS1\"" },
+  { id: "xbox-series-x", name: "Xbox Series X",        generation: "current", query: "Xbox Series X console -\"Series S\"" },
   { id: "xbox-series-s", name: "Xbox Series S",        generation: "current", query: "Xbox Series S console" },
   { id: "switch-oled",  name: "Nintendo Switch OLED",  generation: "current", query: "Nintendo Switch OLED console" },
   { id: "switch-lite",  name: "Nintendo Switch Lite",  generation: "current", query: "Nintendo Switch Lite console" },
