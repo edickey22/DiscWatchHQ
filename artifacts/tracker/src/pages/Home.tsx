@@ -110,7 +110,7 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b bg-card">
         <HeroMarquee images={heroImages} className="opacity-90" />
-        <div className="container relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+        <div className="container relative mx-auto max-w-[1600px] px-4 py-10 md:py-14">
           <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40" />
@@ -128,17 +128,22 @@ export default function Home() {
 
         {/* Filter + Sort bar */}
         <section className="bg-card border-b sticky top-16 z-30 shadow-sm">
-          <div className="container mx-auto max-w-6xl px-4 py-4">
+          <div className="container mx-auto max-w-[1600px] px-4 py-4">
             <div className="flex flex-col md:flex-row gap-3 items-center">
 
               {/* Search */}
               <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none"
+                  size={15}
+                />
                 <Input
                   placeholder="Search titles or publishers..."
-                  className="pl-9 bg-background"
+                  className="pl-9 bg-card border-card-border"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
               </div>
 
@@ -195,7 +200,7 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="container mx-auto max-w-6xl px-4 py-8 space-y-16">
+        <div className="container mx-auto max-w-[1600px] px-4 py-8 space-y-16">
 
           {/* Currently Available */}
           <section>
