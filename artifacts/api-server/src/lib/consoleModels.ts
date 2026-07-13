@@ -52,8 +52,16 @@ export const CONSOLE_MODELS: ConsoleModel[] = [
     // results with siblings despite the `-"PS4"` exclusion. Quoting forces
     // the exact phrase to appear, which the exclusions alone couldn't do.
     requireTerms: ["5 pro", "5pro"], excludeTerms: ["ps4", "playstation 4", "ps3", "slim"] },
-  { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console -Vita -\"PS4\" -\"PS3\" -\"PS2\" -\"PS1\"",
-    excludeTerms: ["vita", "ps4", "playstation 4", "ps3", "ps2", "ps1"] },
+  { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console -Vita -\"PS4\" -\"PS3\" -\"PS2\" -\"PS1\" -Portal",
+    // "PlayStation Portal" is a streaming handheld, not a PS5 console — it
+    // shares enough keywords ("PlayStation 5", "console") to slip past the
+    // query's `-Portal` exclusion via eBay's relevance search the same way
+    // sibling console models do (see requireTerms/excludeTerms doc above).
+    // Excluded entirely for now; a real PS5+Portal bundle listing would
+    // still mention "PS5"/"PlayStation 5" prominently, but until we have a
+    // dedicated Portal model we'd rather drop bundle listings than show a
+    // bare Portal as if it were a PS5.
+    excludeTerms: ["vita", "ps4", "playstation 4", "ps3", "ps2", "ps1", "portal"] },
   { id: "xbox-series-x", name: "Xbox Series X",        generation: "current", query: "Xbox Series X console -\"Series S\"",
     requireTerms: ["series x"], excludeTerms: ["series s"] },
   { id: "xbox-series-s", name: "Xbox Series S",        generation: "current", query: "Xbox Series S console -\"Series X\"",
