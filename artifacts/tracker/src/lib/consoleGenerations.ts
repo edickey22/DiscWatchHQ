@@ -16,11 +16,15 @@ export const GENERATION_LABELS: Record<ConsoleGeneration, string> = {
   retro:    "Retro",
 }
 
-/** Badge classes (background + text + border) for the grid card's generation tag. */
+/**
+ * Badge classes (background + text + border) for the grid card's generation
+ * tag. Solid (opaque) fills, not tinted/transparent ones — translucent
+ * badges over busy photo backgrounds were hard to read.
+ */
 export const GENERATION_BADGE_STYLES: Record<ConsoleGeneration, string> = {
   current:  "bg-primary text-primary-foreground border-primary/60",
-  previous: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  retro:    "bg-destructive/15 text-destructive border-destructive/30",
+  previous: "bg-blue-500 text-white border-blue-600/60",
+  retro:    "bg-destructive text-destructive-foreground border-destructive/60",
 }
 
 /** Plain text color (no background) for the detail page's generation label. */

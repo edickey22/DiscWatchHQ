@@ -24,10 +24,12 @@ function formatTimeLeft(endsAt: number): string | null {
   return `${Math.round(hours / 24)}d left`
 }
 
+// Solid (opaque) fills to match the generation tag bubbles elsewhere on the
+// site — translucent badges over busy listing photos were hard to read.
 const CONDITION_STYLES: Record<ConsoleCondition, string> = {
-  "New":                "bg-primary/15 text-primary border-primary/30",
-  "Used":               "bg-secondary text-foreground/80 border-border",
-  "Seller Refurbished": "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  "New":                "bg-primary text-primary-foreground border-primary/60",
+  "Used":               "bg-secondary text-secondary-foreground border-secondary-border",
+  "Seller Refurbished": "bg-amber-500 text-white border-amber-600/60",
 }
 
 /**
