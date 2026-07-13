@@ -15,3 +15,4 @@
 - [eBay search query phrasing](ebay-search-query-phrasing.md) — quote the core multi-word model phrase (e.g. `"PlayStation 5 Pro"`) or exclusions alone won't stop sibling models flooding results
 - [catalog_games upsert onConflict fields](catalog-upsert-onconflict-fields.md) — every mutable column (esp. releaseDate/releaseYear) must be in the upsert's SET list or upstream updates silently never land
 - [Scheduler cache restart budget burn](scheduler-cache-restart-budget-burn.md) — in-memory-only scheduler caches re-fetch everything on every restart, exhausting shared daily API budgets fast in dev; persist + skip-if-fresh
+- [eBay empty result retry](ebay-empty-result-retry.md) — a transient timeout during the startup call burst cached 0 listings for random consoles, stuck for 24h; retry once + don't treat empty as fresh

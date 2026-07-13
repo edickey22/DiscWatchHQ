@@ -238,14 +238,41 @@ export async function getEbayConsoleListings(
       `?q=${q}&category_ids=${CONSOLES_CATEGORY_ID}&limit=${rawLimit}` +
       `&filter=${encodeURIComponent(`buyingOptions:{FIXED_PRICE|AUCTION},conditionIds:{${CONDITION_IDS_FILTER}}`)}`;
 
-    const res = await fetch(apiUrl, {
-      headers: {
-        Authorization:             `Bearer ${token}`,
-        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-        "Content-Type":            "application/json",
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
+    // Retry transient network/timeout failures once before giving up. This
+    // matters because a single logical "refresh this model" attempt only
+    // happens once every REFRESH_INTERVAL_MS (24h) — if the one shot times
+    // out (observed happening under the back-to-back 2s-apart call burst
+    // across all 26 models at startup), the model was previously stuck
+    // showing "no listings" for a full day with no recovery until the next
+    // scheduled cycle. A real 429 still aborts immediately (handled below,
+    // not retried here) since that's a signal to back off, not a fluke.
+    const MAX_ATTEMPTS = 2;
+    let res: Response | null = null;
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        res = await fetch(apiUrl, {
+          headers: {
+            Authorization:             `Bearer ${token}`,
+            "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+            "Content-Type":            "application/json",
+          },
+          signal: AbortSignal.timeout(12_000),
+        });
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < MAX_ATTEMPTS) {
+          logger.warn({ consoleId: model.id, attempt, err }, "[eBay Consoles] Fetch failed — retrying once");
+          await new Promise(r => setTimeout(r, 1_500));
+        }
+      }
+    }
+    if (!res) {
+      logger.warn({ consoleId: model.id, err: lastErr }, "[eBay Consoles] Fetch failed after retry — returning empty for this cycle");
+      return [];
+    }
 
     if (res.status === 429) {
       logger.error({ consoleId: model.id }, "[eBay Consoles] Rate limited (429) — signaling caller to back off");

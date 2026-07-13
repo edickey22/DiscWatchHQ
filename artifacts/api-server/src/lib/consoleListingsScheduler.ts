@@ -78,8 +78,17 @@ async function refreshConsoleListings(): Promise<void> {
     // refresh cadence — this is what stops every dev restart from burning a
     // fresh 26-call cycle out of the shared daily eBay budget for data that
     // was already fetched an hour ago (see consoleListingsCache.ts).
+    //
+    // Exception: an entry that came back EMPTY is never treated as "still
+    // fresh" — a 0-listing result is far more often a transient fetch
+    // failure (timeout, momentary throttling) than genuine zero inventory
+    // for a real console model, and previously got stuck showing "no
+    // listings" to visitors for a full 24h with no way to recover before
+    // the next scheduled cycle. Always retry empty models on the next run
+    // (subject to the same budget) so a bad fetch self-heals quickly
+    // instead of persisting for a whole day.
     const existing = getConsoleListingsEntry(model.id);
-    if (existing && Date.now() - existing.updatedAt < REFRESH_INTERVAL_MS) {
+    if (existing && existing.listings.length > 0 && Date.now() - existing.updatedAt < REFRESH_INTERVAL_MS) {
       skipped++;
       continue;
     }
