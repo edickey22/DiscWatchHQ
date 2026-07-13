@@ -77,12 +77,15 @@ export const affiliateConfig = {
 // ─── URL builders ────────────────────────────────────────────────────────────
 
 /**
- * eBay video-game category search.
+ * eBay category search. Defaults to 139973 (Video Games) for per-game
+ * lookups; pass 139971 (Video Game Consoles) for console models so the
+ * "search all" link stays in the same category the Browse API client
+ * queries (ebayConsolesClient.ts) instead of surfacing loose game listings.
  * Appends EPN affiliate params when EBAY_CAMPAIGN_ID is set.
  */
-export function buildEbaySearchUrl(title: string): string {
+export function buildEbaySearchUrl(title: string, categoryId = "139973"): string {
   const q = encodeURIComponent(title);
-  const base = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=139973`;
+  const base = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=${categoryId}`;
   if (!affiliateConfig.ebay.campaignId) return base;
   const { campaignId, rotationId, toolId } = affiliateConfig.ebay;
   return `${base}&mkcid=1&mkrid=${rotationId}&siteid=0&campid=${campaignId}&toolid=${toolId}&mkevt=1`;

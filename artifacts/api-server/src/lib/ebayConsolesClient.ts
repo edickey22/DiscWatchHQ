@@ -191,7 +191,7 @@ export interface ConsoleListing {
  */
 export async function getEbayConsoleListings(
   model: ConsoleModel,
-  limit = 8,
+  limit = 16,
 ): Promise<ConsoleListing[]> {
   if (!ebayConsolesConfigured) return [];
 

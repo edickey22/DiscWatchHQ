@@ -45,7 +45,7 @@ export function getConsoleSummaries(): ConsoleSummary[] {
     const entry = _cache.get(model.id);
     return {
       ...model,
-      searchUrl:    buildEbaySearchUrl(model.query),
+      searchUrl:    buildEbaySearchUrl(model.query, "139971"),
       hasFetched:   !!entry,
       listingCount: entry?.listings.length ?? 0,
     };
@@ -67,7 +67,7 @@ export function getConsoleDetail(id: string): ConsoleDetail | null {
   const entry = _cache.get(id);
   return {
     ...model,
-    searchUrl: buildEbaySearchUrl(model.query),
+    searchUrl: buildEbaySearchUrl(model.query, "139971"),
     listings:  entry?.listings ?? [],
     updatedAt: entry?.updatedAt ?? null,
   };

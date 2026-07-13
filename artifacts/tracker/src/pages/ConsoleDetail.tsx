@@ -68,23 +68,10 @@ export default function ConsoleDetail() {
 
       <main className="flex-1">
         <div className="container mx-auto max-w-[1600px] px-4 pt-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <Link href="/consoles" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono">
-              <ArrowLeft size={14} />
-              All consoles
-            </Link>
-            {consoleData?.searchUrl && (
-              <a
-                href={consoleData.searchUrl}
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-secondary/40 text-foreground/80 text-xs font-semibold uppercase tracking-wider px-4 py-2 hover:border-primary/50 hover:bg-secondary/60 transition-colors"
-              >
-                <Search size={12} />
-                Search all on eBay
-              </a>
-            )}
-          </div>
+          <Link href="/consoles" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono">
+            <ArrowLeft size={14} />
+            All consoles
+          </Link>
         </div>
 
         {!isLoading && !consoleData ? (
@@ -124,6 +111,17 @@ export default function ConsoleDetail() {
                           ? `${consoleData.listings.length} current listing${consoleData.listings.length === 1 ? "" : "s"} — real hardware only, filtered for junk`
                           : "No live listings right now"}
                       </p>
+                      {consoleData?.searchUrl && (
+                        <a
+                          href={consoleData.searchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-secondary/40 text-foreground/80 text-xs font-semibold uppercase tracking-wider px-4 py-2 hover:border-primary/50 hover:bg-secondary/60 transition-colors"
+                        >
+                          <Search size={12} />
+                          Search all on eBay
+                        </a>
+                      )}
                     </>
                   )}
                 </div>
