@@ -61,7 +61,7 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
           {listing.isAuction && (
             <Badge
               variant="outline"
-              className="backdrop-blur-md font-semibold text-[10px] uppercase tracking-wide bg-violet-500/15 text-violet-400 border-violet-500/30 gap-1"
+              className="font-semibold text-[10px] uppercase tracking-wide bg-violet-600 text-white border-violet-400/50 shadow-sm gap-1"
             >
               <Gavel size={10} />
               Auction
