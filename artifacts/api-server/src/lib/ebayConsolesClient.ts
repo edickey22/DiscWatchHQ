@@ -279,7 +279,7 @@ export async function getEbayConsoleListings(
       };
     });
 
-    const candidates = mapped
+    const filtered = mapped
       .filter(c =>
         !isNaN(c.price) &&
         c.price >= minPrice &&
@@ -288,8 +288,18 @@ export async function getEbayConsoleListings(
         !isNonConsole(c.title) &&
         matchesModelTerms(c.title, model),
       )
-      .sort((a, b) => a.price - b.price)
-      .slice(0, limit);
+      .sort((a, b) => a.price - b.price);
+
+    // Diagnostic-level visibility into the raw→filtered→capped funnel per
+    // model, so "why do I only see N listings" is answerable from logs
+    // instead of guesswork: is N the real total after filtering, or is the
+    // cap itself trimming a bigger surviving set?
+    logger.debug(
+      { consoleId: model.id, rawCount: mapped.length, filteredCount: filtered.length, cap: limit },
+      "[eBay Consoles] Raw→filtered→capped funnel"
+    );
+
+    const candidates = filtered.slice(0, limit);
 
     return candidates.map(c => ({
       title:     c.title,
