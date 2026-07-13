@@ -403,6 +403,12 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                       })}
                     </div>
                   )}
+
+                  {displayed && displayed.platforms.length > 1 && (
+                    <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+                      Tip: select a platform above for a more precise, less cluttered search.
+                    </p>
+                  )}
                 </div>
 
                 {displayed && <ScoreBadge game={displayed} />}

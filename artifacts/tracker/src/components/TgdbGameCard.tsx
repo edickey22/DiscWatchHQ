@@ -247,9 +247,13 @@ export function CatalogGameCard({
 
           {/* Platform chips — cap at 4. Clickable: selecting one narrows the
               retailer searches below to that platform (e.g. "... Switch").
-              min-h reserves room for up to 2 wrapped rows so the buttons
-              below never shift based on how many chips a card has. */}
-          <div className="flex flex-wrap gap-1 min-h-[1.75rem] content-start">
+              Fixed height (not min-height!) reserves exactly 2 wrapped rows
+              and clips anything beyond via overflow-hidden, so the buttons
+              below always start at the same offset across every card in a
+              row — a min-height alone lets a 2-line wrap on one card grow
+              past a neighboring 1-line card's reservation and push that
+              one card's buttons down relative to the rest of the row. */}
+          <div className="flex flex-wrap gap-1 h-[3.25rem] content-start overflow-hidden">
             {game.platforms.slice(0, 4).map(p => {
               const isSelected = selectedPlatform === p
               return (

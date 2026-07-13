@@ -331,8 +331,27 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
         </a>
       )}
 
+      {/* Always render all OTHER_RETAILERS slots (not just the retro subset)
+          so every card reserves the same grid footprint — retro titles fill
+          the Amazon/Best Buy cells with an invisible, non-interactive
+          placeholder instead of omitting them. Omitting cells for retro
+          games shrinks that card's retailer block to a single row, which
+          then misaligns the Strategy Guides section (and overall card
+          height) against non-retro cards in the same grid row. */}
       <div className="grid gap-1.5 grid-cols-2">
-        {RETAILERS.map(({ key, label }) => {
+        {OTHER_RETAILERS.map(({ key, label }) => {
+          const isShown = RETAILERS.some(r => r.key === key)
+          if (!isShown) {
+            // Matches the real cell's internal structure (two stacked lines)
+            // so the reserved height is identical — only invisible, not absent.
+            return (
+              <div key={key} aria-hidden className="invisible flex flex-col gap-0.5 rounded border px-2.5 py-2">
+                <span className="font-display font-semibold leading-none text-[10px]">{label}</span>
+                <span className="font-mono leading-none text-[9px]">Search →</span>
+              </div>
+            )
+          }
+
           const url    = urls[key]
           const price  = confirmedPrices[key] ?? null
           const isBest = key === bestKey
