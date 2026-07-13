@@ -1,15 +1,27 @@
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Gavel } from "lucide-react"
 
 export type ConsoleCondition = "New" | "Used" | "Seller Refurbished"
 
 export interface ConsoleListing {
-  title:     string
-  price:     number
-  url:       string
-  imageUrl:  string | null
-  condition: ConsoleCondition
+  title:      string
+  price:      number
+  url:        string
+  imageUrl:   string | null
+  condition:  ConsoleCondition
+  isAuction:  boolean
+  bidCount?:  number
+  endsAt?:    number | null
+}
+
+function formatTimeLeft(endsAt: number): string | null {
+  const ms = endsAt - Date.now()
+  if (ms <= 0) return null
+  const hours = ms / 3_600_000
+  if (hours < 1) return `${Math.max(1, Math.round(ms / 60_000))}m left`
+  if (hours < 24) return `${Math.round(hours)}h left`
+  return `${Math.round(hours / 24)}d left`
 }
 
 const CONDITION_STYLES: Record<ConsoleCondition, string> = {
@@ -39,13 +51,22 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
             No image
           </div>
         )}
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <Badge
             variant="outline"
             className={cn("backdrop-blur-md font-semibold text-[10px] uppercase tracking-wide", CONDITION_STYLES[listing.condition])}
           >
             {listing.condition}
           </Badge>
+          {listing.isAuction && (
+            <Badge
+              variant="outline"
+              className="backdrop-blur-md font-semibold text-[10px] uppercase tracking-wide bg-violet-500/15 text-violet-400 border-violet-500/30 gap-1"
+            >
+              <Gavel size={10} />
+              Auction
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -53,16 +74,24 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
         <p className="text-sm text-foreground/90 leading-snug line-clamp-2" title={listing.title}>
           {listing.title}
         </p>
-        <span className="font-display tabular-nums text-lg font-semibold text-foreground/90">
-          ${listing.price.toFixed(2)}
-        </span>
+        <div className="flex items-baseline gap-2">
+          <span className="font-display tabular-nums text-lg font-semibold text-foreground/90">
+            ${listing.price.toFixed(2)}
+          </span>
+          {listing.isAuction && (
+            <span className="text-[11px] font-mono text-muted-foreground">
+              {listing.bidCount ? `${listing.bidCount} bid${listing.bidCount === 1 ? "" : "s"}` : "no bids yet"}
+              {listing.endsAt && formatTimeLeft(listing.endsAt) ? ` · ${formatTimeLeft(listing.endsAt)}` : ""}
+            </span>
+          )}
+        </div>
         <a
           href={listing.url}
           target="_blank"
           rel="noopener noreferrer sponsored"
           className="mt-auto pt-2 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold uppercase tracking-wider px-3 py-2 hover:bg-primary/90 transition-colors"
         >
-          Buy on eBay
+          {listing.isAuction ? "Current bid" : "Buy on eBay"}
           <ExternalLink size={12} />
         </a>
       </div>

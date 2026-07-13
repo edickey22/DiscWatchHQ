@@ -15,10 +15,11 @@
  * ── Junk / non-console filtering ────────────────────────────────────────
  *
  * eBay's "Video Game Consoles" category (139971) is not scoped tightly
- * enough on its own — accessories, replacement parts, repair services, and
- * manuals routinely surface in a plain keyword search because sellers list
- * them under the same category. This client applies three layers before a
- * result is ever shown to a visitor:
+ * enough on its own — accessories, replacement parts, repair services,
+ * manuals, and even sibling hardware models (a "PS5 Pro" search returning
+ * a PS4, or a "Switch 2" search returning the original Switch) routinely
+ * surface in a plain keyword search. This client applies several layers
+ * before a result is ever shown to a visitor:
  *
  *   1. API-level condition filter: excludes conditionIds 7000
  *      ("For parts or not working") outright.
@@ -26,13 +27,21 @@
  *      non-console pattern — manuals, replacement/repair parts, empty
  *      boxes/shells, accessories-only listings, broken/DOA hardware, etc.
  *      (see NON_CONSOLE_TERMS below).
- *   3. Minimum price floor per hardware generation: accessories and parts
+ *   3. Per-model require/exclude terms: some models are only reliably
+ *      distinguished from a close sibling (Series X vs Series S, Switch 2
+ *      vs Switch, PS5 Pro vs PS5/PS4) by asserting a term the real model's
+ *      title must contain, and/or terms it must never contain — see
+ *      requireTerms/excludeTerms on ConsoleModel (consoleModels.ts). Query
+ *      `-"term"` exclusions alone aren't reliable enough on their own,
+ *      since eBay's relevance search still surfaces semantically related
+ *      sibling models; this is a second, server-side gate applied after
+ *      the fetch.
+ *   4. Minimum price floor per hardware generation: accessories and parts
  *      are almost always listed far below a real console's price, so a
  *      generation-tiered price floor catches junk that slips past the
  *      title blocklist (e.g. an untitled "console" bundle that's actually
  *      just a dock).
- *
- *   4. Badge safety: only listings whose condition normalizes cleanly to
+ *   5. Badge safety: only listings whose condition normalizes cleanly to
  *      "New", "Used", or "Seller Refurbished" are shown. Anything else
  *      (ambiguous/unrecognized condition strings) is dropped rather than
  *      displayed with a vague or missing badge.
@@ -40,7 +49,7 @@
 
 import { applyEbayEpnParams } from "./affiliateConfig";
 import { getAccessToken, ebayBrowseConfigured } from "./ebayBrowseClient";
-import type { ConsoleGeneration } from "./consoleModels";
+import type { ConsoleModel, ConsoleGeneration } from "./consoleModels";
 
 export const ebayConsolesConfigured = ebayBrowseConfigured;
 
@@ -108,6 +117,28 @@ function isNonConsole(title: string): boolean {
   return NON_CONSOLE_TERMS.some(term => lower.includes(term));
 }
 
+/**
+ * Word-boundary-ish substring test — avoids "pro" matching inside unrelated
+ * words while still tolerating punctuation (e.g. "PS5-Pro"). Uses lookaround
+ * against alphanumerics rather than \b so it works for multi-word terms too.
+ */
+function containsTerm(title: string, term: string): boolean {
+  const escaped = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, "i").test(title);
+}
+
+function matchesModelTerms(
+  title: string,
+  model: Pick<ConsoleModel, "requireTerms" | "excludeTerms">,
+): boolean {
+  if (model.excludeTerms?.some(term => containsTerm(title, term))) return false;
+  // requireTerms is a set of acceptable phrasings — at least one must appear
+  // (e.g. "5 pro" or "5pro" both count as a real PS5 Pro title), not all of
+  // them simultaneously.
+  if (model.requireTerms && !model.requireTerms.some(term => containsTerm(title, term))) return false;
+  return true;
+}
+
 export type ConsoleCondition = "New" | "Used" | "Seller Refurbished";
 
 /**
@@ -127,10 +158,13 @@ function normalizeCondition(raw: string | undefined): ConsoleCondition | null {
 
 export interface ConsoleListing {
   title:     string;
-  price:     number;             // USD
+  price:     number;             // USD — current bid for auctions, list price otherwise
   url:       string;             // direct item URL, EPN-tagged
   imageUrl:  string | null;
   condition: ConsoleCondition;
+  isAuction: boolean;
+  bidCount?: number;              // present only when isAuction
+  endsAt?:   number | null;       // ms epoch, present only when isAuction
 }
 
 /**
@@ -140,9 +174,15 @@ export interface ConsoleListing {
  * many listings are ultimately returned — the Browse API returns up to
  * `rawLimit` candidates per call, which are then filtered down.
  *
+ * Includes both Buy It Now (FIXED_PRICE) and live AUCTION listings — for
+ * auctions, `price` is the current bid (or starting bid if no bids yet),
+ * exposed via `isAuction`/`bidCount`/`endsAt` so the UI can show a bid
+ * count and time-left instead of implying a fixed purchase price.
+ *
  * Returns an empty array when:
  *   - credentials are not configured
- *   - no listing survives the condition + blocklist + price-floor filters
+ *   - no listing survives the condition + blocklist + require/exclude-term
+ *     + price-floor filters
  *   - the API call fails or times out
  *
  * IMPORTANT — quota management: this must only ever be called from the
@@ -150,8 +190,7 @@ export interface ConsoleListing {
  * visitor-facing request handler. See that file for the call budget.
  */
 export async function getEbayConsoleListings(
-  query: string,
-  generation: ConsoleGeneration,
+  model: ConsoleModel,
   limit = 8,
 ): Promise<ConsoleListing[]> {
   if (!ebayConsolesConfigured) return [];
@@ -168,11 +207,11 @@ export async function getEbayConsoleListings(
     // `sort` param is given) reliably surfaces the actual console model
     // being searched for; we sort by price ourselves *after* filtering.
     const rawLimit = 60; // over-fetch — filtering still drops a meaningful share as junk
-    const q = encodeURIComponent(query);
+    const q = encodeURIComponent(model.query);
     const apiUrl =
       `https://api.ebay.com/buy/browse/v1/item_summary/search` +
       `?q=${q}&category_ids=${CONSOLES_CATEGORY_ID}&limit=${rawLimit}` +
-      `&filter=${encodeURIComponent(`buyingOptions:{FIXED_PRICE},conditionIds:{${CONDITION_IDS_FILTER}}`)}`;
+      `&filter=${encodeURIComponent(`buyingOptions:{FIXED_PRICE|AUCTION},conditionIds:{${CONDITION_IDS_FILTER}}`)}`;
 
     const res = await fetch(apiUrl, {
       headers: {
@@ -184,36 +223,51 @@ export async function getEbayConsoleListings(
     });
 
     if (!res.ok) {
-      console.warn("[eBay Consoles] Search failed", res.status, query);
+      console.warn("[eBay Consoles] Search failed", res.status, model.query);
       return [];
     }
 
     const data = (await res.json()) as {
       itemSummaries?: Array<{
-        title?:       string;
-        price?:       { value?: string; currency?: string };
-        itemWebUrl?:  string;
-        condition?:   string;
-        image?:       { imageUrl?: string };
+        title?:           string;
+        price?:           { value?: string; currency?: string };
+        currentBidPrice?: { value?: string; currency?: string };
+        bidCount?:        number;
+        itemEndDate?:     string;
+        buyingOptions?:   string[];
+        itemWebUrl?:      string;
+        condition?:       string;
+        image?:           { imageUrl?: string };
       }>;
     };
 
-    const minPrice = MIN_PRICE_BY_GENERATION[generation];
+    const minPrice = MIN_PRICE_BY_GENERATION[model.generation];
 
-    const candidates = (data.itemSummaries ?? [])
-      .map(item => ({
+    const mapped = (data.itemSummaries ?? []).map(item => {
+      const isAuction = !!item.buyingOptions?.includes("AUCTION") && !item.buyingOptions?.includes("FIXED_PRICE");
+      const price = isAuction
+        ? parseFloat(item.currentBidPrice?.value ?? "")
+        : parseFloat(item.price?.value ?? "");
+      return {
         title:     item.title ?? "",
-        price:     parseFloat(item.price?.value ?? ""),
+        price,
         url:       item.itemWebUrl ?? "",
         imageUrl:  item.image?.imageUrl ?? null,
         condition: normalizeCondition(item.condition),
-      }))
-      .filter((c): c is { title: string; price: number; url: string; imageUrl: string | null; condition: ConsoleCondition } =>
+        isAuction,
+        bidCount:  isAuction ? (item.bidCount ?? 0) : undefined,
+        endsAt:    isAuction && item.itemEndDate ? Date.parse(item.itemEndDate) : undefined,
+      };
+    });
+
+    const candidates = mapped
+      .filter(c =>
         !isNaN(c.price) &&
         c.price >= minPrice &&
         !!c.url &&
         c.condition !== null &&
-        !isNonConsole(c.title),
+        !isNonConsole(c.title) &&
+        matchesModelTerms(c.title, model),
       )
       .sort((a, b) => a.price - b.price)
       .slice(0, limit);
@@ -223,7 +277,9 @@ export async function getEbayConsoleListings(
       price:     c.price,
       url:       applyEbayEpnParams(c.url),
       imageUrl:  c.imageUrl,
-      condition: c.condition,
+      condition: c.condition as ConsoleCondition,
+      isAuction: c.isAuction,
+      ...(c.isAuction ? { bidCount: c.bidCount, endsAt: c.endsAt ?? null } : {}),
     }));
   } catch (err) {
     console.warn("[eBay Consoles] Lookup error:", err);

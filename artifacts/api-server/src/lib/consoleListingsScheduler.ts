@@ -71,7 +71,7 @@ async function refreshConsoleListings(): Promise<void> {
 
   for (const model of CONSOLE_MODELS) {
     try {
-      const listings = await getEbayConsoleListings(model.query, model.generation);
+      const listings = await getEbayConsoleListings(model);
       setConsoleListings(model.id, listings);
       if (listings.length > 0) updated++; else empty++;
     } catch (err) {
