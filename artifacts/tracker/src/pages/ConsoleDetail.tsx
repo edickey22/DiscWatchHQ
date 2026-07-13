@@ -11,7 +11,7 @@ import { buildCanonicalUrl } from "@/lib/seo"
 import { ArrowLeft, Search, ChevronDown } from "lucide-react"
 
 /** How many listings render initially, and how many more each "Show more" click reveals. */
-const LISTINGS_PAGE_SIZE = 16
+const LISTINGS_PAGE_SIZE = 24
 
 interface ConsoleDetailData {
   id:         string

@@ -37,11 +37,20 @@ export const CONSOLE_MODELS: ConsoleModel[] = [
   // ── Current-gen ──────────────────────────────────────────────────────────
   { id: "switch-2",      name: "Nintendo Switch 2",     generation: "current", query: "Nintendo Switch 2 console -OLED -Lite -HAC-001 -\"V2\"",
     requireTerms: ["switch 2"], excludeTerms: ["oled", "lite"] },
-  { id: "ps5-pro",       name: "PlayStation 5 Pro",     generation: "current", query: "PlayStation 5 Pro console -\"PS4\" -\"PS3\" -Slim",
+  { id: "ps5-pro",       name: "PlayStation 5 Pro",     generation: "current", query: "\"PlayStation 5 Pro\" console -\"PS4\" -\"PS3\" -Slim",
     // Bare "pro" alone is unsafe — regular PS5 listings bundled with a "Pro"
     // branded accessory (e.g. a "PS Nova Pro" headset) contain the word
     // "pro" without being an actual PS5 Pro console. Require the digit and
     // "pro" adjacent ("5 Pro"/"5Pro") so only the real model name matches.
+    //
+    // The core phrase is quoted ("PlayStation 5 Pro") because eBay's search
+    // (both the Browse API and the public site the "Search all on eBay" link
+    // points to) treats an unquoted multi-word query as an OR of loose
+    // keywords, not a requirement that they appear together — an unquoted
+    // query matched any listing containing "PlayStation" OR "5" OR "Pro" OR
+    // "console", which is true of nearly every PS4/PS5 listing too, flooding
+    // results with siblings despite the `-"PS4"` exclusion. Quoting forces
+    // the exact phrase to appear, which the exclusions alone couldn't do.
     requireTerms: ["5 pro", "5pro"], excludeTerms: ["ps4", "playstation 4", "ps3", "slim"] },
   { id: "ps5",          name: "PlayStation 5",         generation: "current", query: "PlayStation 5 console -Vita -\"PS4\" -\"PS3\" -\"PS2\" -\"PS1\"",
     excludeTerms: ["vita", "ps4", "playstation 4", "ps3", "ps2", "ps1"] },
