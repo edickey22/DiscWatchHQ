@@ -74,17 +74,16 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
         <p className="text-sm text-foreground/90 leading-snug line-clamp-2" title={listing.title}>
           {listing.title}
         </p>
-        <div className="flex items-baseline gap-2">
-          <span className="font-display tabular-nums text-lg font-semibold text-foreground/90">
-            ${listing.price.toFixed(2)}
+        <span className="font-display tabular-nums text-lg font-semibold text-foreground/90">
+          ${listing.price.toFixed(2)}
+        </span>
+        {listing.isAuction && (
+          <span className="inline-flex w-fit items-center gap-1 text-sm font-semibold font-mono text-violet-300">
+            <Gavel size={13} className="shrink-0" />
+            {listing.bidCount ? `${listing.bidCount} bid${listing.bidCount === 1 ? "" : "s"}` : "No bids yet"}
+            {listing.endsAt && formatTimeLeft(listing.endsAt) ? ` · ${formatTimeLeft(listing.endsAt)}` : ""}
           </span>
-          {listing.isAuction && (
-            <span className="text-[11px] font-mono text-muted-foreground">
-              {listing.bidCount ? `${listing.bidCount} bid${listing.bidCount === 1 ? "" : "s"}` : "no bids yet"}
-              {listing.endsAt && formatTimeLeft(listing.endsAt) ? ` · ${formatTimeLeft(listing.endsAt)}` : ""}
-            </span>
-          )}
-        </div>
+        )}
         <a
           href={listing.url}
           target="_blank"
