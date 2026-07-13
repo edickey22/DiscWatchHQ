@@ -25,7 +25,7 @@ import {
   ExternalLink, X, Image as ImageIcon,
   ChevronDown, ChevronUp,
 } from "lucide-react"
-import type { CatalogGame } from "@/components/TgdbGameCard"
+import { isUnreleased, type CatalogGame } from "@/components/TgdbGameCard"
 import { MediaLightbox, type MediaSlide } from "@/components/MediaLightbox"
 
 // ── API response types ────────────────────────────────────────────────────────
@@ -412,6 +412,9 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                 const platformUrls = selectedPlatform
                   ? displayed.retailerSearchUrlsByPlatform?.[selectedPlatform]
                   : undefined
+                // Unreleased titles have no secondhand/new-sealed eBay stock
+                // and no strategy guide yet — hide both (see isUnreleased doc).
+                const unreleased = isUnreleased(displayed.releaseDate)
                 return (
                   <div className="mt-3">
                     <RetailerLinks
@@ -432,7 +435,8 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                       }}
                       platforms={displayed.platforms}
                       variant="detail"
-                      guideUrls={displayed.guideSearchUrls}
+                      guideUrls={unreleased ? undefined : displayed.guideSearchUrls}
+                      showEbay={!unreleased}
                     />
                   </div>
                 )

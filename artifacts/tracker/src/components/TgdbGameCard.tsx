@@ -112,6 +112,29 @@ function formatReleaseDate(releaseDate: string | null): string | null {
   return isNaN(year) ? null : String(year)
 }
 
+/**
+ * True when a game's confirmed release date is still in the future (or it
+ * only has a bare future year, e.g. "2027"). Used to hide eBay + strategy
+ * guide links — eBay has no secondhand/new-sealed stock, and no guide
+ * exists, for a title that hasn't shipped yet. Unknown/missing dates are
+ * treated as already-released (the common case for older catalog rows).
+ */
+export function isUnreleased(releaseDate: string | null): boolean {
+  if (!releaseDate) return false
+  const now = new Date()
+
+  const fullDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(releaseDate)
+  if (fullDateMatch) {
+    const parsed = new Date(releaseDate.replace(/-/g, "/"))
+    return !isNaN(parsed.getTime()) && parsed.getTime() > now.getTime()
+  }
+
+  const yearMatch = /^\d{4}$/.exec(releaseDate)
+  if (yearMatch) return Number(releaseDate) > now.getFullYear()
+
+  return false
+}
+
 function CoverPlaceholder() {
   return (
     <div className="w-full h-full flex items-center justify-center text-muted-foreground/15">
@@ -147,6 +170,7 @@ export function CatalogGameCard({
   priority?: boolean
 }) {
   const displayDate = formatReleaseDate(game.releaseDate)
+  const unreleased  = isUnreleased(game.releaseDate)
   const [imgFailed, setImgFailed] = useState(false)
 
   // Selected platform tag, if any — threads into the retailer search URLs
@@ -264,7 +288,12 @@ export function CatalogGameCard({
             in the row forces onto this card renders as blank space below the
             buttons instead of shifting the buttons themselves. */}
         <div className="pt-1">
-          <RetailerLinks urls={effectiveRetailerUrls} platforms={game.platforms} guideUrls={game.guideSearchUrls} />
+          <RetailerLinks
+            urls={effectiveRetailerUrls}
+            platforms={game.platforms}
+            guideUrls={unreleased ? undefined : game.guideSearchUrls}
+            showEbay={!unreleased}
+          />
         </div>
       </div>
     </article>

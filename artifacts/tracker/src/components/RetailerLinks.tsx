@@ -80,6 +80,13 @@ interface RetailerLinksProps {
   platforms?:  string[]
   /** Optional strategy guide search links (eBay + Amazon). */
   guideUrls?:  GuideSearchUrls
+  /**
+   * Hide the eBay slot entirely. Used for unreleased/pre-order titles —
+   * eBay listings are for physical secondhand/new-sealed stock, which
+   * realistically doesn't exist yet for a game that hasn't shipped.
+   * Defaults to true (shown) for already-released titles.
+   */
+  showEbay?: boolean
 }
 
 // Non-eBay retailers — the only ones eligible for cross-retailer "BEST"
@@ -110,7 +117,7 @@ const RETAILER_ICON_STYLE: Record<typeof OTHER_RETAILERS[number]["key"], string>
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function RetailerLinks({ urls, prices, variant = "card", platforms, guideUrls }: RetailerLinksProps) {
+export function RetailerLinks({ urls, prices, variant = "card", platforms, guideUrls, showEbay = true }: RetailerLinksProps) {
   const retro     = isRetroGame(platforms ?? [])
   const RETAILERS = retro ? RETRO_OTHER_RETAILERS : OTHER_RETAILERS
 
@@ -154,38 +161,41 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
             its own row, outside the comparison grid and its "BEST" ranking
             logic (eBay API license compliance, see note above). Shows
             eBay's own live price (permitted) but is never ranked/badged
-            against other retailers' prices. ── */}
-        <a
-          href={ebayUrl}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          onClick={e => e.stopPropagation()}
-          className="group relative flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 mb-2.5 bg-primary hover:bg-primary/90 active:bg-primary/80 shadow-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
-              <ShoppingBag size={15} className="text-primary-foreground" />
-            </span>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-display font-bold text-[14px] leading-none text-primary-foreground">
-                eBay
+            against other retailers' prices. Hidden entirely for unreleased
+            titles via showEbay=false — see prop doc above. ── */}
+        {showEbay && (
+          <a
+            href={ebayUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            onClick={e => e.stopPropagation()}
+            className="group relative flex items-center justify-between gap-3 rounded-lg px-4 py-3.5 mb-2.5 bg-primary hover:bg-primary/90 active:bg-primary/80 shadow-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+                <ShoppingBag size={15} className="text-primary-foreground" />
               </span>
-              {ebayPrice !== null ? (
-                <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary-foreground mt-1">
-                  ${ebayPrice.toFixed(2)}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-display font-bold text-[14px] leading-none text-primary-foreground">
+                  eBay
                 </span>
-              ) : (
-                <span className="font-mono text-[10px] leading-none text-primary-foreground/70 mt-1">
-                  {retro ? "Best source for retro →" : "Search →"}
-                </span>
-              )}
+                {ebayPrice !== null ? (
+                  <span className="font-display tabular-nums font-bold text-[15px] leading-none text-primary-foreground mt-1">
+                    ${ebayPrice.toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="font-mono text-[10px] leading-none text-primary-foreground/70 mt-1">
+                    {retro ? "Best source for retro →" : "Search →"}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <ArrowUpRight
-            size={16}
-            className="shrink-0 text-primary-foreground/70 group-hover:text-primary-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
-          />
-        </a>
+            <ArrowUpRight
+              size={16}
+              className="shrink-0 text-primary-foreground/70 group-hover:text-primary-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-150"
+            />
+          </a>
+        )}
 
         <div className="grid gap-2.5 grid-cols-2">
           {sorted.map(({ key, label }) => {
@@ -293,30 +303,33 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
           par with the retailer grid below, but kept in its own row outside
           the grid/BEST ranking (eBay API license compliance, see note
           above). Its own live price (when available) is still shown —
-          that part is permitted. ── */}
-      <a
-        href={ebayUrl}
-        target="_blank"
-        rel="noopener noreferrer sponsored"
-        onClick={e => e.stopPropagation()}
-        className="group flex items-center justify-between gap-2 rounded bg-primary hover:bg-primary/90 active:bg-primary/80 px-2.5 py-2 mb-1.5 shadow-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <span className="flex items-center gap-1.5 min-w-0">
-          <ShoppingBag size={11} className="shrink-0 text-primary-foreground/85" />
-          <span className="font-display font-semibold leading-none truncate text-[10px] text-primary-foreground">
-            eBay
+          that part is permitted. Hidden entirely for unreleased titles via
+          showEbay=false — see prop doc above. ── */}
+      {showEbay && (
+        <a
+          href={ebayUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          onClick={e => e.stopPropagation()}
+          className="group flex items-center justify-between gap-2 rounded bg-primary hover:bg-primary/90 active:bg-primary/80 px-2.5 py-2 mb-1.5 shadow-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <span className="flex items-center gap-1.5 min-w-0">
+            <ShoppingBag size={11} className="shrink-0 text-primary-foreground/85" />
+            <span className="font-display font-semibold leading-none truncate text-[10px] text-primary-foreground">
+              eBay
+            </span>
           </span>
-        </span>
-        {ebayPrice !== null ? (
-          <span className="font-mono font-bold leading-none text-[11px] text-primary-foreground">
-            ${ebayPrice.toFixed(2)}
-          </span>
-        ) : (
-          <span className="font-mono leading-none text-primary-foreground/75 group-hover:text-primary-foreground transition-colors text-[9px]">
-            {retro ? "Best →" : "Search →"}
-          </span>
-        )}
-      </a>
+          {ebayPrice !== null ? (
+            <span className="font-mono font-bold leading-none text-[11px] text-primary-foreground">
+              ${ebayPrice.toFixed(2)}
+            </span>
+          ) : (
+            <span className="font-mono leading-none text-primary-foreground/75 group-hover:text-primary-foreground transition-colors text-[9px]">
+              {retro ? "Best →" : "Search →"}
+            </span>
+          )}
+        </a>
+      )}
 
       <div className="grid gap-1.5 grid-cols-2">
         {RETAILERS.map(({ key, label }) => {
