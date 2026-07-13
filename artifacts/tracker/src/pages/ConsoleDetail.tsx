@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useParams } from "wouter"
 import { Header } from "@/components/Header"
@@ -6,9 +6,11 @@ import { Footer } from "@/components/Footer"
 import { ControllerIcon } from "@/components/ControllerIcon"
 import { CONSOLE_IMAGES } from "@/lib/consoleImages"
 import { ConsoleListingCard, ConsoleListingCardSkeleton, type ConsoleListing } from "@/components/ConsoleListingCard"
+import { CONSOLE_SORT_OPTIONS, sortConsoleListings, type ConsoleSortValue } from "@/lib/consoleListingsSort"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
-import { ArrowLeft, Search, ChevronDown } from "lucide-react"
+import { ArrowLeft, Search, ChevronDown, ArrowUpDown } from "lucide-react"
 
 /** How many listings render initially, and how many more each "Show more" click reveals. */
 const LISTINGS_PAGE_SIZE = 24
@@ -59,12 +61,20 @@ export default function ConsoleDetail() {
   // purely client-side, no additional API calls. Resets whenever the console
   // changes so navigating between detail pages doesn't carry over state.
   const [visibleCount, setVisibleCount] = useState(LISTINGS_PAGE_SIZE)
+  const [sortBy, setSortBy] = useState<ConsoleSortValue>("featured")
   useEffect(() => {
     setVisibleCount(LISTINGS_PAGE_SIZE)
+    setSortBy("featured")
   }, [slug])
 
-  const visibleListings = consoleData?.listings.slice(0, visibleCount) ?? []
-  const hasMore = !!consoleData && consoleData.listings.length > visibleCount
+  // Sorting is entirely client-side over the already-cached listings — no
+  // extra API calls, same data as "Featured" just reordered.
+  const sortedListings = useMemo(
+    () => sortConsoleListings(consoleData?.listings ?? [], sortBy),
+    [consoleData, sortBy],
+  )
+  const visibleListings = sortedListings.slice(0, visibleCount)
+  const hasMore = sortedListings.length > visibleCount
 
   useDocumentHead({
     title:       consoleData
@@ -150,6 +160,22 @@ export default function ConsoleDetail() {
                 </div>
               ) : consoleData && consoleData.listings.length > 0 ? (
                 <>
+                  <div className="flex justify-end mb-4">
+                    <Select value={sortBy} onValueChange={v => setSortBy(v as ConsoleSortValue)}>
+                      <SelectTrigger
+                        aria-label="Sort listings"
+                        className="w-auto min-w-[170px] bg-card border-card-border shrink-0 text-sm gap-2"
+                      >
+                        <ArrowUpDown size={13} className="text-muted-foreground shrink-0" />
+                        <SelectValue placeholder="Featured" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONSOLE_SORT_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                     {visibleListings.map((listing, i) => (
                       <ConsoleListingCard key={`${listing.url}-${i}`} listing={listing} />
