@@ -443,7 +443,7 @@ export default function LandingPage() {
                 platform from NES to PS5 — with direct retailer buy links.
               </p>
               <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
-                {catalogStats?.count?.toLocaleString() ?? "—"} games in catalog →
+                {catalogStats?.count?.toLocaleString() ?? "—"} games indexed and counting →
               </div>
             </Link>
 

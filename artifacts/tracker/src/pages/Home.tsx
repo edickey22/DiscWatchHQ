@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Search, FilterX } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import { HeroMarquee } from "@/components/HeroMarquee"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
+import { trackSearchEvent } from "@/lib/analytics"
 
 type SortOption = "updated" | "title" | "publisher" | "newest"
 
@@ -66,14 +67,21 @@ export default function Home() {
     return params
   }, [platform, publisher, debouncedSearch, sort])
 
-  // Report search queries to GA4 so "Search Term" reporting is populated, mirroring
-  // Browse Games (GamesSearch.tsx). Uses the longer analyticsSearch debounce (not the
-  // 300ms search-results one) so partial in-progress fragments aren't reported.
+  // Report submitted search queries to GA4 so "Search Term" reporting is
+  // populated, mirroring Browse Games (GamesSearch.tsx). Uses the longer
+  // analyticsSearch debounce (not the 300ms search-results one) so this only
+  // fires once typing has settled — i.e. once the search has effectively
+  // been "submitted" — never on every keystroke, and never for a blank term.
+  // lastTrackedSearch guards against firing the same term twice in a row.
+  const lastTrackedSearch = useRef<string>("")
+  useEffect(() => {
+    if (!search.trim()) lastTrackedSearch.current = ""
+  }, [search])
   useEffect(() => {
     const term = analyticsSearch.trim()
-    if (!term) return
-    if (typeof window.gtag !== "function") return
-    window.gtag("event", "search", { search_term: term })
+    if (!term || term === lastTrackedSearch.current) return
+    trackSearchEvent(term)
+    lastTrackedSearch.current = term
   }, [analyticsSearch])
 
   const { data: availableData,  isLoading: isLoadingAvailable }  = useListAvailableReleases(queryParams)

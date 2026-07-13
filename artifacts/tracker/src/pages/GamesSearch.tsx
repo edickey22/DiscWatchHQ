@@ -19,7 +19,7 @@
  *   RAWG       — required by their free-tier API terms
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "wouter"
 import {
@@ -27,6 +27,7 @@ import {
   ExternalLink, AlertCircle, Star, CalendarDays,
   ArrowRight, X, SlidersHorizontal,
 } from "lucide-react"
+import { trackSearchEvent } from "@/lib/analytics"
 
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
@@ -379,15 +380,22 @@ export default function GamesSearch() {
   // Reset page whenever any search/filter parameter changes
   useEffect(() => { setPage(1) }, [debouncedSearch, platform, genre, era, sort])
 
-  // Report search queries to GA4 so "Search Term" reporting is populated.
-  // Uses the longer analyticsSearch debounce (not the 400ms search-results one) so
-  // partial in-progress fragments don't get reported as distinct terms; window.gtag
-  // is declared globally in App.tsx.
+  // Report submitted search queries to GA4 so "Search Term" reporting is
+  // populated. Uses the longer analyticsSearch debounce (not the 400ms
+  // search-results one) so partial in-progress fragments don't get reported
+  // as distinct searches — this only fires once typing has settled, i.e. once
+  // the search has effectively been "submitted", never on every keystroke.
+  // lastTrackedSearch guards against firing the same term twice in a row
+  // (e.g. if analyticsSearch briefly re-settles to an identical value).
+  const lastTrackedSearch = useRef<string>("")
+  useEffect(() => {
+    if (!search.trim()) lastTrackedSearch.current = ""
+  }, [search])
   useEffect(() => {
     const term = analyticsSearch.trim()
-    if (!term) return
-    if (typeof window.gtag !== "function") return
-    window.gtag("event", "search", { search_term: term })
+    if (!term || term === lastTrackedSearch.current) return
+    trackSearchEvent(term)
+    lastTrackedSearch.current = term
   }, [analyticsSearch])
 
   const clearFilters = useCallback(() => {
