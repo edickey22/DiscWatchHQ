@@ -132,15 +132,22 @@ export function startConsoleListingsScheduler(): void {
   const intervalHours = (REFRESH_INTERVAL_MS / 3_600_000).toFixed(1);
   logger.info({ intervalHours }, "Starting console listings scheduler");
 
-  // First run: wait 30s after startup — independent of the eBay price
-  // scheduler's 90s delay so the two don't burst-call the API at the same
-  // instant on cold start. Load the persisted snapshot first so a restart
-  // recognizes models refreshed earlier today as still-fresh instead of
-  // re-fetching all of them (see consoleListingsCache.ts).
+  // Load the persisted snapshot immediately (not gated behind the 30s
+  // startup delay below) — visitor-facing routes read straight from the
+  // in-memory cache, so any gap between "server listening" and "persisted
+  // cache loaded" showed every console as having zero listings on every
+  // restart/deploy, even though real data was sitting in system_kv the
+  // whole time. Only the live eBay re-fetch below needs the 30s stagger
+  // (independent of the eBay price scheduler's 90s delay so the two don't
+  // burst-call the API at the same instant on cold start).
+  loadPersistedConsoleListings().catch(err =>
+    logger.error({ err }, "Failed to load persisted console listings"),
+  );
+
   setTimeout(() => {
-    loadPersistedConsoleListings()
-      .then(() => refreshConsoleListings())
-      .catch(err => logger.error({ err }, "Initial console listings refresh failed"));
+    refreshConsoleListings().catch(err =>
+      logger.error({ err }, "Initial console listings refresh failed"),
+    );
   }, 30_000);
 
   consoleListingsInterval = setInterval(() => {

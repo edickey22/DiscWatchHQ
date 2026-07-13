@@ -16,3 +16,5 @@
 - [catalog_games upsert onConflict fields](catalog-upsert-onconflict-fields.md) — every mutable column (esp. releaseDate/releaseYear) must be in the upsert's SET list or upstream updates silently never land
 - [Scheduler cache restart budget burn](scheduler-cache-restart-budget-burn.md) — in-memory-only scheduler caches re-fetch everything on every restart, exhausting shared daily API budgets fast in dev; persist + skip-if-fresh
 - [eBay empty result retry](ebay-empty-result-retry.md) — a transient timeout during the startup call burst cached 0 listings for random consoles, stuck for 24h; retry once + don't treat empty as fresh
+- [Console listings startup race](console-listings-startup-race.md) — server accepted requests up to 30s before persisted eBay cache loaded, showing 0 listings on every restart; load persisted cache eagerly, delay only the live re-fetch
+- [Letterboxed image containers](letterboxed-image-hero.md) — a fixed-aspect box around object-contain images shows the box's own background color in the gaps; size the box to the image (max-height, w-auto) instead

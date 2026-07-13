@@ -112,11 +112,21 @@ export default function ConsoleDetail() {
               {/* Mobile: image spans full width and text is centered below it;
                   md+: reverts to the original side-by-side thumbnail layout. */}
               <div className="container relative mx-auto max-w-[1600px] px-4 py-8 md:py-10 flex flex-col md:flex-row gap-6 items-center md:items-center text-center md:text-left">
-                <div className="relative aspect-[5/4] w-full md:w-72 shrink-0 overflow-hidden rounded-md shadow-sm">
+                <div className="relative w-full md:w-72 shrink-0 flex items-center justify-center md:justify-start">
                   {stockPhoto ? (
-                    <img src={stockPhoto} alt={consoleData?.name ?? ""} className="h-full w-full object-contain" />
+                    // No fixed-aspect box around the photo — sizing the box
+                    // separately from the image's own aspect ratio is what
+                    // left a visible letterboxed strip of the section's
+                    // background color next to/around the photo. Letting
+                    // the image size itself (capped by max-height) means
+                    // there's no leftover box background to show at all.
+                    <img
+                      src={stockPhoto}
+                      alt={consoleData?.name ?? ""}
+                      className="max-h-64 w-auto max-w-full rounded-md object-contain shadow-sm"
+                    />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-secondary">
+                    <div className="flex h-64 w-64 items-center justify-center rounded-md bg-secondary">
                       <ControllerIcon size={64} strokeWidth={2.5} className="opacity-45" />
                     </div>
                   )}
