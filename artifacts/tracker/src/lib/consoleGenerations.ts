@@ -26,10 +26,3 @@ export const GENERATION_BADGE_STYLES: Record<ConsoleGeneration, string> = {
   previous: "bg-blue-500 text-white border-blue-600/60",
   retro:    "bg-destructive text-destructive-foreground border-destructive/60",
 }
-
-/** Plain text color (no background) for the detail page's generation label. */
-export const GENERATION_TEXT_STYLES: Record<ConsoleGeneration, string> = {
-  current:  "text-primary",
-  previous: "text-blue-400",
-  retro:    "text-destructive",
-}

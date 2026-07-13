@@ -4,13 +4,14 @@ import { Link, useParams } from "wouter"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { ControllerIcon } from "@/components/ControllerIcon"
+import { Badge } from "@/components/ui/badge"
 import { CONSOLE_IMAGES } from "@/lib/consoleImages"
 import { ConsoleListingCard, ConsoleListingCardSkeleton, type ConsoleListing } from "@/components/ConsoleListingCard"
 import { CONSOLE_SORT_OPTIONS, sortConsoleListings, type ConsoleSortValue } from "@/lib/consoleListingsSort"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
-import { GENERATION_LABELS, GENERATION_TEXT_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
+import { GENERATION_LABELS, GENERATION_BADGE_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
 import { ArrowLeft, Search, ChevronDown, ArrowUpDown } from "lucide-react"
 
 /** How many listings render initially, and how many more each "Show more" click reveals. */
@@ -125,9 +126,14 @@ export default function ConsoleDetail() {
                     <div className="h-8 w-64 animate-pulse rounded bg-muted/60" />
                   ) : (
                     <>
-                      <span className={`inline-block text-xs font-mono uppercase tracking-wide mb-1.5 ${consoleData ? GENERATION_TEXT_STYLES[consoleData.generation] : "text-primary"}`}>
-                        {consoleData && GENERATION_LABELS[consoleData.generation]}
-                      </span>
+                      {consoleData && (
+                        <Badge
+                          variant="outline"
+                          className={`mb-2 font-semibold text-xs uppercase tracking-wide shadow-sm ${GENERATION_BADGE_STYLES[consoleData.generation]}`}
+                        >
+                          {GENERATION_LABELS[consoleData.generation]}
+                        </Badge>
+                      )}
                       <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground">
                         {consoleData?.name}
                       </h1>

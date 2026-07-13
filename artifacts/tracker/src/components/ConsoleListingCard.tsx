@@ -26,9 +26,13 @@ function formatTimeLeft(endsAt: number): string | null {
 
 // Solid (opaque) fills to match the generation tag bubbles elsewhere on the
 // site — translucent badges over busy listing photos were hard to read.
+// Each condition/state gets its own distinct hue: New = brand green,
+// Used = teal (secondary's near-black was hard to see; avoids pink and
+// doesn't collide with the blue Previous-Gen or violet Auction badges also
+// shown on this page), Seller Refurbished = amber, Auction = violet.
 const CONDITION_STYLES: Record<ConsoleCondition, string> = {
   "New":                "bg-primary text-primary-foreground border-primary/60",
-  "Used":               "bg-secondary text-secondary-foreground border-secondary-border",
+  "Used":               "bg-teal-500 text-white border-teal-600/60",
   "Seller Refurbished": "bg-amber-500 text-white border-amber-600/60",
 }
 
