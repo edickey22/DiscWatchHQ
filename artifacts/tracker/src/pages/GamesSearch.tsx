@@ -594,6 +594,10 @@ export default function GamesSearch() {
               </FilterSelect>
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground/70 mt-2">
+            Tip: select a platform above for more precise, less cluttered search results.
+          </p>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════

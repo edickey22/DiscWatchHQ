@@ -18,6 +18,14 @@ const GENERATION_LABELS: Record<ConsoleSummary["generation"], string> = {
   retro:    "Retro",
 }
 
+// Current-Gen gets the primary brand green so it stands out as the newest
+// hardware; Previous-Gen/Retro stay neutral so they don't compete with it.
+const GENERATION_BADGE_STYLES: Record<ConsoleSummary["generation"], string> = {
+  current:  "bg-primary text-primary-foreground border-primary/60",
+  previous: "bg-secondary/80 text-muted-foreground border-border",
+  retro:    "bg-secondary/80 text-muted-foreground border-border",
+}
+
 /**
  * Fills the tile edge-to-edge (object-cover). Starts slightly zoomed in so
  * the crop reads intentional, then zooms back out to reveal more of the
@@ -63,7 +71,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleSummary }) {
         <div className="absolute top-2 right-2">
           <Badge
             variant="outline"
-            className="backdrop-blur-md font-semibold text-[10px] uppercase tracking-wide bg-secondary/80 text-muted-foreground border-border"
+            className={`backdrop-blur-md font-semibold text-[10px] uppercase tracking-wide shadow-sm ${GENERATION_BADGE_STYLES[generation]}`}
           >
             {GENERATION_LABELS[generation]}
           </Badge>
