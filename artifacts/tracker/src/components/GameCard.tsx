@@ -30,7 +30,7 @@ export function GameCard({ release, priority = false }: GameCardProps) {
 
   return (
     <div className={cn(
-      "group relative flex flex-col space-y-3 rounded-lg p-3 transition-all hover:bg-card/50",
+      "group relative flex flex-col space-y-3 rounded-lg p-3 border border-border/60 transition-all hover:bg-card/50 hover:border-primary",
       isSoldOut && "opacity-75"
     )}>
       {/* Cover Image — navigates to detail page */}

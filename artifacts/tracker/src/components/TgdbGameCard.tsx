@@ -185,7 +185,7 @@ export function CatalogGameCard({
 
   return (
     <article
-      className="group bg-card border border-card-border rounded-lg overflow-hidden flex flex-col hover:border-primary/30 transition-colors duration-150 cursor-pointer"
+      className="group bg-card border border-border/60 rounded-lg overflow-hidden flex flex-col hover:border-primary transition-colors duration-150 cursor-pointer"
       onClick={() => onClick?.(game)}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}

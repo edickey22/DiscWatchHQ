@@ -43,7 +43,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleSummary }) {
   return (
     <Link
       href={`/consoles/${id}`}
-      className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/40 transition-all hover:bg-card/70 hover:border-border"
+      className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/60 transition-all hover:bg-card/70 hover:border-primary"
     >
       {/* Image */}
       <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
