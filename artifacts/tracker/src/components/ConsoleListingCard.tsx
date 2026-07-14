@@ -41,7 +41,7 @@ const CONDITION_STYLES: Record<ConsoleCondition, string> = {
  */
 export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
   return (
-    <div className="group flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/40 transition-all hover:bg-card/70 hover:border-border">
+    <div className="group flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/60 transition-all hover:bg-card/70 hover:border-primary">
       <a
         href={listing.url}
         target="_blank"
