@@ -49,6 +49,15 @@ export const affiliateConfig = {
   amazon: {
     /** Amazon Associates tracking tag → AMAZON_ASSOCIATES_TAG secret */
     associatesTag: (process.env.AMAZON_ASSOCIATES_TAG ?? "").trim(),
+    /**
+     * Product Advertising API v5 credentials (AWS access key + secret,
+     * distinct from your AWS account root keys — see amazonClient.ts).
+     * → AMAZON_PA_API_KEY / AMAZON_PA_API_SECRET secrets
+     * Enables live Amazon price lookups; requires an approved Associates
+     * account with qualifying sales history before PA-API grants access.
+     */
+    paApiKey:    (process.env.AMAZON_PA_API_KEY ?? "").trim(),
+    paApiSecret: (process.env.AMAZON_PA_API_SECRET ?? "").trim(),
   },
 
   gamestop: {

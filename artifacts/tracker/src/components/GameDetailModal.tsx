@@ -46,6 +46,7 @@ interface LiveListing {
 interface LivePricing {
   ebay?:    LiveListing | null   // absent = not configured; null = configured, no result
   bestbuy?: LiveListing | null
+  amazon?:  LiveListing | null
 }
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
@@ -434,10 +435,12 @@ export function GameDetailModal({ game, onClose }: GameDetailModalProps) {
                         // unqualified live-pricing match.
                         ...(pricing?.ebay?.url    ? { ebay:    pricing.ebay.url    } : {}),
                         ...(pricing?.bestbuy?.url ? { bestbuy: pricing.bestbuy.url } : {}),
+                        ...(pricing?.amazon?.url  ? { amazon:  pricing.amazon.url  } : {}),
                       }}
                       prices={platformUrls ? {} : {
                         ebay:    pricing?.ebay?.price    ?? null,
                         bestbuy: pricing?.bestbuy?.price ?? null,
+                        amazon:  pricing?.amazon?.price  ?? null,
                       }}
                       platforms={displayed.platforms}
                       variant="detail"

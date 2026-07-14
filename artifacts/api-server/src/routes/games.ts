@@ -819,8 +819,10 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
 /**
  * GET /api/games/live-pricing/:sourceId?title=Game+Title
  *
- * Returns live price + direct listing URL for eBay and/or Best Buy for the
- * given catalog game, fetched from the respective retailer APIs.
+ * Returns live price + direct listing URL for Best Buy and/or Amazon for
+ * the given catalog game, fetched from the respective retailer APIs.
+ * (eBay is never included here — see catalogLivePricing.ts's module doc
+ * for why keyword-only eBay matching is unsafe for per-game pricing.)
  *
  * Results are served from a 4-hour in-process cache — the first open after
  * a cache miss triggers the real API calls; subsequent opens within 4 h are
@@ -830,11 +832,15 @@ router.get("/games/landing-covers", async (req, res): Promise<void> => {
  * When a retailer's credentials are not configured its key is absent from
  * the response (frontend falls back to the generic search URL).
  * When configured but no match found the key is present with value null.
+ * Amazon results are additionally filtered to the "Video Game" catalog
+ * binding plus a title blocklist, so accessories/guides/merch filed under
+ * Amazon's Video Games department never surface as a game's price — see
+ * amazonClient.ts.
  *
  * Response shape:
  *   {
- *     ebay?:    { price: number; url: string; cachedAt: number } | null,
  *     bestbuy?: { price: number; url: string; cachedAt: number } | null,
+ *     amazon?:  { price: number; url: string; cachedAt: number } | null,
  *   }
  */
 router.get("/games/live-pricing/:sourceId", async (req, res): Promise<void> => {

@@ -13,7 +13,7 @@
  * and writes to the releases DB table. Catalog game pricing is:
  *   - demand-driven  (only fetched when a user opens a game's detail modal)
  *   - not persisted  (in-process cache only — prices change too often for DB)
- *   - dual-retailer  (eBay + Best Buy, vs. eBay-only for boutique releases)
+ *   - multi-retailer (eBay excluded — see below; Best Buy + Amazon when configured)
  *
  * ── Cache strategy ───────────────────────────────────────────────────────────
  *
@@ -48,6 +48,7 @@
 
 import { logger } from "./logger";
 import { getBestBuyProduct, bestbuyConfigured } from "./bestbuyClient";
+import { getAmazonProduct, amazonPaApiConfigured } from "./amazonClient";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ export interface LivePricingResult {
   // correctly if this ever changes.
   ebay?:    LiveListing | null;
   bestbuy?: LiveListing | null;
+  amazon?:  LiveListing | null;
 }
 
 // ── In-process cache ──────────────────────────────────────────────────────────
@@ -105,8 +107,9 @@ export async function fetchLivePricing(
   // Each retailer fetch is individually guarded — one failure doesn't kill both.
   const now = Date.now();
 
-  const [bestbuySettled] = await Promise.allSettled([
+  const [bestbuySettled, amazonSettled] = await Promise.allSettled([
     bestbuyConfigured ? getBestBuyProduct(title) : Promise.resolve(undefined),
+    amazonPaApiConfigured ? getAmazonProduct(title) : Promise.resolve(undefined),
   ]);
 
   const result: LivePricingResult = {};
@@ -126,9 +129,24 @@ export async function fetchLivePricing(
     }
   }
 
+  if (amazonPaApiConfigured) {
+    if (amazonSettled.status === "fulfilled" && amazonSettled.value != null) {
+      result.amazon = {
+        price:    amazonSettled.value.price,
+        url:      amazonSettled.value.url,
+        cachedAt: now,
+      };
+    } else {
+      result.amazon = null;
+      if (amazonSettled.status === "rejected") {
+        logger.warn({ err: amazonSettled.reason, sourceId, title }, "Amazon product fetch failed");
+      }
+    }
+  }
+
   _cache.set(sourceId, { result, expiresAt: now + TTL_MS });
   logger.debug(
-    { sourceId, bestbuy: result.bestbuy?.price ?? null },
+    { sourceId, bestbuy: result.bestbuy?.price ?? null, amazon: result.amazon?.price ?? null },
     "catalogLivePricing: fetched and cached",
   );
 
