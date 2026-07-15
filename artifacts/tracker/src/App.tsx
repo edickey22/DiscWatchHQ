@@ -11,6 +11,7 @@ import Consoles from '@/pages/Consoles';
 import ConsoleDetail from '@/pages/ConsoleDetail';
 import PrivacyPage from '@/pages/PrivacyPage';
 import TermsPage from '@/pages/TermsPage';
+import AboutPage from '@/pages/AboutPage';
 
 // Tells GA4 about every client-side navigation.
 // gtag('config', ...) re-fires a page_view hit with the new path whenever
@@ -77,6 +78,7 @@ function AppRouter() {
       {/* Legal */}
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
+      <Route path="/about" component={AboutPage} />
       <Route component={NotFound} />
       </Switch>
     </>

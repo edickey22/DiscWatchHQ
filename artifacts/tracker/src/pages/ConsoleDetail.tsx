@@ -77,10 +77,29 @@ export default function ConsoleDetail() {
       ? `${consoleData.name} — Live eBay Listings | DiscWatchHQ`
       : "Console Listings | DiscWatchHQ",
     description: consoleData
-      ? `Multiple current eBay listings for the ${consoleData.name}, filtered to real complete consoles only — no manuals, parts, or accessories. Condition always clearly labeled.`
-      : "Live eBay console listings.",
+      ? `Live eBay listings for the ${consoleData.name} — filtered to complete consoles only, no parts or accessories. Condition clearly labeled: New, Used, or Seller Refurbished.`
+      : "Live eBay console listings — condition always clearly labeled.",
     canonical:   buildCanonicalUrl(`/consoles/${slug}`),
-    jsonLd:      null,
+    jsonLd: consoleData ? {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type":       "ItemPage",
+          "name":        `${consoleData.name} — Live eBay Listings | DiscWatchHQ`,
+          "url":         `https://discwatchhq.com/consoles/${slug}`,
+          "description": `Live eBay listings for the ${consoleData.name}, filtered to complete consoles only. Condition always clearly labeled.`,
+          "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home",     "item": "https://discwatchhq.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Consoles", "item": "https://discwatchhq.com/consoles" },
+            { "@type": "ListItem", "position": 3, "name": consoleData.name },
+          ],
+        },
+      ],
+    } : null,
   })
 
   return (

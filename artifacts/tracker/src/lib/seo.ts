@@ -255,7 +255,23 @@ export function buildReleaseJsonLd(
 
   schema["offers"] = offer
 
-  return schema
+  // Wrap in @graph alongside BreadcrumbList so Google can show breadcrumbs
+  // in SERPs and the Product/VideoGame entity is properly contained.
+  delete schema["@context"]
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      schema,
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home",             "item": "https://discwatchhq.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Boutique Tracker", "item": "https://discwatchhq.com/boutique" },
+          { "@type": "ListItem", "position": 3, "name": r.title,            "item": canonicalUrl },
+        ],
+      },
+    ],
+  }
 }
 
 // ── Canonical URL helper ──────────────────────────────────────────────────────

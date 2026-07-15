@@ -26,9 +26,16 @@ const SECTIONS: { generation: ConsoleSummary["generation"]; label: string; blurb
 export default function Consoles() {
   useDocumentHead({
     title:       "Consoles — Live eBay Listings for Every Platform | DiscWatchHQ",
-    description: "Browse live eBay listings for game consoles spanning every generation — PS5, Xbox Series X, Switch, and retro hardware like the N64, Genesis, and PS1. Condition always clearly labeled.",
+    description: "Browse live eBay listings for game consoles spanning every generation — PS5, Xbox Series X, Switch 2, and retro hardware like N64, Genesis, and PS1.",
     canonical:   buildCanonicalUrl("/consoles"),
-    jsonLd:      null,
+    jsonLd: {
+      "@context":    "https://schema.org",
+      "@type":       "CollectionPage",
+      "name":        "Game Consoles — Live eBay Listings | DiscWatchHQ",
+      "description": "Live eBay listings for game consoles spanning every generation, from PS5 Pro and Xbox Series X to retro hardware. Condition always clearly labeled.",
+      "url":         "https://discwatchhq.com/consoles",
+      "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
+    },
   })
 
   const { data, isLoading } = useQuery({

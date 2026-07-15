@@ -51,6 +51,13 @@ export function Footer({ showCatalogAttribution = false }: FooterProps) {
         {/* ── Legal links ── */}
         <div className="flex items-center gap-4 text-[11px] text-muted-foreground/90">
           <Link
+            href="/about"
+            className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+          >
+            About
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link
             href="/privacy"
             className="hover:text-muted-foreground transition-colors underline underline-offset-2"
           >

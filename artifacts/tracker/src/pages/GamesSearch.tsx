@@ -382,9 +382,16 @@ export default function GamesSearch() {
 
   useDocumentHead({
     title:       _pageTitle,
-    description: "Explore popular games, new releases, and the full physical game catalog across all platforms. Search 900,000+ titles with direct retailer links.",
+    description: "Search 900,000+ physical video games across every platform and generation. Compare prices and buy on GameStop, Amazon, eBay, and Best Buy — all in one search.",
     canonical:   buildCanonicalUrl("/games"),
-    jsonLd:      null,
+    jsonLd: {
+      "@context":    "https://schema.org",
+      "@type":       "CollectionPage",
+      "name":        "Browse Physical Games — DiscWatchHQ",
+      "description": "Search 900,000+ physical video games across every platform. Compare prices on GameStop, Amazon, eBay, and Best Buy.",
+      "url":         "https://discwatchhq.com/games",
+      "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
+    },
   })
 
   // Reset page whenever any search/filter parameter changes

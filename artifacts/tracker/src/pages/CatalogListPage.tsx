@@ -111,10 +111,17 @@ export default function CatalogListPage({ kind }: CatalogListPageProps) {
   const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null)
 
   useDocumentHead({
-    title:     cfg.docTitle,
+    title:       cfg.docTitle,
     description: cfg.docDesc,
-    canonical: buildCanonicalUrl(cfg.canonical),
-    jsonLd:    null,
+    canonical:   buildCanonicalUrl(cfg.canonical),
+    jsonLd: {
+      "@context":    "https://schema.org",
+      "@type":       "CollectionPage",
+      "name":        cfg.docTitle,
+      "description": cfg.docDesc,
+      "url":         `https://discwatchhq.com${cfg.canonical}`,
+      "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
+    },
   })
 
   const { data, isLoading } = useQuery<ListResponse>({

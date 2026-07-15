@@ -26,6 +26,7 @@ import { Router } from "express";
 import { desc } from "drizzle-orm";
 import { db, releasesTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { CONSOLE_MODELS } from "../lib/consoleModels";
 
 const router = Router();
 
@@ -93,6 +94,23 @@ router.get("/sitemap.xml", async (req, res): Promise<void> => {
 
     urlEntries.push(`
   <url>
+    <loc>${escapeXml(baseUrl)}/consoles</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`)
+
+    // Individual console pages
+    for (const console of CONSOLE_MODELS) {
+      urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/consoles/${escapeXml(console.slug)}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`)
+    }
+
+    urlEntries.push(`
+  <url>
     <loc>${escapeXml(baseUrl)}/games/popular</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -110,6 +128,27 @@ router.get("/sitemap.xml", async (req, res): Promise<void> => {
     <loc>${escapeXml(baseUrl)}/games/upcoming</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>`)
+
+    urlEntries.push(`
+  <url>
+    <loc>${escapeXml(baseUrl)}/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>`)
 
     // ── Release pages ────────────────────────────────────────────────────────

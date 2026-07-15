@@ -8,8 +8,9 @@
     <meta name='impact-site-verification' value='3e3bce1d-fbe7-4070-9d7d-89ad00275281'>
 
     <!-- ── Primary meta ──────────────────────────────────────────────────── -->
-    <title>DiscWatchHQ — Find Any Game, Buy Anywhere</title>
-    <meta name="description" content="Search 900,000+ physical games across every platform and generation. Jump straight to GameStop, Amazon, eBay, and Best Buy — plus real-time boutique limited-run drop tracking." />
+    <title>DiscWatchHQ — Find Any Physical Game, Buy Anywhere</title>
+    <meta name="description" content="Search 900,000+ physical games across every platform. Compare prices on GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases." />
+    <meta name="keywords" content="physical video games, physical game tracker, compare game prices, limited run games, buy physical games, GameStop, Amazon, eBay, Best Buy, game price comparison, boutique game tracker, limited edition games, physical game collector" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#21b557" />
 
@@ -18,8 +19,8 @@
     <meta property="og:type"        content="website" />
     <!-- og:url defaults to root; useDocumentHead overrides it dynamically per page -->
     <meta property="og:url"         content="https://discwatchhq.com/" />
-    <meta property="og:title"       content="DiscWatchHQ — Find Any Game, Buy Anywhere" />
-    <meta property="og:description" content="Search 900,000+ physical games across every platform. One search, four storefronts — GameStop, Amazon, eBay, Best Buy. Plus boutique limited-run drop tracker." />
+    <meta property="og:title"       content="DiscWatchHQ — Find Any Physical Game, Buy Anywhere" />
+    <meta property="og:description" content="Search 900,000+ physical games and compare prices across GameStop, Amazon, eBay, and Best Buy. Real-time limited-run boutique release tracking." />
     <meta property="og:image"       content="https://raw.githubusercontent.com/edickey22/DiscWatchHQ/main/artifacts/tracker/public/og-image.png" />
     <meta property="og:image:width"  content="1200" />
     <meta property="og:image:height" content="630" />
@@ -27,8 +28,10 @@
 
     <!-- ── Twitter / X Card ─────────────────────────────────────────────── -->
     <meta name="twitter:card"        content="summary_large_image" />
-    <meta name="twitter:title"       content="DiscWatchHQ — Find Any Game, Buy Anywhere" />
-    <meta name="twitter:description" content="Search 900,000+ physical games across every platform. One search, four storefronts — GameStop, Amazon, eBay, Best Buy. Plus boutique limited-run drop tracker." />
+    <meta name="twitter:site"        content="@DiscWatchHQ" />
+    <meta name="twitter:creator"     content="@DiscWatchHQ" />
+    <meta name="twitter:title"       content="DiscWatchHQ — Find Any Physical Game, Buy Anywhere" />
+    <meta name="twitter:description" content="Search 900,000+ physical games and compare prices across GameStop, Amazon, eBay, and Best Buy. Real-time limited-run boutique release tracking." />
     <meta name="twitter:image"       content="https://raw.githubusercontent.com/edickey22/DiscWatchHQ/main/artifacts/tracker/public/og-image.png" />
     <meta name="twitter:image:alt"   content="DiscWatchHQ — Find Any Game, Buy Anywhere" />
 
@@ -44,6 +47,9 @@
 
     <!-- ── PWA / Web App Manifest ────────────────────────────────────────── -->
     <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- ── Canonical URL (default; overridden per-page by useDocumentHead) ── -->
+    <link rel="canonical" href="https://discwatchhq.com/" />
 
     <!-- ── Google AdSense ───────────────────────────────────────────────── -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5084315305897479" crossorigin="anonymous"></script>
@@ -61,10 +67,62 @@
     <!-- ── Fonts ─────────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- font-display=swap is encoded in the URL so text stays visible during load -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ── Structured data: WebSite + Organization (static, always present) ─ -->
+    <!-- React's useDocumentHead targets #json-ld-schema for per-page data;
+         this #json-ld-site block is separate and is never touched by React. -->
+    <script type="application/ld+json" id="json-ld-site">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://discwatchhq.com/#website",
+          "name": "DiscWatchHQ",
+          "url": "https://discwatchhq.com",
+          "description": "Find physical video games and compare prices across GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases in real time.",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://discwatchhq.com/games?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://discwatchhq.com/#organization",
+          "name": "DiscWatchHQ",
+          "url": "https://discwatchhq.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://discwatchhq.com/icon-192.png",
+            "width": 192,
+            "height": 192
+          },
+          "sameAs": ["https://x.com/DiscWatchHQ"],
+          "description": "DiscWatchHQ is a physical video game tracker and price comparison tool covering GameStop, Amazon, eBay, and Best Buy."
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Fallback content for crawlers that don't execute JavaScript -->
+    <noscript>
+      <h1>DiscWatchHQ — Physical Game Tracker &amp; Price Comparison</h1>
+      <p>Search 900,000+ physical video games and compare prices across GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases from publishers including Limited Run Games, Strictly Limited Games, iam8bit, Super Rare Games, and Fangamer.</p>
+      <nav>
+        <a href="/games">Browse Games</a> |
+        <a href="/boutique">Boutique Tracker</a> |
+        <a href="/consoles">Consoles</a> |
+        <a href="/about">About</a>
+      </nav>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

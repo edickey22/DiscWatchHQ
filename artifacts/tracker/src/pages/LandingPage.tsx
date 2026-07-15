@@ -166,10 +166,28 @@ export default function LandingPage() {
       : "900,000+"
 
   useDocumentHead({
-    title:       "DiscWatchHQ — Find Any Game, Buy Anywhere",
-    description: `Search ${catalogLabel} physical games across every platform and generation. Jump directly to GameStop, Amazon, eBay, and Best Buy. Plus real-time boutique limited-run drop tracking.`,
+    title:       "DiscWatchHQ — Find Any Physical Game, Buy Anywhere",
+    description: `Search ${catalogLabel} physical games across every platform. Compare prices on GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases in real time.`,
     canonical:   buildCanonicalUrl("/"),
-    jsonLd:      null,
+    jsonLd: {
+      "@context":            "https://schema.org",
+      "@type":               "WebApplication",
+      "name":                "DiscWatchHQ",
+      "url":                 "https://discwatchhq.com",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem":     "Web",
+      "description":         "Find physical video games and compare prices across GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases in real time.",
+      "offers": {
+        "@type":         "Offer",
+        "price":         "0",
+        "priceCurrency": "USD",
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id":   "https://discwatchhq.com/#organization",
+        "name":  "DiscWatchHQ",
+      },
+    },
   })
   const { data: covers = [] } = useQuery({
     queryKey:  ["landing-covers-v2"],
@@ -517,6 +535,56 @@ export default function LandingPage() {
                 {pub}
               </span>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SEO CONTENT — keyword-rich descriptive section
+          Provides topical depth for search engines and long-scroll users.
+      ════════════════════════════════════════════════════════════════════ */}
+      <section className="py-14 border-t border-border/30 bg-secondary/10">
+        <div className="container mx-auto max-w-6xl px-4">
+          <h2 className="font-display text-2xl font-bold text-foreground mb-8">
+            Physical Game Tracker for Collectors &amp; Buyers
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-8 text-sm text-muted-foreground leading-relaxed">
+            <div className="space-y-4">
+              <p>
+                <strong className="text-foreground/80">DiscWatchHQ</strong> is a free physical
+                video game tracker and price comparison tool. Search{" "}
+                {catalogLabel ? `${catalogLabel} ` : ""}physical games — from classic NES and
+                Atari titles to the latest PS5, Xbox Series X, and Nintendo Switch 2 releases
+                — and compare buy links across GameStop, Amazon, eBay, and Best Buy in a
+                single search.
+              </p>
+              <p>
+                Every major platform is covered: PlayStation, Xbox, Nintendo Switch, PC, and
+                decades of retro hardware. Filter by platform or genre, sort by Metacritic
+                score or release date, and jump straight to your preferred retailer without
+                bouncing between tabs.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <p>
+                The <strong className="text-foreground/80">boutique tracker</strong> monitors
+                limited-run physical releases from publishers like Limited Run Games, Strictly
+                Limited Games, iam8bit, Super Rare Games, and Fangamer — updated every two
+                hours. See what's available now, what's coming soon, and find sold-out titles
+                on the secondary market via eBay.
+              </p>
+              <p>
+                Need hardware? Browse live eBay listings for 26+ console models across every
+                generation — PS5 Pro, Nintendo Switch 2, Xbox Series X, and retro systems
+                like the N64, SNES, and Sega Genesis — with condition always clearly labeled.{" "}
+                <Link
+                  href="/about"
+                  className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                >
+                  Learn more about DiscWatchHQ →
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </section>

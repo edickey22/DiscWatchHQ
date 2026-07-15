@@ -44,9 +44,27 @@ export default function Home() {
 
   useDocumentHead({
     title:       "Boutique Tracker — Limited-Run Physical Game Releases | DiscWatchHQ",
-    description: "Track limited-run physical game releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. See what's available now, coming soon, and recently sold out.",
+    description: "Track limited-run physical game releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. Available now, coming soon, and recently sold out.",
     canonical:   buildCanonicalUrl("/boutique"),
-    jsonLd:      null,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type":       "CollectionPage",
+          "name":        "Boutique Tracker — Limited-Run Physical Game Releases | DiscWatchHQ",
+          "url":         "https://discwatchhq.com/boutique",
+          "description": "Real-time tracking of limited-run physical game releases from boutique publishers including Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and Fangamer.",
+          "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home",             "item": "https://discwatchhq.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Boutique Tracker", "item": "https://discwatchhq.com/boutique" },
+          ],
+        },
+      ],
+    },
   })
 
   const debouncedSearch = useDebounce(search, 300)
