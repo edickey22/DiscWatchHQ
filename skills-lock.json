@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "audit-website": {
+      "source": "squirrelscan/skills",
+      "sourceType": "github",
+      "skillPath": "skills/audit-website/SKILL.md",
+      "computedHash": "da5839252ae281ecc7f56a70cf53850f9686dba51bfae7a2d07be150d6cd7f7f"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "781bd6d3f9b19f8c9af6b53d8d0e4876d0183841b565db34ca7092ffa412d111"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "f0916ca326ad6dbde1d0770b46956a213406b8ea4a19ed931bb4f2dc7d04c16d"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    }
+  }
+}
