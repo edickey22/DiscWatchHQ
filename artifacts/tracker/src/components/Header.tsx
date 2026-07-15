@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/games",    label: "Browse Games" },
   { href: "/boutique", label: "Boutique" },
   { href: "/consoles", label: "Consoles" },
+  { href: "/about",    label: "About" },
 ]
 
 async function fetchCatalogStats(): Promise<{ count: number }> {
@@ -77,6 +78,7 @@ export function Header() {
           {navLink("/games",    "Browse Games")}
           {navLink("/boutique", "Boutique")}
           {navLink("/consoles", "Consoles")}
+          {navLink("/about",    "About")}
         </nav>
 
         {/* ── Mobile nav trigger ───────────────────────────────────────── */}
