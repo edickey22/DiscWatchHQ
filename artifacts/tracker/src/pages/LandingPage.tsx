@@ -205,8 +205,8 @@ function StepRow({
       <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
         {icon}
       </div>
-      <h3 className="font-display font-bold text-2xl text-foreground">{title}</h3>
-      <p className="text-muted-foreground text-sm leading-relaxed max-w-md">{body}</p>
+      <h3 className="font-display font-bold text-3xl sm:text-4xl text-foreground">{title}</h3>
+      <p className="text-muted-foreground text-base leading-relaxed max-w-md">{body}</p>
     </div>
   )
 
@@ -511,10 +511,10 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="border-t border-border/30 bg-secondary/20">
         <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4 text-center">
-          <p className="text-xs font-mono uppercase tracking-widest text-primary/60 mb-4">
+          <p className="text-sm font-mono uppercase tracking-widest text-primary/60 mb-4">
             No account needed
           </p>
-          <h2 className="font-display text-4xl sm:text-5xl font-bold text-foreground">
+          <h2 className="font-display text-5xl sm:text-6xl font-bold text-foreground">
             How it works
           </h2>
         </div>
