@@ -20,6 +20,7 @@
  *   • Tiles are `aria-hidden` — purely decorative; no alt text needed.
  */
 
+import { useRef, useEffect, useState, type ReactNode } from "react"
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
@@ -143,6 +144,94 @@ function TileColumn({
   )
 }
 
+// ── How It Works — step data ─────────────────────────────────────────────────
+
+const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
+  {
+    num:   "01",
+    icon:  <Search className="text-primary" size={18} />,
+    title: "Search any title",
+    body:  "Search 899,000+ games across every platform and generation — NES to PS5, retro to new releases. Filter by platform, sort by Metacritic score or release date. Results are cached locally for instant repeat searches.",
+  },
+  {
+    num:   "02",
+    icon:  <ShoppingBag className="text-primary" size={18} />,
+    title: "Buy at four retailers",
+    body:  "Every game card links directly to GameStop, Amazon, eBay, and Best Buy. One search, four storefronts — find the best price or availability without tabbing between sites.",
+  },
+  {
+    num:   "03",
+    icon:  <Clock className="text-primary" size={18} />,
+    title: "Boutique drop tracker",
+    body:  "Limited-run physical releases from boutique publishers like Limited Run Games and Strictly Limited are monitored every 2 hours — Available\u00a0Now, Coming\u00a0Soon, and Sold\u00a0Out with preorder countdowns.",
+  },
+]
+
+// ── Step row — zigzag alternating layout with scroll-reveal ──────────────────
+
+function StepRow({
+  num, icon, title, body, index,
+}: { num: string; icon: ReactNode; title: string; body: string; index: number }) {
+  const rowRef                = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = rowRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === "undefined") { setVisible(true); return }
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold: 0.15 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  const flip = index % 2 === 1
+
+  const content = (
+    <div className="flex-1 py-10 md:py-14 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-primary/60">
+          Step {num}
+        </span>
+      </div>
+      <h3 className="font-display font-bold text-2xl text-foreground">{title}</h3>
+      <p className="text-muted-foreground text-sm leading-relaxed max-w-md">{body}</p>
+    </div>
+  )
+
+  const decoration = (
+    <div
+      className="hidden md:flex flex-1 items-center justify-center pointer-events-none select-none"
+      aria-hidden="true"
+    >
+      <span className="font-mono font-black leading-none text-[clamp(6rem,11vw,9.5rem)] text-primary/[0.07]">
+        {num}
+      </span>
+    </div>
+  )
+
+  return (
+    <div
+      ref={rowRef}
+      className="transition-[opacity,transform] duration-700 ease-out"
+      style={{
+        opacity:   visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(2.5rem)",
+        transitionDelay: `${index * 100}ms`,
+      }}
+    >
+      <div className={`flex flex-col md:flex-row ${flip ? "md:flex-row-reverse" : ""} items-center`}>
+        {flip ? <>{decoration}{content}</> : <>{content}{decoration}</>}
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -189,6 +278,21 @@ export default function LandingPage() {
       },
     },
   })
+  // Scroll-reveal for the staggered pathway cards
+  const cardsRef                = useRef<HTMLDivElement>(null)
+  const [cardsVisible, setCardsVisible] = useState(false)
+  useEffect(() => {
+    const el = cardsRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === "undefined") { setCardsVisible(true); return }
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setCardsVisible(true); obs.disconnect() } },
+      { threshold: 0.1 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   const { data: covers = [] } = useQuery({
     queryKey:  ["landing-covers-v2"],
     queryFn:   fetchCovers,
@@ -385,134 +489,148 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════════════
-          HOW IT WORKS
+          HOW IT WORKS — zigzag alternating rows with scroll-reveal
       ════════════════════════════════════════════════════════════════════ */}
-      <section className="border-t border-border/30 py-20 bg-secondary/20">
-        <div className="container mx-auto max-w-6xl px-4">
-          <h2 className="font-display text-3xl font-bold text-foreground mb-12">
+      <section className="border-t border-border/30 bg-secondary/20">
+        <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-3">
+            Three steps · no account needed
+          </p>
+          <h2 className="font-display text-3xl font-bold text-foreground">
             How it works
           </h2>
-          <div className="grid sm:grid-cols-3 gap-10">
-            <div className="space-y-4">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Search className="text-primary" size={18} />
-              </div>
-              <h3 className="font-display font-bold text-xl text-foreground">Search any title</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Search 899,000+ games across every platform and generation — NES to PS5,
-                retro to new releases. Filter by platform, sort by Metacritic score or
-                release date. Results are cached locally for instant repeat searches.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <ShoppingBag className="text-primary" size={18} />
-              </div>
-              <h3 className="font-display font-bold text-xl text-foreground">Buy at four retailers</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Every game card links directly to GameStop, Amazon, eBay, and Best Buy.
-                One search, four storefronts — find the best price or availability without
-                tabbing between sites.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Clock className="text-primary" size={18} />
-              </div>
-              <h3 className="font-display font-bold text-xl text-foreground">Boutique drop tracker</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Limited-run physical releases from boutique publishers like Limited Run
-                Games and Strictly Limited are monitored every 2 hours — Available&nbsp;Now,
-                Coming&nbsp;Soon, and Sold&nbsp;Out with preorder countdowns.
-              </p>
-            </div>
+        </div>
+        <div className="container mx-auto max-w-6xl px-4 pb-10">
+          <div className="divide-y divide-border/20">
+            {STEPS.map((step, i) => (
+              <StepRow key={step.num} {...step} index={i} />
+            ))}
           </div>
         </div>
       </section>
 
+      {/* ── Visual break: gradient line + background shift ── */}
+      <div className="relative" aria-hidden="true">
+        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <div className="h-8 bg-gradient-to-b from-secondary/20 to-background" />
+      </div>
+
       {/* ════════════════════════════════════════════════════════════════════
-          PATHWAY CARDS
+          PATHWAY CARDS — per-section accent colours, staggered reveal
       ════════════════════════════════════════════════════════════════════ */}
-      <section className="py-16 border-t border-border/30">
+      <section className="pb-16 bg-background">
         <div className="container mx-auto max-w-6xl px-4">
-          {/* Single column on mobile, straight to 3 columns at lg — no 2-column
-              intermediate step, so 3 cards never split into an uneven 2-then-1. */}
-          <div className="grid lg:grid-cols-3 gap-5">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-8">
+            Where to start
+          </p>
+          {/* Single column on mobile, straight to 3 columns at lg */}
+          <div ref={cardsRef} className="grid lg:grid-cols-3 gap-5">
 
-            {/* Browse Games — all three cards share identical primary-accent
-                treatment (border, background tint, icon badge, arrow, label
-                color) so none reads as more important than the others. */}
-            <Link
-              href="/games"
-              className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
+            {/* ── Browse Games — primary green accent ── */}
+            <div
+              className="transition-[opacity,transform] duration-700 ease-out"
+              style={{
+                opacity:         cardsVisible ? 1 : 0,
+                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionDelay: "0ms",
+              }}
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <Library className="text-primary" size={22} />
+              <Link
+                href="/games"
+                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 border-t-primary bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 hover:border-t-primary transition-colors duration-200 p-8"
+              >
+                <div className="flex items-start justify-between mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <Library className="text-primary" size={22} />
+                  </div>
+                  <ChevronRight
+                    className="text-primary/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
+                    size={20}
+                  />
                 </div>
-                <ChevronRight
-                  className="text-primary/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
-                  size={20}
-                />
-              </div>
-              <h3 className="font-display font-black text-2xl text-foreground mb-2">Browse Games</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
-                Explore the full game catalog — popular titles, new releases, every
-                platform from NES to PS5 — with direct retailer buy links.
-              </p>
-              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
-                {catalogStats?.count?.toLocaleString() ?? "—"} games indexed and counting →
-              </div>
-            </Link>
+                <h3 className="font-display font-black text-2xl text-foreground mb-2">Browse Games</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                  Explore the full game catalog — popular titles, new releases, every
+                  platform from NES to PS5 — with direct retailer buy links.
+                </p>
+                <div className="text-xs font-mono text-primary/80 uppercase tracking-wider">
+                  {catalogStats?.count?.toLocaleString() ?? "—"} games indexed and counting →
+                </div>
+              </Link>
+            </div>
 
-            {/* Boutique Tracker */}
-            <Link
-              href="/boutique"
-              className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
+            {/* ── Boutique Tracker — amber accent ── */}
+            <div
+              className="transition-[opacity,transform] duration-700 ease-out"
+              style={{
+                opacity:         cardsVisible ? 1 : 0,
+                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionDelay: "120ms",
+              }}
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <Bell className="text-primary" size={22} />
+              <Link
+                href="/boutique"
+                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 transition-colors duration-200 p-8"
+                style={{ borderTopColor: "#f59e0b" }}
+              >
+                <div className="flex items-start justify-between mb-6">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: "rgba(245,158,11,0.12)" }}>
+                    <Bell size={22} style={{ color: "#f59e0b" }} />
+                  </div>
+                  <ChevronRight
+                    className="text-muted-foreground/30 group-hover:translate-x-0.5 transition-all mt-1"
+                    style={{ color: "rgba(245,158,11,0.4)" }}
+                    size={20}
+                  />
                 </div>
-                <ChevronRight
-                  className="text-primary/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
-                  size={20}
-                />
-              </div>
-              <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
-                Real-time scarcity tracking for limited-run physical releases from 9
-                boutique publishers. Preorder windows, countdowns, and secondary-market
-                links for sold-out titles.
-              </p>
-              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
-                {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
-              </div>
-            </Link>
+                <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                  Real-time scarcity tracking for limited-run physical releases from 9
+                  boutique publishers. Preorder windows, countdowns, and secondary-market
+                  links for sold-out titles.
+                </p>
+                <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(245,158,11,0.75)" }}>
+                  {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
+                </div>
+              </Link>
+            </div>
 
-            {/* Consoles */}
-            <Link
-              href="/consoles"
-              className="group block rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 p-8"
+            {/* ── Consoles — sky-blue accent ── */}
+            <div
+              className="transition-[opacity,transform] duration-700 ease-out"
+              style={{
+                opacity:         cardsVisible ? 1 : 0,
+                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionDelay: "240ms",
+              }}
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <ControllerIcon size={22} strokeWidth={1.75} />
+              <Link
+                href="/consoles"
+                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 transition-colors duration-200 p-8"
+                style={{ borderTopColor: "#38bdf8" }}
+              >
+                <div className="flex items-start justify-between mb-6">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: "rgba(56,189,248,0.12)" }}>
+                    <ControllerIcon size={22} strokeWidth={1.75} color="#38bdf8" />
+                  </div>
+                  <ChevronRight
+                    className="group-hover:translate-x-0.5 transition-all mt-1"
+                    style={{ color: "rgba(56,189,248,0.4)" }}
+                    size={20}
+                  />
                 </div>
-                <ChevronRight
-                  className="text-primary/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
-                  size={20}
-                />
-              </div>
-              <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
-                Live eBay listings for hardware across every era — current-gen flagships
-                down to 16-bit retro — with condition always clearly labeled.
-              </p>
-              <div className="text-xs font-mono text-primary/95 uppercase tracking-wider">
-                {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
-              </div>
-            </Link>
+                <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                  Live eBay listings for hardware across every era — current-gen flagships
+                  down to 16-bit retro — with condition always clearly labeled.
+                </p>
+                <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(56,189,248,0.7)" }}>
+                  {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
+                </div>
+              </Link>
+            </div>
 
           </div>
         </div>
