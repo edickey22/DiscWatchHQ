@@ -206,7 +206,7 @@ function StepRow({
         {icon}
       </div>
       <h3 className="font-display font-bold text-3xl sm:text-4xl text-foreground">{title}</h3>
-      <p className="text-muted-foreground text-base leading-relaxed max-w-md">{body}</p>
+      <p className="text-muted-foreground text-lg leading-relaxed max-w-md">{body}</p>
     </div>
   )
 
