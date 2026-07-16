@@ -57,9 +57,16 @@ function AppRouter() {
     <>
       <GaPageView />
       <ScrollToTop />
-      {/* Suspense wraps all lazy routes — shows nothing while the chunk loads
-          (pages have their own skeleton states so a fallback spinner isn't needed) */}
-      <Suspense fallback={null}>
+      {/* Suspense wraps all lazy routes. The fallback is a full-height dark
+          screen with a subtle pulse so the page never goes blank mid-nav. */}
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            <span className="text-xs font-mono text-muted-foreground/50 tracking-widest uppercase">Loading</span>
+          </div>
+        </div>
+      }>
         <Switch>
           {/* Landing page — splashy entry point */}
           <Route path="/" component={LandingPage} />

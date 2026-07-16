@@ -85,14 +85,14 @@ const DATA_SOURCES = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Thin eyebrow rule used above each section heading. */
+/** Section eyebrow — prominent label above each heading. */
 function SectionEyebrow({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 mb-7">
-      <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-primary/75">
+    <div className="flex items-center gap-3 mb-5">
+      <span className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-primary">
         {label}
       </span>
-      <span className="flex-1 h-px bg-border/35" />
+      <span className="flex-1 h-px bg-primary/20" />
     </div>
   )
 }
@@ -190,39 +190,39 @@ export default function AboutPage() {
         <div className="container mx-auto max-w-6xl px-4 py-16">
 
           {/* ── Features ── */}
-          <section className="mb-20">
+          <section className="mb-16">
             <SectionEyebrow label="Features" />
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-10">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-10">
               What DiscWatchHQ does
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
               {FEATURES.map(item => (
                 <div key={item.heading} className="rounded-2xl border border-border/30 bg-secondary/10 hover:bg-secondary/20 transition-colors p-8 space-y-4">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                     {item.icon}
                   </div>
-                  <h3 className="font-display font-bold text-foreground text-xl leading-snug">{item.heading}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{item.body}</p>
+                  <h3 className="font-display font-bold text-foreground text-2xl leading-snug">{item.heading}</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed">{item.body}</p>
                 </div>
               ))}
             </div>
           </section>
 
           {/* ── Who it's for + Publishers — side by side ── */}
-          <section className="mb-20 pt-14 border-t border-border/30">
-            <div className="grid lg:grid-cols-2 gap-14">
+          <section className="mb-16 pt-12 border-t border-border/30">
+            <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
 
               {/* Who it's for */}
               <div>
                 <SectionEyebrow label="Audience" />
-                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">Who it's for</h2>
-                <p className="text-muted-foreground leading-relaxed mb-8">
+                <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">Who it's for</h2>
+                <p className="text-base text-muted-foreground leading-relaxed mb-8">
                   DiscWatchHQ is built for anyone who prefers owning physical copies of video
                   games. That includes game collectors building complete platform libraries,
                   buyers comparing retail prices before purchasing, and fans of limited-edition
                   physical releases who want to catch preorder windows before they close.
                 </p>
-                <blockquote className="pl-6 py-1 border-l-2 border-primary">
+                <blockquote className="pl-6 py-2 border-l-2 border-primary">
                   <p className="text-base text-foreground/85 leading-relaxed">
                     If you've ever searched multiple retailer websites to find a physical copy of
                     a game, missed a Limited Run Games preorder window, or wanted to know whether
@@ -235,10 +235,10 @@ export default function AboutPage() {
               {/* Publishers */}
               <div>
                 <SectionEyebrow label="Publishers" />
-                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+                <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
                   Boutique publishers we track
                 </h2>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-base text-muted-foreground mb-6">
                   The{" "}
                   <Link href="/boutique" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
                     Boutique Tracker
@@ -249,7 +249,7 @@ export default function AboutPage() {
                   {PUBLISHERS_TRACKED.map(p => (
                     <span
                       key={p}
-                      className="text-xs font-mono text-primary/90 border border-primary/25 bg-primary/5 px-3 py-1.5 rounded-full hover:border-primary/45 hover:bg-primary/10 transition-colors"
+                      className="text-sm font-mono text-primary/90 border border-primary/25 bg-primary/5 px-3 py-2 rounded-full hover:border-primary/45 hover:bg-primary/10 transition-colors"
                     >
                       {p}
                     </span>
@@ -261,17 +261,17 @@ export default function AboutPage() {
           </section>
 
           {/* ── Console tracking + Data sources — side by side ── */}
-          <section className="mb-20 pt-14 border-t border-border/30">
-            <div className="grid lg:grid-cols-2 gap-14">
+          <section className="mb-16 pt-12 border-t border-border/30">
+            <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
 
               {/* Console tracking */}
               <div>
                 <SectionEyebrow label="Hardware" />
-                <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-                  <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+                  <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground">
                     Console price tracking
                   </h2>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-mono text-primary/90 shrink-0 self-start mt-1">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-mono text-primary/90 shrink-0 self-start">
                     <span className="relative flex h-1.5 w-1.5 shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
@@ -279,7 +279,7 @@ export default function AboutPage() {
                     26+ consoles tracked
                   </span>
                 </div>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   The{" "}
                   <Link href="/consoles" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
                     Consoles section
@@ -295,7 +295,7 @@ export default function AboutPage() {
               {/* Data sources */}
               <div>
                 <SectionEyebrow label="Data" />
-                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-8">Data sources</h2>
+                <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-7">Data sources</h2>
                 <div className="grid sm:grid-cols-2 gap-3 mb-6">
                   {DATA_SOURCES.map(src => (
                     <a
@@ -308,13 +308,13 @@ export default function AboutPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {src.icon}
-                          <span className="font-display font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                          <span className="font-display font-bold text-base text-foreground group-hover:text-primary transition-colors">
                             {src.name}
                           </span>
                         </div>
-                        <ExternalLink size={12} className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
+                        <ExternalLink size={13} className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
                       </div>
-                      <p className="text-[13px] text-muted-foreground leading-relaxed">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         {src.detail}
                       </p>
                     </a>
@@ -331,14 +331,14 @@ export default function AboutPage() {
           </section>
 
           {/* ── Contact ── */}
-          <section className="mb-10 pt-14 border-t border-border/30">
+          <section className="mb-10 pt-12 border-t border-border/30">
             <div className="rounded-2xl border border-primary/20 bg-primary/5 px-10 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8">
               <div>
                 <SectionEyebrow label="Contact" />
-                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+                <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-3">
                   Contact &amp; feedback
                 </h2>
-                <p className="text-muted-foreground leading-relaxed max-w-lg">
+                <p className="text-base text-muted-foreground leading-relaxed max-w-lg">
                   Questions, bug reports, missing publishers, or feature suggestions?
                   Reach out on X (Twitter).
                 </p>
