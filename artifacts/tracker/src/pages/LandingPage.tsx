@@ -523,7 +523,7 @@ export default function LandingPage() {
           HOW IT WORKS — zigzag alternating rows with scroll-reveal
       ════════════════════════════════════════════════════════════════════ */}
       <section className="border-t border-border/30 bg-secondary/20">
-        <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4">
+        <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4 text-center">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-3">
             Three steps · no account needed
           </p>
@@ -651,38 +651,50 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* ── Consoles — sky-blue accent ── */}
+            {/* ── Consoles — sky-blue accent, photo bg ── */}
             <div
-              className="transition-[opacity,transform] duration-700 ease-out"
               style={{
-                opacity:         cardsVisible ? 1 : 0,
-                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionDelay: "240ms",
+                opacity:                  cardsVisible ? 1 : 0,
+                transform:                cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionProperty:       "opacity, transform",
+                transitionDuration:       "700ms",
+                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+                transitionDelay:          "240ms",
               }}
             >
               <Link
                 href="/consoles"
-                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 transition-colors duration-200 p-8"
+                className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"
                 style={{ borderTopColor: "#38bdf8" }}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "rgba(56,189,248,0.12)" }}>
-                    <ControllerIcon size={22} strokeWidth={1.75} color="#38bdf8" />
+                {/* Photo background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url('/images/card-consoles.jpg')" }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-background/92 via-background/80 to-background/55" />
+                {/* Content */}
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "rgba(56,189,248,0.12)" }}>
+                      <ControllerIcon size={22} strokeWidth={1.75} color="#38bdf8" />
+                    </div>
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition-all mt-1"
+                      style={{ color: "rgba(56,189,248,0.4)" }}
+                      size={20}
+                    />
                   </div>
-                  <ChevronRight
-                    className="group-hover:translate-x-0.5 transition-all mt-1"
-                    style={{ color: "rgba(56,189,248,0.4)" }}
-                    size={20}
-                  />
-                </div>
-                <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                  Live eBay listings for hardware across every era — current-gen flagships
-                  down to 16-bit retro — with condition always clearly labeled.
-                </p>
-                <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(56,189,248,0.7)" }}>
-                  {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
+                  <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                    Live eBay listings for hardware across every era — current-gen flagships
+                    down to 16-bit retro — with condition always clearly labeled.
+                  </p>
+                  <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(56,189,248,0.7)" }}>
+                    {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
+                  </div>
                 </div>
               </Link>
             </div>
