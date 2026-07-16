@@ -144,7 +144,13 @@ function TileColumn({
   )
 }
 
-// ── How It Works — step data ─────────────────────────────────────────────────
+// ── How It Works — step data & images ────────────────────────────────────────
+
+const STEP_IMAGES = [
+  { src: "/images/step-search.jpg",    alt: "A collection of Nintendo game cartridges" },
+  { src: "/images/step-checkout.jpg",  alt: "Person holding a card at checkout"        },
+  { src: "/images/step-collector.jpg", alt: "Premium black collector's edition box"     },
+]
 
 const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
   {
@@ -167,7 +173,7 @@ const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
   },
 ]
 
-// ── Step row — zigzag alternating layout with scroll-reveal ──────────────────
+// ── Step row — zigzag alternating layout with scroll-reveal + photo ──────────
 
 function StepRow({
   num, icon, title, body, index,
@@ -181,16 +187,21 @@ function StepRow({
     if (typeof IntersectionObserver === "undefined") { setVisible(true); return }
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.15 },
+      // rootMargin keeps the animation from firing until the user has
+      // genuinely scrolled the section into view — avoids instant-trigger
+      // on tall viewports where the section is technically "visible" on load.
+      { threshold: 0.15, rootMargin: "-100px" },
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
 
-  const flip = index % 2 === 1
+  // true  → image on the LEFT,  text on the right
+  // false → text on the LEFT,   image on the right
+  const imageLeft = index % 2 === 1
 
   const content = (
-    <div className="flex-1 py-10 md:py-14 space-y-5">
+    <div className="flex-1 py-10 md:py-14 md:pr-6 space-y-5">
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
           {icon}
@@ -204,29 +215,49 @@ function StepRow({
     </div>
   )
 
-  const decoration = (
-    <div
-      className="hidden md:flex flex-1 items-center justify-center pointer-events-none select-none"
-      aria-hidden="true"
-    >
-      <span className="font-mono font-black leading-none text-[clamp(6rem,11vw,9.5rem)] text-primary/[0.07]">
-        {num}
-      </span>
+  const photo = (
+    <div className="hidden md:block flex-1 py-8 shrink-0">
+      <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: "4/3" }}>
+        <img
+          src={STEP_IMAGES[index].src}
+          alt={STEP_IMAGES[index].alt}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+        {/* Subtle dark vignette so the step number overlay is legible */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        {/* Faint step-number watermark in the image corner */}
+        <span
+          className="absolute bottom-3 right-4 font-mono font-black leading-none select-none pointer-events-none"
+          style={{ fontSize: "clamp(3rem,7vw,5.5rem)", color: "rgba(255,255,255,0.10)" }}
+          aria-hidden="true"
+        >
+          {num}
+        </span>
+      </div>
     </div>
   )
 
   return (
     <div
       ref={rowRef}
-      className="transition-[opacity,transform] duration-700 ease-out"
+      // All transition properties set inline so Tailwind class ordering
+      // can never accidentally reset transition-duration to its 150ms default.
       style={{
-        opacity:   visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(2.5rem)",
-        transitionDelay: `${index * 100}ms`,
+        opacity:                visible ? 1 : 0,
+        transform:              visible ? "translateY(0)" : "translateY(2rem)",
+        transitionProperty:     "opacity, transform",
+        transitionDuration:     "700ms",
+        transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+        transitionDelay:        `${index * 120}ms`,
       }}
     >
-      <div className={`flex flex-col md:flex-row ${flip ? "md:flex-row-reverse" : ""} items-center`}>
-        {flip ? <>{decoration}{content}</> : <>{content}{decoration}</>}
+      {/* Simple flex-row; swap JSX child order to achieve the left/right alternation.
+          No flex-row-reverse (which would invert both DOM order AND visual order,
+          accidentally putting both halves on the same side). */}
+      <div className="flex flex-col md:flex-row md:gap-12 items-center">
+        {imageLeft ? <>{photo}{content}</> : <>{content}{photo}</>}
       </div>
     </div>
   )
@@ -287,7 +318,7 @@ export default function LandingPage() {
     if (typeof IntersectionObserver === "undefined") { setCardsVisible(true); return }
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setCardsVisible(true); obs.disconnect() } },
-      { threshold: 0.1 },
+      { threshold: 0.1, rootMargin: "-100px" },
     )
     obs.observe(el)
     return () => obs.disconnect()
@@ -526,72 +557,96 @@ export default function LandingPage() {
           {/* Single column on mobile, straight to 3 columns at lg */}
           <div ref={cardsRef} className="grid lg:grid-cols-3 gap-5">
 
-            {/* ── Browse Games — primary green accent ── */}
+            {/* ── Browse Games — primary green accent, photo bg ── */}
             <div
-              className="transition-[opacity,transform] duration-700 ease-out"
               style={{
-                opacity:         cardsVisible ? 1 : 0,
-                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionDelay: "0ms",
+                opacity:                cardsVisible ? 1 : 0,
+                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionProperty:     "opacity, transform",
+                transitionDuration:     "700ms",
+                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+                transitionDelay:        "0ms",
               }}
             >
               <Link
                 href="/games"
-                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 border-t-primary bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 hover:border-t-primary transition-colors duration-200 p-8"
+                className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 border-t-primary overflow-hidden hover:border-border/50 hover:border-t-primary transition-colors duration-200 p-8"
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                    <Library className="text-primary" size={22} />
+                {/* Photo background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url('/images/card-games-spread.jpg')" }}
+                />
+                {/* Dark overlay — dense at bottom so stat line stays readable */}
+                <div className="absolute inset-0 bg-gradient-to-br from-background/92 via-background/80 to-background/55" />
+                {/* Content */}
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
+                      <Library className="text-primary" size={22} />
+                    </div>
+                    <ChevronRight
+                      className="text-primary/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
+                      size={20}
+                    />
                   </div>
-                  <ChevronRight
-                    className="text-primary/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1"
-                    size={20}
-                  />
-                </div>
-                <h3 className="font-display font-black text-2xl text-foreground mb-2">Browse Games</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                  Explore the full game catalog — popular titles, new releases, every
-                  platform from NES to PS5 — with direct retailer buy links.
-                </p>
-                <div className="text-xs font-mono text-primary/80 uppercase tracking-wider">
-                  {catalogStats?.count?.toLocaleString() ?? "—"} games indexed and counting →
+                  <h3 className="font-display font-black text-2xl text-foreground mb-2">Browse Games</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                    Explore the full game catalog — popular titles, new releases, every
+                    platform from NES to PS5 — with direct retailer buy links.
+                  </p>
+                  <div className="text-xs font-mono text-primary/80 uppercase tracking-wider">
+                    {catalogStats?.count?.toLocaleString() ?? "—"} games indexed and counting →
+                  </div>
                 </div>
               </Link>
             </div>
 
-            {/* ── Boutique Tracker — amber accent ── */}
+            {/* ── Boutique Tracker — amber accent, photo bg ── */}
             <div
-              className="transition-[opacity,transform] duration-700 ease-out"
               style={{
-                opacity:         cardsVisible ? 1 : 0,
-                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionDelay: "120ms",
+                opacity:                cardsVisible ? 1 : 0,
+                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
+                transitionProperty:     "opacity, transform",
+                transitionDuration:     "700ms",
+                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+                transitionDelay:        "120ms",
               }}
             >
               <Link
                 href="/boutique"
-                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 transition-colors duration-200 p-8"
+                className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"
                 style={{ borderTopColor: "#f59e0b" }}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "rgba(245,158,11,0.12)" }}>
-                    <Bell size={22} style={{ color: "#f59e0b" }} />
+                {/* Photo background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url('/images/card-shipping-box.jpg')" }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-background/92 via-background/80 to-background/55" />
+                {/* Content */}
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "rgba(245,158,11,0.12)" }}>
+                      <Bell size={22} style={{ color: "#f59e0b" }} />
+                    </div>
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition-all mt-1"
+                      style={{ color: "rgba(245,158,11,0.4)" }}
+                      size={20}
+                    />
                   </div>
-                  <ChevronRight
-                    className="text-muted-foreground/30 group-hover:translate-x-0.5 transition-all mt-1"
-                    style={{ color: "rgba(245,158,11,0.4)" }}
-                    size={20}
-                  />
-                </div>
-                <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                  Real-time scarcity tracking for limited-run physical releases from 9
-                  boutique publishers. Preorder windows, countdowns, and secondary-market
-                  links for sold-out titles.
-                </p>
-                <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(245,158,11,0.75)" }}>
-                  {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
+                  <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                    Real-time scarcity tracking for limited-run physical releases from 9
+                    boutique publishers. Preorder windows, countdowns, and secondary-market
+                    links for sold-out titles.
+                  </p>
+                  <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(245,158,11,0.75)" }}>
+                    {stats?.available ?? "—"} available now · {stats?.comingSoon ?? "—"} coming soon →
+                  </div>
                 </div>
               </Link>
             </div>
