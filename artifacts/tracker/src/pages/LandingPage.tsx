@@ -511,10 +511,10 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="border-t border-border/30 bg-secondary/20">
         <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4 text-center">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-3">
+          <p className="text-xs font-mono uppercase tracking-widest text-primary/60 mb-4">
             No account needed
           </p>
-          <h2 className="font-display text-3xl font-bold text-foreground">
+          <h2 className="font-display text-4xl sm:text-5xl font-bold text-foreground">
             How it works
           </h2>
         </div>
