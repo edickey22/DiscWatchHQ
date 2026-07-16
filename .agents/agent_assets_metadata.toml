@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "s4Pt-AGZa3PqmHuAL0Jf8"
+uri = "file://artifacts/tracker/public/og-image.png"
+type = "image"
+title = "Social Media Preview Image (OG Image)"
