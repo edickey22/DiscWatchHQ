@@ -202,13 +202,8 @@ function StepRow({
 
   const content = (
     <div className="flex-1 py-10 md:py-14 md:pr-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-primary/60">
-          Step {num}
-        </span>
+      <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+        {icon}
       </div>
       <h3 className="font-display font-bold text-2xl text-foreground">{title}</h3>
       <p className="text-muted-foreground text-sm leading-relaxed max-w-md">{body}</p>
@@ -225,16 +220,8 @@ function StepRow({
           loading="lazy"
           decoding="async"
         />
-        {/* Subtle dark vignette so the step number overlay is legible */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-        {/* Faint step-number watermark in the image corner */}
-        <span
-          className="absolute bottom-3 right-4 font-mono font-black leading-none select-none pointer-events-none"
-          style={{ fontSize: "clamp(3rem,7vw,5.5rem)", color: "rgba(255,255,255,0.10)" }}
-          aria-hidden="true"
-        >
-          {num}
-        </span>
+        {/* Subtle dark vignette along the bottom edge */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
       </div>
     </div>
   )
@@ -525,7 +512,7 @@ export default function LandingPage() {
       <section className="border-t border-border/30 bg-secondary/20">
         <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4 text-center">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-3">
-            Three steps · no account needed
+            No account needed
           </p>
           <h2 className="font-display text-3xl font-bold text-foreground">
             How it works
