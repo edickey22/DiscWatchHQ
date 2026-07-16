@@ -253,11 +253,11 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
           })}
         </div>
 
-        {/* ── Strategy guides — secondary discovery, not a primary CTA ── */}
+        {/* ── Strategy guides — clearly visible secondary buttons ── */}
         {guideUrls && (
-          <div className="mt-3 pt-2.5 border-t border-border/15">
-            <p className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/90 uppercase tracking-widest mb-2">
-              <BookOpen size={10} className="opacity-70 shrink-0" />
+          <div className="mt-3 pt-3 border-t border-border/25">
+            <p className="flex items-center gap-1.5 text-[10px] font-mono text-foreground/60 uppercase tracking-widest mb-2.5">
+              <BookOpen size={11} className="shrink-0" />
               Strategy Guides
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -266,12 +266,12 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 onClick={e => e.stopPropagation()}
-                className="group flex flex-col gap-1 rounded border border-border/25 bg-secondary/20 px-3 py-2.5 hover:border-border/50 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="group flex flex-col gap-1 rounded border border-border/50 bg-secondary/50 px-3 py-2.5 hover:border-primary/35 hover:bg-primary/8 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
+                <span className="font-display font-semibold text-[12px] leading-none text-foreground/80 group-hover:text-foreground transition-colors">
                   eBay
                 </span>
-                <span className="font-mono text-[9px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors">
+                <span className="font-mono text-[9px] leading-none text-muted-foreground group-hover:text-foreground/70 transition-colors">
                   Used / out-of-print →
                 </span>
               </a>
@@ -280,12 +280,12 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 onClick={e => e.stopPropagation()}
-                className="group flex flex-col gap-1 rounded border border-border/25 bg-secondary/20 px-3 py-2.5 hover:border-border/50 hover:bg-secondary/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="group flex flex-col gap-1 rounded border border-border/50 bg-secondary/50 px-3 py-2.5 hover:border-primary/35 hover:bg-primary/8 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <span className="font-display font-semibold text-[12px] leading-none text-foreground/55 group-hover:text-foreground/80 transition-colors">
+                <span className="font-display font-semibold text-[12px] leading-none text-foreground/80 group-hover:text-foreground transition-colors">
                   Amazon
                 </span>
-                <span className="font-mono text-[9px] leading-none text-muted-foreground/90 group-hover:text-muted-foreground transition-colors">
+                <span className="font-mono text-[9px] leading-none text-muted-foreground group-hover:text-foreground/70 transition-colors">
                   New releases →
                 </span>
               </a>
@@ -391,12 +391,11 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
         })}
       </div>
 
-      {/* ── Strategy guides — same button weight as the retailer grid above,
-          not plain text, so they don't get missed next to it. ── */}
+      {/* ── Strategy guides — clearly visible, same weight as retailer grid ── */}
       {guideUrls && (
-        <div className="mt-1.5 pt-1.5 border-t border-border/20">
-          <p className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground/70 uppercase tracking-widest mb-1">
-            <BookOpen size={8} className="opacity-70 shrink-0" />
+        <div className="mt-1.5 pt-2 border-t border-border/25">
+          <p className="flex items-center gap-1 text-[9px] font-mono text-foreground/60 uppercase tracking-widest mb-1.5">
+            <BookOpen size={9} className="shrink-0" />
             Strategy Guides
           </p>
           <div className="grid grid-cols-2 gap-1.5">
@@ -405,9 +404,10 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="group flex items-center justify-center gap-1 rounded border border-border/40 bg-secondary/50 hover:border-border/70 hover:bg-secondary px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="group flex items-center justify-center gap-1 rounded border border-border/55 bg-secondary/60 hover:border-primary/35 hover:bg-primary/8 px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80 group-hover:text-foreground transition-colors">
+              <BookOpen size={8} className="shrink-0 text-foreground/50 group-hover:text-primary/70 transition-colors" />
+              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground group-hover:text-foreground transition-colors">
                 Guide · eBay
               </span>
             </a>
@@ -416,9 +416,10 @@ export function RetailerLinks({ urls, prices, variant = "card", platforms, guide
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={e => e.stopPropagation()}
-              className="group flex items-center justify-center gap-1 rounded border border-border/40 bg-secondary/50 hover:border-border/70 hover:bg-secondary px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="group flex items-center justify-center gap-1 rounded border border-border/55 bg-secondary/60 hover:border-primary/35 hover:bg-primary/8 px-2 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground/80 group-hover:text-foreground transition-colors">
+              <BookOpen size={8} className="shrink-0 text-foreground/50 group-hover:text-primary/70 transition-colors" />
+              <span className="font-display font-semibold leading-none truncate text-[10px] text-foreground group-hover:text-foreground transition-colors">
                 Guide · Amazon
               </span>
             </a>

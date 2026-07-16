@@ -98,7 +98,7 @@ export default function ReleaseDetail() {
 
       <main className="flex-1 pb-16">
         <div className="container mx-auto max-w-5xl px-4 py-8">
-          <Button asChild variant="ghost" size="sm" className="mb-6 -ml-3 text-muted-foreground hover:text-foreground">
+          <Button asChild variant="outline" size="sm" className="mb-6">
             <Link href="/boutique"><ArrowLeft className="mr-2 w-4 h-4" /> Back to Tracker</Link>
           </Button>
 
