@@ -187,160 +187,170 @@ export default function AboutPage() {
       </section>
 
       <main className="flex-1">
-        <div className="container mx-auto max-w-3xl px-4 py-16">
+        <div className="container mx-auto max-w-6xl px-4 py-16">
 
           {/* ── Features ── */}
-          <section className="mb-16">
+          <section className="mb-20">
             <SectionEyebrow label="Features" />
-            <h2 className="font-display text-2xl font-bold text-foreground mb-8">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-10">
               What DiscWatchHQ does
             </h2>
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               {FEATURES.map(item => (
-                <div key={item.heading} className="relative space-y-3 group">
-                  {/* Decorative number */}
-                  <span className="absolute -top-1 right-0 font-mono text-[11px] font-bold text-primary/15 select-none group-hover:text-primary/30 transition-colors">
-                    {item.num}
-                  </span>
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <div key={item.heading} className="rounded-2xl border border-border/30 bg-secondary/10 hover:bg-secondary/20 transition-colors p-8 space-y-4">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                     {item.icon}
                   </div>
-                  <h3 className="font-semibold text-foreground text-sm leading-snug">{item.heading}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.body}</p>
+                  <h3 className="font-display font-bold text-foreground text-xl leading-snug">{item.heading}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{item.body}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* ── Who it's for ── */}
-          <section className="mb-16 pt-12 border-t border-border/30">
-            <SectionEyebrow label="Audience" />
-            <h2 className="font-display text-2xl font-bold text-foreground mb-6">Who it's for</h2>
-            <p className="text-muted-foreground leading-relaxed mb-8">
-              DiscWatchHQ is built for anyone who prefers owning physical copies of video
-              games. That includes game collectors building complete platform libraries,
-              buyers comparing retail prices before purchasing, and fans of limited-edition
-              physical releases who want to catch preorder windows before they close.
-            </p>
-            {/* Pull-quote */}
-            <blockquote className="pl-6 py-1 border-l-2 border-primary">
-              <p className="text-base text-foreground/85 leading-relaxed">
-                If you've ever searched multiple retailer websites to find a physical copy of
-                a game, missed a Limited Run Games preorder window, or wanted to know whether
-                a sold-out boutique title has shown up on the secondary market — DiscWatchHQ
-                was built to solve exactly those problems.
-              </p>
-            </blockquote>
-          </section>
+          {/* ── Who it's for + Publishers — side by side ── */}
+          <section className="mb-20 pt-14 border-t border-border/30">
+            <div className="grid lg:grid-cols-2 gap-14">
 
-          {/* ── Publishers ── */}
-          <section className="mb-16 pt-12 border-t border-border/30">
-            <SectionEyebrow label="Publishers" />
-            <h2 className="font-display text-2xl font-bold text-foreground mb-3">
-              Boutique publishers we track
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              The{" "}
-              <Link href="/boutique" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
-                Boutique Tracker
-              </Link>{" "}
-              monitors releases from these publishers in real time, updated every 2 hours:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {PUBLISHERS_TRACKED.map(p => (
-                <span
-                  key={p}
-                  className="text-xs font-mono text-primary/90 border border-primary/25 bg-primary/5 px-3 py-1.5 rounded-full hover:border-primary/45 hover:bg-primary/10 transition-colors"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          {/* ── Console tracking ── */}
-          <section className="mb-16 pt-12 border-t border-border/30">
-            <SectionEyebrow label="Hardware" />
-            <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-              <h2 className="font-display text-2xl font-bold text-foreground">
-                Console price tracking
-              </h2>
-              {/* Live badge — matches Consoles page style */}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-mono text-primary/90 shrink-0 self-start mt-0.5">
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
-                </span>
-                26+ consoles tracked
-              </span>
-            </div>
-            <p className="text-muted-foreground leading-relaxed">
-              The{" "}
-              <Link href="/consoles" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
-                Consoles section
-              </Link>{" "}
-              aggregates live eBay listings for hardware spanning 30+ years of gaming —
-              from current-generation consoles like the PS5 Pro, Xbox Series X, and
-              Nintendo Switch 2 to retro hardware including the N64, Sega Genesis, Super
-              Nintendo, and PlayStation 1. Condition is always clearly labeled (New, Used,
-              or Seller Refurbished), and listings are refreshed daily.
-            </p>
-          </section>
-
-          {/* ── Data sources ── */}
-          <section className="mb-16 pt-12 border-t border-border/30">
-            <SectionEyebrow label="Data" />
-            <h2 className="font-display text-2xl font-bold text-foreground mb-8">Data sources</h2>
-            <div className="grid sm:grid-cols-2 gap-3 mb-6">
-              {DATA_SOURCES.map(src => (
-                <a
-                  key={src.name}
-                  href={src.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col gap-2.5 rounded-lg border border-border/40 bg-card hover:border-primary/30 hover:bg-primary/5 px-5 py-4 transition-all duration-150"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {src.icon}
-                      <span className="font-display font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                        {src.name}
-                      </span>
-                    </div>
-                    <ExternalLink size={12} className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
-                  </div>
-                  <p className="text-[13px] text-muted-foreground leading-relaxed">
-                    {src.detail}
+              {/* Who it's for */}
+              <div>
+                <SectionEyebrow label="Audience" />
+                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">Who it's for</h2>
+                <p className="text-muted-foreground leading-relaxed mb-8">
+                  DiscWatchHQ is built for anyone who prefers owning physical copies of video
+                  games. That includes game collectors building complete platform libraries,
+                  buyers comparing retail prices before purchasing, and fans of limited-edition
+                  physical releases who want to catch preorder windows before they close.
+                </p>
+                <blockquote className="pl-6 py-1 border-l-2 border-primary">
+                  <p className="text-base text-foreground/85 leading-relaxed">
+                    If you've ever searched multiple retailer websites to find a physical copy of
+                    a game, missed a Limited Run Games preorder window, or wanted to know whether
+                    a sold-out boutique title has shown up on the secondary market — DiscWatchHQ
+                    was built to solve exactly those problems.
                   </p>
-                </a>
-              ))}
+                </blockquote>
+              </div>
+
+              {/* Publishers */}
+              <div>
+                <SectionEyebrow label="Publishers" />
+                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+                  Boutique publishers we track
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  The{" "}
+                  <Link href="/boutique" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
+                    Boutique Tracker
+                  </Link>{" "}
+                  monitors releases from these publishers in real time, updated every 2 hours:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PUBLISHERS_TRACKED.map(p => (
+                    <span
+                      key={p}
+                      className="text-xs font-mono text-primary/90 border border-primary/25 bg-primary/5 px-3 py-1.5 rounded-full hover:border-primary/45 hover:bg-primary/10 transition-colors"
+                    >
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              DiscWatchHQ is an independent tool and is not affiliated with any publisher,
-              retailer, or platform holder. Affiliate links to GameStop, Amazon, eBay, and
-              Best Buy may earn a small commission at no additional cost to you.
-            </p>
+          </section>
+
+          {/* ── Console tracking + Data sources — side by side ── */}
+          <section className="mb-20 pt-14 border-t border-border/30">
+            <div className="grid lg:grid-cols-2 gap-14">
+
+              {/* Console tracking */}
+              <div>
+                <SectionEyebrow label="Hardware" />
+                <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                  <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                    Console price tracking
+                  </h2>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-mono text-primary/90 shrink-0 self-start mt-1">
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+                    </span>
+                    26+ consoles tracked
+                  </span>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  The{" "}
+                  <Link href="/consoles" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
+                    Consoles section
+                  </Link>{" "}
+                  aggregates live eBay listings for hardware spanning 30+ years of gaming —
+                  from current-generation consoles like the PS5 Pro, Xbox Series X, and
+                  Nintendo Switch 2 to retro hardware including the N64, Sega Genesis, Super
+                  Nintendo, and PlayStation 1. Condition is always clearly labeled (New, Used,
+                  or Seller Refurbished), and listings are refreshed daily.
+                </p>
+              </div>
+
+              {/* Data sources */}
+              <div>
+                <SectionEyebrow label="Data" />
+                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-8">Data sources</h2>
+                <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                  {DATA_SOURCES.map(src => (
+                    <a
+                      key={src.name}
+                      href={src.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex flex-col gap-2.5 rounded-xl border border-border/40 bg-card hover:border-primary/30 hover:bg-primary/5 px-5 py-4 transition-all duration-150"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {src.icon}
+                          <span className="font-display font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {src.name}
+                          </span>
+                        </div>
+                        <ExternalLink size={12} className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
+                      </div>
+                      <p className="text-[13px] text-muted-foreground leading-relaxed">
+                        {src.detail}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  DiscWatchHQ is independent and not affiliated with any publisher, retailer,
+                  or platform holder. Affiliate links may earn a small commission at no
+                  additional cost to you.
+                </p>
+              </div>
+
+            </div>
           </section>
 
           {/* ── Contact ── */}
-          <section className="mb-10 pt-12 border-t border-border/30">
-            <SectionEyebrow label="Contact" />
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-7 py-7">
-              <h2 className="font-display text-xl font-bold text-foreground mb-2">
-                Contact &amp; feedback
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-6 max-w-lg">
-                Questions, bug reports, missing publishers, or feature suggestions?
-                Reach out on X (Twitter):
-              </p>
+          <section className="mb-10 pt-14 border-t border-border/30">
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 px-10 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8">
+              <div>
+                <SectionEyebrow label="Contact" />
+                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+                  Contact &amp; feedback
+                </h2>
+                <p className="text-muted-foreground leading-relaxed max-w-lg">
+                  Questions, bug reports, missing publishers, or feature suggestions?
+                  Reach out on X (Twitter).
+                </p>
+              </div>
               <a
                 href="https://x.com/DiscWatchHQ"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary/90 active:bg-primary/80 transition-colors px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm shadow-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary/90 active:bg-primary/80 transition-colors px-6 py-3 text-base font-bold text-primary-foreground shadow-sm shadow-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0 whitespace-nowrap"
                 aria-label="@DiscWatchHQ on X — opens in new tab"
               >
-                @DiscWatchHQ on X <ExternalLink size={13} />
+                @DiscWatchHQ on X <ExternalLink size={14} />
               </a>
             </div>
           </section>
