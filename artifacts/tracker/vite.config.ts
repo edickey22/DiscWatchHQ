@@ -63,25 +63,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        // Split large vendor libraries into named chunks so the browser can
-        // cache them independently of app code changes.
-        manualChunks: (id) => {
-          // React core — almost never changes; kept separate so other vendor
-          // chunk changes don't invalidate the browser's React cache entry.
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'vendor-react';
-          }
-          // Everything else from node_modules goes into a single vendor chunk.
-          // This keeps app code small and lets the browser cache third-party
-          // libraries independently of business-logic changes.
-          if (id.includes('node_modules/')) {
-            return 'vendor';
-          }
-        },
-      },
-    },
   },
   server: {
     port,
