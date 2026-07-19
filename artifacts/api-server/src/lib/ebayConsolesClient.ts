@@ -203,20 +203,27 @@ export interface ConsoleListing {
  * scheduled background refresh (consoleListingsScheduler.ts), never from a
  * visitor-facing request handler. See that file for the call budget.
  */
+/**
+ * Returns:
+ *   ConsoleListing[]  — success; may be empty if eBay returned no qualifying results
+ *   null              — transient failure (timeout, network error, token failure,
+ *                       budget exhausted) — caller should preserve existing cached
+ *                       data rather than overwriting it with an empty array
+ */
 export async function getEbayConsoleListings(
   model: ConsoleModel,
   cacheLimit = 200,
-): Promise<ConsoleListing[]> {
-  if (!ebayConsolesConfigured) return [];
+): Promise<ConsoleListing[] | null> {
+  if (!ebayConsolesConfigured) return null;
 
   if (!(await checkAndReserveEbayCall("console"))) {
     logger.debug({ consoleId: model.id }, "[eBay Consoles] Daily call budget exhausted — skipping refresh");
-    return [];
+    return null;
   }
 
   try {
     const token = await getAccessToken();
-    if (!token) return [];
+    if (!token) return null;
 
     // IMPORTANT: no `sort=price`. Sorting cheapest-first surfaces accessories,
     // parts, and unrelated low-price junk almost exclusively — real consoles
@@ -257,7 +264,7 @@ export async function getEbayConsoleListings(
             "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
             "Content-Type":            "application/json",
           },
-          signal: AbortSignal.timeout(12_000),
+          signal: AbortSignal.timeout(25_000),
         });
         lastErr = null;
         break;
@@ -270,8 +277,8 @@ export async function getEbayConsoleListings(
       }
     }
     if (!res) {
-      logger.warn({ consoleId: model.id, err: lastErr }, "[eBay Consoles] Fetch failed after retry — returning empty for this cycle");
-      return [];
+      logger.warn({ consoleId: model.id, err: lastErr }, "[eBay Consoles] Fetch failed after retry — preserving existing cache for this cycle");
+      return null;
     }
 
     if (res.status === 429) {
@@ -280,8 +287,8 @@ export async function getEbayConsoleListings(
     }
 
     if (!res.ok) {
-      console.warn("[eBay Consoles] Search failed", res.status, model.query);
-      return [];
+      logger.warn({ consoleId: model.id, status: res.status }, "[eBay Consoles] Search returned non-OK status — preserving existing cache");
+      return null;
     }
 
     const data = (await res.json()) as {
@@ -350,7 +357,7 @@ export async function getEbayConsoleListings(
     }));
   } catch (err) {
     if (err instanceof EbayRateLimitError) throw err; // let the scheduler's loop see it and back off
-    console.warn("[eBay Consoles] Lookup error:", err);
-    return [];
+    logger.warn({ consoleId: model.id, err }, "[eBay Consoles] Lookup error — preserving existing cache");
+    return null;
   }
 }

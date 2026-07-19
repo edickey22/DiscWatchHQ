@@ -95,8 +95,16 @@ async function refreshConsoleListings(): Promise<void> {
 
     try {
       const listings = await getEbayConsoleListings(model);
-      setConsoleListings(model.id, listings);
-      if (listings.length > 0) updated++; else empty++;
+      if (listings === null) {
+        // Transient failure (timeout, network error, budget exhausted) — preserve
+        // any existing cached listings rather than overwriting good data with empty.
+        // The model stays "not fresh" so the next scheduled cycle retries it.
+        logger.warn({ consoleId: model.id }, "Console listings fetch returned null — keeping existing cache");
+        failed++;
+      } else {
+        setConsoleListings(model.id, listings);
+        if (listings.length > 0) updated++; else empty++;
+      }
     } catch (err) {
       if (err instanceof EbayRateLimitError) {
         logger.error(
@@ -106,11 +114,10 @@ async function refreshConsoleListings(): Promise<void> {
         rateLimited = true;
         break;
       }
-      logger.warn({ err, consoleId: model.id }, "Console listings fetch failed");
+      logger.warn({ err, consoleId: model.id }, "Console listings fetch failed unexpectedly");
       failed++;
-      // Still record an empty result so the cache reflects "fetched, no data"
-      // rather than leaving stale data indefinitely on repeated failures.
-      setConsoleListings(model.id, []);
+      // Do NOT overwrite existing cached listings on an unexpected error — preserve
+      // whatever was there so visitors still see something while the issue resolves.
     }
 
     await new Promise(r => setTimeout(r, CALL_DELAY_MS));
