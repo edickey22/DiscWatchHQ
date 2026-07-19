@@ -42,8 +42,8 @@ export function Header() {
         href={href}
         className={`px-3 py-1.5 rounded transition-colors text-[13px] font-medium ${
           isActive
-            ? "text-foreground bg-secondary/60"
-            : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+            ? "text-primary bg-primary/15"
+            : "text-muted-foreground hover:text-primary hover:bg-primary/10"
         }`}
       >
         {label}
@@ -112,8 +112,8 @@ export function Header() {
                     onClick={() => setMobileOpen(false)}
                     className={`px-4 py-3 rounded-md text-base font-medium transition-colors ${
                       isActive
-                        ? "text-foreground bg-primary/10 border border-primary/30"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                        ? "text-primary bg-primary/15 border border-primary/30"
+                        : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                     }`}
                   >
                     {label}
