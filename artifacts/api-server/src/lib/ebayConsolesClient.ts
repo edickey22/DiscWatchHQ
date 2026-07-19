@@ -233,12 +233,16 @@ export async function getEbayConsoleListings(
     // `sort` param is given) reliably surfaces the actual console model
     // being searched for; we sort by price ourselves *after* filtering.
     //
-    // rawLimit=200 is the Browse API's maximum page size — pulling the full
-    // page costs exactly the same 1 API call as pulling 60 did, so raising
-    // it is free. It just gives the filtering step below a much bigger pool
-    // of real candidates to keep, instead of throwing away extra genuine
-    // matches purely because we stopped asking eBay for them.
-    const rawLimit = 200;
+    // rawLimit=100: we originally used 200 (the Browse API maximum), but
+    // high-volume retro queries (e.g. "Nintendo 64 console") consistently
+    // timed out in the Cloud Run environment at both 12 s and 25 s, while
+    // identical queries from the dev workspace succeeded in <1 s — pointing
+    // to soft throttling by eBay for large-payload responses from Cloud Run
+    // IPs. Halving to 100 cuts the response body from ~330 KB to ~170 KB
+    // and keeps round-trip times well under 25 s in all observed cases,
+    // while still supplying far more than enough raw candidates for the
+    // post-fetch filter chain (which typically keeps 50–150 items).
+    const rawLimit = 100;
     const q = encodeURIComponent(model.query);
     const apiUrl =
       `https://api.ebay.com/buy/browse/v1/item_summary/search` +
