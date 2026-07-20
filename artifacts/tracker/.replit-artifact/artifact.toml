@@ -18,9 +18,26 @@ build = [ "pnpm", "--filter", "@workspace/tracker", "run", "build" ]
 serve = "static"
 publicDir = "artifacts/tracker/dist/public"
 
+# Removed: [[services.production.rewrites]] from = "/*" to = "/index.html"
+#
+# Why removed: that blanket catch-all fired before the static server could check
+# for directory-level index.html files, meaning every route — including paths
+# with pre-generated per-route HTML files (e.g. /consoles/switch-2/index.html) —
+# was always served the root /index.html with generic meta tags.
+#
+# How routing works now:
+#   Static assets (/assets/*, /og-image.png, /consoles/*.jpg, etc.)
+#     → served directly by exact file match (unchanged)
+#   Pre-generated SPA routes (/about, /boutique, /games, /consoles, /consoles/:id)
+#     → served from their pre-generated dist/public/{route}/index.html (per-route og tags)
+#   Game detail pages (/games/:id) — the one route not pre-generated at build time
+#     → rewritten to /games/index.html (Browse Games og:image; acceptable fallback)
+#   Any other unmapped path
+#     → 404 (acceptable — the SPA has no other routes)
+
 [[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+from = "/games/*"
+to = "/games/index.html"
 
 [services.env]
 PORT = "20338"
