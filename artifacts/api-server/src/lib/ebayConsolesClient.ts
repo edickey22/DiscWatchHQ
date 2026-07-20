@@ -99,6 +99,10 @@ const NON_CONSOLE_TERMS = [
   "tablet only", "screen only", "digital only", "no console",
   "console not included", "console excluded", "without console",
 
+  // Pest / infestation — listings disclosing bug or rodent contamination
+  "cockroach", "roach", "infestation", "infested", "bed bug", "bedbug",
+  "flea", "lice", "rodent", "mice", "mouse droppings", "rat", "pest",
+
   // Non-hardware collectibles that share keywords
   "keychain", "plush", "funko", "replica", "figure", "mini figure",
 ];
