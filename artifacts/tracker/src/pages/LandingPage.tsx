@@ -379,9 +379,9 @@ export default function LandingPage() {
 
             {/* Headline */}
             <h1 className="font-display text-[clamp(3.5rem,10vw,6.5rem)] font-black tracking-tight leading-[0.9] text-foreground mb-7">
-              FIND ANY<br />
-              GAME.<br />
-              <span className="text-primary">BUY ANYWHERE.</span>
+              EVERY GAME.<br />
+              EVERY DROP.<br />
+              <span className="text-primary">BEST PRICE.</span>
             </h1>
 
             {/* Sub-headline */}
