@@ -4,6 +4,7 @@ import { ControllerIcon } from "@/components/ControllerIcon"
 import { CONSOLE_IMAGES } from "@/lib/consoleImages"
 import { GENERATION_LABELS, GENERATION_BADGE_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
 import { ListChecks } from "lucide-react"
+import { TrackButton } from "@/components/TrackButton"
 
 export interface ConsoleSummary {
   id:           string
@@ -41,11 +42,18 @@ export function ConsoleCard({ console: item }: { console: ConsoleSummary }) {
   const stockPhoto = CONSOLE_IMAGES[id]
 
   return (
-    <Link
-      href={`/consoles/${id}`}
-      className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/60 transition-all hover:bg-card/70 hover:border-primary"
-    >
+    <div className="group relative flex flex-col space-y-3 rounded-lg p-3 bg-card/40 border border-border/60 transition-all hover:bg-card/70 hover:border-primary">
+      {/* Track button */}
+      <div className="absolute top-2 left-2 z-10">
+        <TrackButton
+          itemType="console"
+          itemId={id}
+          itemData={{ title: name, image: stockPhoto }}
+        />
+      </div>
+
       {/* Image */}
+      <Link href={`/consoles/${id}`} className="block">
       <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
         {stockPhoto ? (
           <FramedImage src={stockPhoto} alt={name} />
@@ -64,19 +72,25 @@ export function ConsoleCard({ console: item }: { console: ConsoleSummary }) {
           </Badge>
         </div>
       </div>
+      </Link>
 
       {/* Details */}
       <div className="flex flex-col flex-1 space-y-1.5">
-        <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors">
-          {name}
-        </h3>
+        <Link href={`/consoles/${id}`} className="block">
+          <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors">
+            {name}
+          </h3>
+        </Link>
 
-        <span className="mt-auto pt-2 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold uppercase tracking-wider px-3 py-2 group-hover:bg-primary/90 transition-colors">
+        <Link
+          href={`/consoles/${id}`}
+          className="mt-auto pt-2 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold uppercase tracking-wider px-3 py-2 group-hover:bg-primary/90 transition-colors"
+        >
           View Listings
           <ListChecks size={12} />
-        </span>
+        </Link>
       </div>
-    </Link>
+    </div>
   )
 }
 

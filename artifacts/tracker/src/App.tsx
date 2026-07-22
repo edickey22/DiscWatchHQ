@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Component, type ReactNode, useEffect } from 'react';
 import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
+import { AuthProvider } from '@/context/AuthContext';
+import { AuthModal }    from '@/components/AuthModal';
+
 import LandingPage    from '@/pages/LandingPage';
 import Home           from '@/pages/Home';
 import ReleaseDetail  from '@/pages/ReleaseDetail';
@@ -9,6 +12,8 @@ import GamesSearch    from '@/pages/GamesSearch';
 import CatalogListPage from '@/pages/CatalogListPage';
 import Consoles       from '@/pages/Consoles';
 import ConsoleDetail  from '@/pages/ConsoleDetail';
+import TrackingPage   from '@/pages/TrackingPage';
+import ProfilePage    from '@/pages/ProfilePage';
 import PrivacyPage    from '@/pages/PrivacyPage';
 import TermsPage      from '@/pages/TermsPage';
 import AboutPage      from '@/pages/AboutPage';
@@ -85,9 +90,11 @@ function AppRouter() {
     <AppErrorBoundary>
       <GaPageView />
       <ScrollToTop />
+      {/* Auth modal — rendered at root level so it overlays any page */}
+      <AuthModal />
       <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/games" component={GamesSearch} />
+        <Route path="/"            component={LandingPage} />
+        <Route path="/games"       component={GamesSearch} />
         <Route path="/games/popular">
           {() => <CatalogListPage kind="popular" />}
         </Route>
@@ -97,13 +104,15 @@ function AppRouter() {
         <Route path="/games/upcoming">
           {() => <CatalogListPage kind="upcoming" />}
         </Route>
-        <Route path="/boutique" component={Home} />
-        <Route path="/consoles" component={Consoles} />
+        <Route path="/boutique"    component={Home} />
+        <Route path="/consoles"    component={Consoles} />
         <Route path="/consoles/:slug" component={ConsoleDetail} />
-        <Route path="/releases/:id" component={ReleaseDetail} />
-        <Route path="/privacy" component={PrivacyPage} />
-        <Route path="/terms" component={TermsPage} />
-        <Route path="/about" component={AboutPage} />
+        <Route path="/releases/:id"   component={ReleaseDetail} />
+        <Route path="/tracking"    component={TrackingPage} />
+        <Route path="/profile"     component={ProfilePage} />
+        <Route path="/privacy"     component={PrivacyPage} />
+        <Route path="/terms"       component={TermsPage} />
+        <Route path="/about"       component={AboutPage} />
         <Route component={NotFound} />
       </Switch>
     </AppErrorBoundary>
@@ -114,7 +123,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-        <AppRouter />
+        <AuthProvider>
+          <AppRouter />
+        </AuthProvider>
       </WouterRouter>
     </QueryClientProvider>
   );

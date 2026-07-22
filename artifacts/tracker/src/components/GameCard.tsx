@@ -6,6 +6,7 @@ import { daysUntil } from "@/lib/utils"
 import { Clock, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ControllerIcon } from "@/components/ControllerIcon"
+import { TrackButton } from "@/components/TrackButton"
 
 interface GameCardProps {
   release: Release
@@ -33,6 +34,20 @@ export function GameCard({ release, priority = false }: GameCardProps) {
       "group relative flex flex-col space-y-3 rounded-lg p-3 border border-border/60 transition-all hover:bg-card/50 hover:border-primary",
       isSoldOut && "opacity-75"
     )}>
+      {/* Track button — top-right corner, above the image */}
+      <div className="absolute top-2 right-2 z-10">
+        <TrackButton
+          itemType="release"
+          itemId={String(release.id)}
+          itemData={{
+            title:     release.title,
+            image:     release.coverImageUrl ?? undefined,
+            publisher: release.publisherName ?? undefined,
+            status:    release.status,
+          }}
+        />
+      </div>
+
       {/* Cover Image — navigates to detail page */}
       <Link href={`/releases/${release.id}`} className="block">
         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
