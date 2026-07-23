@@ -149,7 +149,7 @@ export function TrackButton({
         inline-flex items-center justify-center rounded-full transition-all
         ${tracked
           ? "text-red-500 bg-red-500/10 hover:bg-red-500/20"
-          : "text-muted-foreground bg-black/30 hover:text-red-400 hover:bg-red-500/10"
+          : "text-white/80 bg-black/40 hover:text-red-400 hover:bg-red-500/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
         }
         ${loading ? "opacity-50 cursor-wait" : "cursor-pointer"}
         w-8 h-8

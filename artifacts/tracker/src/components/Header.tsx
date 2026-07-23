@@ -127,7 +127,7 @@ export function Header() {
     return (
       <Link
         href={href}
-        className={`px-3 py-1.5 rounded transition-colors text-[13px] font-medium ${
+        className={`px-3 py-1.5 rounded transition-colors text-[13px] font-medium whitespace-nowrap ${
           isActive
             ? "text-primary bg-primary/15"
             : "text-muted-foreground hover:text-primary hover:bg-primary/10"

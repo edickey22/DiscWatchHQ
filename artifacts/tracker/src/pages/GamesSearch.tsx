@@ -321,7 +321,7 @@ function buildVariedHeroImages(pools: CatalogGame[][], max = 16): string[] {
 }
 
 // ── Responsive column count ──────────────────────────────────────────────────
-// Mirrors the `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` breakpoints used by
+// Mirrors the `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` breakpoints used by
 // the pre-populated sections below, so each section can always show exactly
 // three full rows (columns × 3) for whatever the current column count is —
 // never a ragged/partial last row.
@@ -632,12 +632,12 @@ export default function GamesSearch() {
               />
 
               {isPopularLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : popularCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {popularCards.map((game, i) => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} priority={i < 4} />
                     ))}
@@ -670,12 +670,12 @@ export default function GamesSearch() {
               />
 
               {isNewLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : newReleasesCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {newReleasesCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
@@ -708,12 +708,12 @@ export default function GamesSearch() {
               />
 
               {isUpcomingLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : upcomingCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {upcomingCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
