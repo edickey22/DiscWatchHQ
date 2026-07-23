@@ -143,17 +143,20 @@ export function Header() {
       <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between gap-4">
 
         {/* ── Wordmark → landing page ──────────────────────────────────── */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-          <ControllerIcon size={30} />
-          <span className="flex items-center gap-1.5 leading-none">
-            <span className="font-display text-[1.2rem] font-bold tracking-tight">
+        {/* Logo scales down at sm→lg to free space for nav links, full size at lg+ */}
+        <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group shrink-0">
+          <span className="[&>svg]:w-[22px] [&>svg]:h-[22px] lg:[&>svg]:w-[30px] lg:[&>svg]:h-[30px]">
+            <ControllerIcon size={30} />
+          </span>
+          <span className="flex items-center gap-1 lg:gap-1.5 leading-none">
+            <span className="font-display text-[1.05rem] lg:text-[1.2rem] font-bold tracking-tight">
               <span className="text-gray-900 dark:text-foreground">Disc</span>
               <span className="text-primary">Watch</span>
             </span>
             <span className="
-              text-[10px] font-bold tracking-wide leading-none
+              text-[9px] lg:text-[10px] font-bold tracking-wide leading-none
               text-primary border border-primary/40 bg-primary/10
-              rounded px-1.5 py-0.5 select-none
+              rounded px-1 lg:px-1.5 py-0.5 select-none
             ">
               HQ
             </span>
