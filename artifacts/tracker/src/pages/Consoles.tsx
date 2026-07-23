@@ -64,6 +64,16 @@ export default function Consoles() {
             <p className="text-muted-foreground mt-1 font-mono text-base">
               Live eBay listings for hardware, every platform and every era. Condition is always shown — never broken, never for parts.
             </p>
+            <p className="text-muted-foreground/80 mt-3 text-sm leading-relaxed max-w-2xl">
+              Whether you're buying a PS5 Pro at retail price, hunting for a working Nintendo 64
+              at a fair secondhand price, or filling a gap in your retro collection, the Consoles
+              page aggregates live eBay listings across every major platform and generation.
+              Current-gen flagships (PS5, Xbox Series X, Nintendo Switch 2), the previous
+              generation (PS4, Xbox One, original Switch), and retro hardware (SNES, N64, Sega
+              Genesis, PS1, Dreamcast, and more) are all covered. Listings are refreshed
+              daily by our scheduler — tap any console to see multiple current options with
+              condition, price, and seller rating all clearly displayed.
+            </p>
           </div>
         </section>
 

@@ -534,6 +534,61 @@ export default function LandingPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
+          WHY IT EXISTS — editorial "problem being solved" section
+      ════════════════════════════════════════════════════════════════════ */}
+      <section className="py-16 bg-background border-b border-border/20">
+        <div className="container mx-auto max-w-6xl px-4">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-5">
+              Why DiscWatchHQ exists
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
+              Physical games are harder to buy than they should be.
+            </h2>
+            <div className="space-y-5 text-muted-foreground text-base leading-relaxed">
+              <p>
+                Physical video game collecting has a fragmentation problem. A game you want might
+                be available at GameStop but out of stock on Amazon, cheaper on eBay but only in
+                poor condition, or not on any major retailer at all because it was a{" "}
+                <span className="text-foreground/80 font-medium">boutique-only release</span> from
+                a publisher most people have never heard of. Checking each storefront separately —
+                in different browser tabs, with different search interfaces — is tedious. DiscWatchHQ
+                puts them all in one place.
+              </p>
+              <p>
+                The boutique publisher market has grown significantly over the past decade. Companies
+                like <span className="text-foreground/80 font-medium">Limited Run Games</span>,{" "}
+                <span className="text-foreground/80 font-medium">Strictly Limited Games</span>, and{" "}
+                <span className="text-foreground/80 font-medium">Super Rare Games</span> produce
+                physical editions of games that otherwise exist only as digital downloads — often in
+                print runs of just a few thousand units. These releases frequently sell out within
+                hours of going live, and the preorder windows are short. Miss the window and you're
+                paying two or three times the original price on the secondary market. The Boutique
+                Tracker exists specifically to solve this: we check publisher storefronts every two
+                hours so you don't have to.
+              </p>
+              <p>
+                The hardware side has its own challenges. Retro console prices are driven largely
+                by what's actually selling on eBay right now — not by any MSRP or list price. The
+                Consoles section pulls live eBay listings for both current-gen and retro hardware so
+                you can see the real market price, with condition and seller ratings visible upfront.
+                No fake "retail" anchors, no guessing — just what hardware is actually selling for
+                today.
+              </p>
+              <p>
+                DiscWatchHQ is free to use. It's supported by affiliate commissions when you click
+                through to a retailer and make a purchase — at no extra cost to you. Game data comes
+                from <span className="text-foreground/80 font-medium">RAWG</span> and{" "}
+                <span className="text-foreground/80 font-medium">TheGamesDB</span>, two of the
+                largest community-maintained game databases, covering over 900,000 titles across
+                every platform and era.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
           PATHWAY CARDS — per-section accent colours, staggered reveal
       ════════════════════════════════════════════════════════════════════ */}
       <section className="pb-16 bg-background">

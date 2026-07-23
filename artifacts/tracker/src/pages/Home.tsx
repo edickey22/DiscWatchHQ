@@ -147,6 +147,19 @@ export default function Home() {
           <p className="text-muted-foreground mt-1 font-mono text-base">
             Limited-run physical releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, Fangamer, and more.
           </p>
+          <p className="text-muted-foreground/80 mt-3 text-sm leading-relaxed max-w-2xl">
+            Boutique game publishers release physical editions in limited quantities — often a
+            few thousand units — that sell out in hours or days and rarely restock. Once they're
+            gone, you're paying secondary-market prices. The Boutique Tracker monitors nine
+            publishers every two hours and organizes their releases into three buckets:{" "}
+            <span className="text-foreground/70 font-medium">Available Now</span> (open for
+            order today),{" "}
+            <span className="text-foreground/70 font-medium">Coming Soon</span> (announced,
+            preorder window not yet open), and{" "}
+            <span className="text-foreground/70 font-medium">Sold Out</span> (with eBay links
+            for the secondary market). Log in to save items to your watchlist and get notified
+            when availability changes.
+          </p>
         </div>
       </section>
 

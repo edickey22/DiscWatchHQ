@@ -506,6 +506,18 @@ export default function GamesSearch() {
           <p className="text-muted-foreground mt-1 font-mono text-base">
             Popular titles, new releases, and 900,000+ physical games across every platform and era.
           </p>
+          <p className="text-muted-foreground/80 mt-3 text-sm leading-relaxed max-w-2xl">
+            Search the full physical game catalog — from classic NES and Atari titles to the
+            latest PS5, Xbox Series X, and Nintendo Switch releases. Every result links directly
+            to <span className="text-foreground/70 font-medium">GameStop</span>,{" "}
+            <span className="text-foreground/70 font-medium">Amazon</span>,{" "}
+            <span className="text-foreground/70 font-medium">eBay</span>, and{" "}
+            <span className="text-foreground/70 font-medium">Best Buy</span> so you can compare
+            availability and price in one place. Filter by platform or genre, sort by Metacritic
+            score or release date, and jump straight to a buy page — no separate tabs needed.
+            Game data is sourced from RAWG and TheGamesDB, two of the largest community-maintained
+            game databases, covering over 900,000 titles across more than 50 platforms.
+          </p>
         </div>
       </section>
 
