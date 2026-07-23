@@ -11,6 +11,7 @@
  */
 import { useState } from "react"
 import { RetailerLinks } from "@/components/RetailerLinks"
+import { TrackButton } from "@/components/TrackButton"
 
 export interface CatalogGame {
   id:            string     // "rawg:123" | "tgdb:456"
@@ -206,6 +207,15 @@ export function CatalogGameCard({
         ) : (
           <CoverPlaceholder />
         )}
+
+        {/* Track (heart) button — top-left; stops card click propagation */}
+        <div className="absolute top-1.5 left-1.5 z-10" onClick={e => e.stopPropagation()}>
+          <TrackButton
+            itemType="game"
+            itemId={game.id}
+            itemData={{ title: game.title, image: game.coverImageUrl ?? undefined }}
+          />
+        </div>
 
         {/* Score/rating badge — Metacritic takes priority over ESRB */}
         {game.metacritic !== null
