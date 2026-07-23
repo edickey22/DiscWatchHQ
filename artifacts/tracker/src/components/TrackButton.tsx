@@ -147,9 +147,10 @@ export function TrackButton({
       }}
       className={`
         inline-flex items-center justify-center rounded-full transition-all
+        bg-zinc-900/85 shadow-[0_2px_8px_rgba(0,0,0,0.55)] ring-1
         ${tracked
-          ? "text-red-500 bg-red-500/10 hover:bg-red-500/20"
-          : "text-white/80 bg-black/40 hover:text-red-400 hover:bg-red-500/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+          ? "text-red-400 ring-red-400/30 hover:text-red-300 hover:ring-red-300/40"
+          : "text-white/90 ring-white/15 hover:text-red-400 hover:ring-red-400/30"
         }
         ${loading ? "opacity-50 cursor-wait" : "cursor-pointer"}
         w-8 h-8

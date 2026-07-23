@@ -172,10 +172,10 @@ export function Header() {
         </nav>
 
         {/* ── Right side: stats + user menu ─────────────────────────────── */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-5">
 
-          {/* Live stats (desktop only) */}
-          <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0">
+          {/* Live stats (desktop only) — border-l creates visual separation from nav links */}
+          <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0 border-l border-border/60 pl-5">
             {stats && (
               <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
                 <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
@@ -214,7 +214,7 @@ export function Header() {
           </div>
 
           {/* User menu (desktop) */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:block ml-1">
             <UserMenu />
           </div>
 
