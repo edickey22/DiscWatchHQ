@@ -140,42 +140,40 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center justify-between gap-4">
+      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center">
 
-        {/* ── Wordmark → landing page ──────────────────────────────────── */}
-        {/* Logo scales down at sm→lg to free space for nav links, full size at lg+ */}
-        <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group shrink-0">
-          <span className="[&>svg]:w-[22px] [&>svg]:h-[22px] lg:[&>svg]:w-[30px] lg:[&>svg]:h-[30px]">
-            <ControllerIcon size={30} />
-          </span>
-          <span className="flex items-center gap-1 lg:gap-1.5 leading-none">
-            <span className="font-display text-[1.05rem] lg:text-[1.2rem] font-bold tracking-tight">
-              <span className="text-gray-900 dark:text-foreground">Disc</span>
-              <span className="text-primary">Watch</span>
+        {/* ── LEFT: Logo + page navigation (pinned left) ───────────────── */}
+        <div className="flex items-center gap-3 shrink-0">
+          <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group">
+            <span className="[&>svg]:w-[22px] [&>svg]:h-[22px] lg:[&>svg]:w-[30px] lg:[&>svg]:h-[30px]">
+              <ControllerIcon size={30} />
             </span>
-            <span className="
-              text-[9px] lg:text-[10px] font-bold tracking-wide leading-none
-              text-primary border border-primary/40 bg-primary/10
-              rounded px-1 lg:px-1.5 py-0.5 select-none
-            ">
-              HQ
+            <span className="flex items-center gap-1 lg:gap-1.5 leading-none">
+              <span className="font-display text-[1.05rem] lg:text-[1.2rem] font-bold tracking-tight">
+                <span className="text-gray-900 dark:text-foreground">Disc</span>
+                <span className="text-primary">Watch</span>
+              </span>
+              <span className="
+                text-[9px] lg:text-[10px] font-bold tracking-wide leading-none
+                text-primary border border-primary/40 bg-primary/10
+                rounded px-1 lg:px-1.5 py-0.5 select-none
+              ">
+                HQ
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
 
-        {/* ── Page navigation ───────────────────────────────────────────── */}
-        <nav className="hidden sm:flex items-center gap-1">
-          {navLink("/games",    "Browse Games")}
-          {navLink("/boutique", "Boutique")}
-          {navLink("/consoles", "Consoles")}
-          {navLink("/about",    "About")}
-        </nav>
+          <nav className="hidden sm:flex items-center gap-1 ml-2">
+            {navLink("/games",    "Browse Games")}
+            {navLink("/boutique", "Boutique")}
+            {navLink("/consoles", "Consoles")}
+            {navLink("/about",    "About")}
+          </nav>
+        </div>
 
-        {/* ── Right side: stats + user menu ─────────────────────────────── */}
-        <div className="flex items-center gap-5">
-
-          {/* Live stats (desktop only) — border-l creates visual separation from nav links */}
-          <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight shrink-0 border-l border-border/60 pl-5">
+        {/* ── CENTER: Live stats (flex-1 so it truly centers between left and right) */}
+        <div className="flex-1 flex justify-center">
+          <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight">
             {stats && (
               <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
                 <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
@@ -212,9 +210,13 @@ export function Header() {
               </>
             )}
           </div>
+        </div>
+
+        {/* ── RIGHT: User menu + mobile hamburger (pinned right, pr for breathing room) */}
+        <div className="flex items-center gap-3 shrink-0 pr-1">
 
           {/* User menu (desktop) */}
-          <div className="hidden sm:block ml-1">
+          <div className="hidden sm:block">
             <UserMenu />
           </div>
 
