@@ -120,8 +120,10 @@ router.post("/auth/request-link", requestLinkLimiter, async (req, res) => {
 
     // Build verify link — points at the API verify endpoint which sets the
     // cookie and redirects back to the frontend.
-    const verifyUrl = `${appUrl()}/api/auth/verify?token=${rawToken}`;
+    const base = appUrl();
+    const verifyUrl = `${base}/api/auth/verify?token=${rawToken}`;
 
+    logger.info({ base, to: normalised }, "Magic-link base URL (confirm this is the production domain in prod)");
     await sendMagicLinkEmail(normalised, verifyUrl);
 
     // Opportunistic cleanup (fire-and-forget)

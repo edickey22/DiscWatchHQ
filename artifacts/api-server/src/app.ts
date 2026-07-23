@@ -8,6 +8,12 @@ import { loadUser } from "./lib/authMiddleware";
 
 const app: Express = express();
 
+// Replit (and most cloud hosts) proxy requests through a load balancer that
+// sets X-Forwarded-For. Without this, express-rate-limit throws a
+// ValidationError because Express doesn't trust the header by default.
+// "1" means: trust exactly one hop of proxy (the Replit edge), which is correct.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
