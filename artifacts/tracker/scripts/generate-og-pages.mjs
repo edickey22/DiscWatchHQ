@@ -152,6 +152,46 @@ function buildRoutes() {
       imageAlt: "Gaming consoles on display — DiscWatchHQ Console Listings",
     },
 
+    // ── Privacy Policy ────────────────────────────────────────────────────────
+    {
+      path: "privacy",
+      url:  `${BASE_URL}/privacy`,
+      title:       "Privacy Policy — DiscWatchHQ",
+      description: "How DiscWatchHQ collects and uses data: account email, tracked items, session cookies, Google AdSense, and affiliate links to GameStop, Amazon, eBay, and Best Buy.",
+      image:    null,
+      imageAlt: null,
+    },
+
+    // ── Terms of Service ──────────────────────────────────────────────────────
+    {
+      path: "terms",
+      url:  `${BASE_URL}/terms`,
+      title:       "Terms of Service — DiscWatchHQ",
+      description: "Terms of Service for DiscWatchHQ: what the site does, affiliate disclosures, accounts, accuracy disclaimers, trademark notices, and how to contact us.",
+      image:    null,
+      imageAlt: null,
+    },
+
+    // ── Tracking / Watchlist ──────────────────────────────────────────────────
+    {
+      path: "tracking",
+      url:  `${BASE_URL}/tracking`,
+      title:       "My Watchlist — DiscWatchHQ",
+      description: "Your tracked games, releases, and consoles on DiscWatchHQ. Get notified when limited-run releases change status.",
+      image:    null,
+      imageAlt: null,
+    },
+
+    // ── Profile ───────────────────────────────────────────────────────────────
+    {
+      path: "profile",
+      url:  `${BASE_URL}/profile`,
+      title:       "My Profile — DiscWatchHQ",
+      description: "Manage your DiscWatchHQ account, alert preferences, and tracked items.",
+      image:    null,
+      imageAlt: null,
+    },
+
     // ── Individual console detail pages ───────────────────────────────────────
     ...CONSOLE_MODELS.map(({ id, name }) => ({
       path: `consoles/${id}`,
