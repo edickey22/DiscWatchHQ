@@ -273,7 +273,7 @@ export default function LandingPage() {
       : "900,000+"
 
   useDocumentHead({
-    title:       "DiscWatchHQ — Find Any Physical Game, Buy Anywhere",
+    title:       "DiscWatchHQ — Every Game. Every Drop. Best Price.",
     description: `Search ${catalogLabel} physical games across every platform. Compare prices on GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases in real time.`,
     canonical:   buildCanonicalUrl("/"),
     jsonLd: {
