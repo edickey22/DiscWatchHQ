@@ -25,7 +25,7 @@ function FramedImage({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       loading="lazy"
-      className="h-full w-full object-cover scale-110 transition-transform duration-500 group-hover:scale-100"
+      className="h-full w-full object-contain"
     />
   )
 }
@@ -54,7 +54,7 @@ export function ConsoleCard({ console: item }: { console: ConsoleSummary }) {
 
       {/* Image */}
       <Link href={`/consoles/${id}`} className="block">
-      <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
+      <div className="relative aspect-[5/4] w-full overflow-hidden rounded-md bg-transparent shadow-sm">
         {stockPhoto ? (
           <FramedImage src={stockPhoto} alt={name} />
         ) : (
