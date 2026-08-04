@@ -1,13 +1,21 @@
 /**
- * TrackingPage — "My Tracked Games" — shows everything the logged-in user
+ * TrackingPage — "My Watchlist" — shows everything the logged-in user
  * has saved across Browse Games, Boutique Tracker, and Consoles.
  * Requires authentication; redirects to home with login modal open if not.
+ *
+ * Alert types per content type:
+ *   release  → Bell (status_change)  + DollarSign (price_drop on eBay resale price)
+ *   game     → Bell (price_drop via Best Buy / Amazon — no-ops until API key added)
+ *   console  → Bell (price_drop via eBay BIN listings)
  */
 
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, Gamepad2, Package, Monitor, Trash2, Bell, BellOff } from "lucide-react";
+import {
+  Heart, Gamepad2, Package, Monitor,
+  Trash2, Bell, BellOff, DollarSign,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -18,24 +26,26 @@ interface TrackedItem {
   itemType: "game" | "release" | "console";
   itemId:   string;
   itemData: {
-    title?:        string;
-    image?:        string;
+    title?:         string;
+    image?:         string;
     coverImageUrl?: string;
-    publisher?:    string;
-    status?:       string;
-    platforms?:    string[];
+    publisher?:     string;
+    status?:        string;
+    platforms?:     string[];
   };
   createdAt: string;
 }
 
+interface AlertEntry {
+  id:            number;
+  alertType:     string;
+  enabled:       boolean;
+  lastNotifiedAt?: string;
+}
+
 interface AlertPref {
-  alert: {
-    id:            number;
-    alertType:     string;
-    enabled:       boolean;
-    lastNotifiedAt?: string;
-  };
-  item: TrackedItem;
+  alert: AlertEntry;
+  item:  TrackedItem;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -54,7 +64,7 @@ const TYPE_LABELS = {
 
 const TYPE_LINKS: Record<string, (itemId: string) => string> = {
   game:    (id) => `/games?q=${encodeURIComponent(id)}`,
-  release: (id) => `/boutique`,
+  release: (_id) => `/boutique`,
   console: (id) => `/consoles/${id}`,
 };
 
@@ -71,7 +81,7 @@ function itemTitle(item: TrackedItem): string {
 export default function TrackingPage() {
   const { user, loading: authLoading, openLogin } = useAuth();
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
+  const queryClient  = useQueryClient();
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -116,10 +126,16 @@ export default function TrackingPage() {
   });
 
   const toggleAlertMutation = useMutation({
-    mutationFn: async ({ trackedItemId, itemData, itemType, existingAlertId, currentEnabled }: {
+    mutationFn: async ({
+      trackedItemId,
+      itemData,
+      alertType,
+      existingAlertId,
+      currentEnabled,
+    }: {
       trackedItemId:    number;
       itemData:         TrackedItem["itemData"];
-      itemType:         TrackedItem["itemType"];
+      alertType:        "status_change" | "price_drop";
       existingAlertId?: number;
       currentEnabled?:  boolean;
     }) => {
@@ -132,13 +148,12 @@ export default function TrackingPage() {
           body: JSON.stringify({ enabled: !currentEnabled }),
         });
       } else {
-        // Create new alert pref.
-        // Releases → status_change with the current status as baseline.
-        // Games / consoles → price_drop; baseline is omitted so the checker
-        // auto-initialises it on its first run (records current price, skips
-        // notification, then fires on any subsequent ≥10% drop).
-        const alertType     = itemType === "release" ? "status_change" : "price_drop";
-        const baselineValue = itemType === "release" ? (itemData.status ?? "unknown") : undefined;
+        // Create new pref.
+        // status_change → store current status as baseline so first change fires.
+        // price_drop    → omit baseline; checker auto-initialises on its first run
+        //                 (records current price, skips notify, fires on ≥10% drop).
+        const baselineValue =
+          alertType === "status_change" ? (itemData.status ?? "unknown") : undefined;
         await fetch("/api/alerts", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -152,10 +167,19 @@ export default function TrackingPage() {
 
   if (authLoading || !user) return null;
 
-  const items   = trackingData?.items ?? [];
-  const alertMap = new Map(
-    (alertsData?.prefs ?? []).map((p) => [p.item.id, p.alert]),
-  );
+  const items = trackingData?.items ?? [];
+
+  // Build two alert maps keyed by trackedItem.id — one per alert type.
+  // Releases can have both a status_change pref and a price_drop pref simultaneously.
+  const statusAlertMap = new Map<number, AlertEntry>();
+  const priceAlertMap  = new Map<number, AlertEntry>();
+  for (const p of (alertsData?.prefs ?? [])) {
+    if (p.alert.alertType === "status_change" || p.alert.alertType === "restock") {
+      statusAlertMap.set(p.item.id, p.alert);
+    } else if (p.alert.alertType === "price_drop") {
+      priceAlertMap.set(p.item.id, p.alert);
+    }
+  }
 
   const grouped = {
     game:    items.filter((i) => i.itemType === "game"),
@@ -215,9 +239,10 @@ export default function TrackingPage() {
                   </h2>
                   <div className="space-y-2">
                     {typeItems.map((item) => {
-                      const img   = itemImage(item);
-                      const title = itemTitle(item);
-                      const alert = alertMap.get(item.id);
+                      const img         = itemImage(item);
+                      const title       = itemTitle(item);
+                      const statusAlert = statusAlertMap.get(item.id);
+                      const priceAlert  = priceAlertMap.get(item.id);
 
                       return (
                         <div
@@ -247,8 +272,8 @@ export default function TrackingPage() {
                               )}
                               {item.itemData.status && (
                                 <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
-                                  item.itemData.status === "in_stock"     ? "bg-primary/20 text-primary" :
-                                  item.itemData.status === "coming_soon"  ? "bg-yellow-500/20 text-yellow-400" :
+                                  item.itemData.status === "in_stock"    ? "bg-primary/20 text-primary" :
+                                  item.itemData.status === "coming_soon" ? "bg-yellow-500/20 text-yellow-400" :
                                   "bg-muted/40 text-muted-foreground"
                                 }`}>
                                   {(item.itemData.status as string).replace("_", " ")}
@@ -259,30 +284,63 @@ export default function TrackingPage() {
 
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Alert toggle — releases get status-change alerts,
-                                games and consoles get price-drop alerts */}
+
+                            {/* ── Status-change bell — releases only ──────── */}
+                            {item.itemType === "release" && (
+                              <button
+                                title={
+                                  statusAlert?.enabled
+                                    ? "Turn off status-change alert"
+                                    : "Alert me when status changes"
+                                }
+                                onClick={() => toggleAlertMutation.mutate({
+                                  trackedItemId:   item.id,
+                                  itemData:        item.itemData,
+                                  alertType:       "status_change",
+                                  existingAlertId: statusAlert?.id,
+                                  currentEnabled:  statusAlert?.enabled,
+                                })}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                  statusAlert?.enabled
+                                    ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                    : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                                }`}
+                              >
+                                {statusAlert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
+                              </button>
+                            )}
+
+                            {/* ── Price-drop toggle ──────────────────────────
+                                Games / consoles: Bell icon (single alert type).
+                                Releases: DollarSign icon (resale price via eBay,
+                                updated every 72h; auto-inits baseline on first check). */}
                             <button
                               title={
-                                alert?.enabled
-                                  ? "Turn off alert"
+                                priceAlert?.enabled
+                                  ? "Turn off price-drop alert"
                                   : item.itemType === "release"
-                                    ? "Get email alert on status change"
-                                    : "Get email alert on price drop (≥10% off)"
+                                    ? "Alert me when resale price drops ≥10% (eBay data, updates every 72h)"
+                                    : "Alert me when price drops ≥10%"
                               }
                               onClick={() => toggleAlertMutation.mutate({
-                                trackedItemId: item.id,
-                                itemData:      item.itemData,
-                                itemType:      item.itemType,
-                                existingAlertId: alert?.id,
-                                currentEnabled:  alert?.enabled,
+                                trackedItemId:   item.id,
+                                itemData:        item.itemData,
+                                alertType:       "price_drop",
+                                existingAlertId: priceAlert?.id,
+                                currentEnabled:  priceAlert?.enabled,
                               })}
                               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                alert?.enabled
+                                priceAlert?.enabled
                                   ? "text-primary bg-primary/10 hover:bg-primary/20"
                                   : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
                               }`}
                             >
-                              {alert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
+                              {item.itemType === "release"
+                                ? <DollarSign size={14} />
+                                : priceAlert?.enabled
+                                  ? <Bell size={14} />
+                                  : <BellOff size={14} />
+                              }
                             </button>
 
                             {/* Remove */}

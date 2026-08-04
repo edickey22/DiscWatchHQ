@@ -265,4 +265,147 @@ router.post("/dev/test-release-alert", async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/dev/test-release-price-alert
+//
+// Forces a price-drop alert for a boutique release by creating a synthetic
+// alert_pref with a 2× inflated baseline against the release's stored ebayPrice,
+// then running the full alert check pipeline.
+//
+// Body: { email: string, releaseId: number, inflatedBaseline?: number }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/dev/test-release-price-alert", async (req, res) => {
+  const { email, releaseId, inflatedBaseline } = req.body as {
+    email?:            string;
+    releaseId?:        number;
+    inflatedBaseline?: number;
+  };
+
+  if (!email || !releaseId) {
+    res.status(400).json({ error: "email and releaseId are required" });
+    return;
+  }
+
+  const steps: string[] = [];
+
+  try {
+    // 1. Load the release and verify it has an eBay price
+    const [release] = await db
+      .select({
+        id:        releasesTable.id,
+        title:     releasesTable.title,
+        status:    releasesTable.status,
+        ebayPrice: releasesTable.ebayPrice,
+      })
+      .from(releasesTable)
+      .where(eq(releasesTable.id, releaseId))
+      .limit(1);
+
+    if (!release) {
+      res.status(404).json({ error: `Release id=${releaseId} not found` });
+      return;
+    }
+
+    if (release.ebayPrice == null) {
+      res.status(422).json({
+        error: `Release id=${releaseId} has no ebayPrice yet — eBay price scheduler hasn't run for this title. ` +
+               `Try a sold_out release that has eBay data (e.g. ids: 971, 277, 332, 153).`,
+      });
+      return;
+    }
+
+    const currentPrice = release.ebayPrice;
+    const baseline     = inflatedBaseline ?? parseFloat((currentPrice * 2).toFixed(2));
+
+    steps.push(`Release "${release.title}" (id=${release.id}, status="${release.status}")`);
+    steps.push(`Current eBay resale price: $${currentPrice.toFixed(2)}`);
+    steps.push(`Synthetic baseline (2× current): $${baseline.toFixed(2)}`);
+    steps.push(`Expected drop: ${((1 - currentPrice / baseline) * 100).toFixed(1)}% — should trigger (≥10% threshold)`);
+
+    // 2. Upsert test user
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    let userId: number;
+    if (existing.length > 0) {
+      userId = existing[0].id;
+      steps.push(`Using existing user id=${userId} for ${email}`);
+    } else {
+      const [newUser] = await db.insert(usersTable).values({ email }).returning();
+      userId = newUser.id;
+      steps.push(`Created test user id=${userId} for ${email}`);
+    }
+
+    // 3. Upsert tracked_item for this release
+    let trackedId: number;
+    const existingItem = await db
+      .select()
+      .from(trackedItemsTable)
+      .where(and(eq(trackedItemsTable.userId, userId), eq(trackedItemsTable.itemId, String(releaseId))))
+      .limit(1);
+
+    if (existingItem.length > 0) {
+      trackedId = existingItem[0].id;
+      steps.push(`Using existing tracked_item id=${trackedId}`);
+    } else {
+      const [ti] = await db
+        .insert(trackedItemsTable)
+        .values({
+          userId,
+          itemType: "release",
+          itemId:   String(releaseId),
+          itemData: { title: release.title, status: release.status },
+        })
+        .returning();
+      trackedId = ti.id;
+      steps.push(`Created tracked_item id=${trackedId}`);
+    }
+
+    // 4. Insert price_drop alert_pref with inflated baseline
+    const [pref] = await db
+      .insert(alertPrefsTable)
+      .values({
+        userId,
+        trackedItemId: trackedId,
+        alertType:     "price_drop",
+        baselineValue: baseline.toFixed(2),
+        enabled:       true,
+      })
+      .returning();
+
+    steps.push(`Created alert_pref id=${pref.id} (type=price_drop) with baseline $${baseline.toFixed(2)}`);
+
+    // 5. Run the full alert check
+    steps.push("Running checkAlerts()…");
+    await checkAlerts();
+
+    // 6. Re-read pref to confirm it fired
+    const [updated] = await db
+      .select()
+      .from(alertPrefsTable)
+      .where(eq(alertPrefsTable.id, pref.id))
+      .limit(1);
+
+    const fired = updated?.lastNotifiedAt != null;
+    steps.push(fired
+      ? `✅ Alert fired — lastNotifiedAt=${updated!.lastNotifiedAt!.toISOString()}`
+      : "❌ Alert did NOT fire — check logs for reason");
+
+    // 7. Clean up the synthetic pref
+    await db.delete(alertPrefsTable).where(eq(alertPrefsTable.id, pref.id));
+    steps.push(`Cleaned up synthetic alert_pref id=${pref.id}`);
+
+    res.json({
+      ok:           fired,
+      email,
+      releaseId,
+      releaseName:  release.title,
+      currentPrice,
+      baseline,
+      steps,
+    });
+  } catch (err) {
+    logger.error({ err }, "devTools: test-release-price-alert error");
+    res.status(500).json({ error: String(err), steps });
+  }
+});
+
 export default router;

@@ -48,6 +48,7 @@ import {
   usersTable,
   releasesTable,
 } from "@workspace/db/schema";
+// NOTE: releasesTable.ebayPrice is used for boutique release price-drop alerts.
 import { eq, and, or, isNull, lt } from "drizzle-orm";
 import { sendAlertEmail } from "./email";
 import { logger } from "./logger";
@@ -122,13 +123,17 @@ async function checkSingleAlert(ctx: {
   let detail       = "";
   let itemUrl      = APP_URL;
 
-  // ── Release alerts (restock / status_change) ──────────────────────────────
+  // ── Release alerts (restock / status_change / price_drop) ───────────────
   if (item.itemType === "release") {
     const releaseId = Number(item.itemId);
     if (Number.isNaN(releaseId)) return;
 
     const [release] = await db
-      .select({ status: releasesTable.status, title: releasesTable.title })
+      .select({
+        status:    releasesTable.status,
+        title:     releasesTable.title,
+        ebayPrice: releasesTable.ebayPrice,
+      })
       .from(releasesTable)
       .where(eq(releasesTable.id, releaseId))
       .limit(1);
@@ -150,6 +155,49 @@ async function checkSingleAlert(ctx: {
         await db
           .update(alertPrefsTable)
           .set({ baselineValue: release.status })
+          .where(eq(alertPrefsTable.id, pref.id));
+      }
+    } else if (pref.alertType === "price_drop") {
+      // ── Boutique release resale price-drop ──────────────────────────────────
+      // Source: releases.ebay_price — lowest eBay BIN for this release, written
+      // by ebayPriceScheduler on a 72-hour cycle. Only exists for sold_out items
+      // with active secondary-market listings. Null until first scheduler run.
+      if (release.ebayPrice == null) {
+        logger.debug(
+          { itemId: item.itemId },
+          "alertChecker: release has no eBay resale price yet — skipping",
+        );
+        return;
+      }
+
+      const currentPrice = release.ebayPrice;
+
+      // First run: no baseline — record current price and skip notification.
+      if (!pref.baselineValue) {
+        await db
+          .update(alertPrefsTable)
+          .set({ baselineValue: currentPrice.toFixed(2) })
+          .where(eq(alertPrefsTable.id, pref.id));
+        logger.info(
+          { itemId: item.itemId, baselinePrice: currentPrice },
+          "alertChecker: release eBay price baseline initialised",
+        );
+        return;
+      }
+
+      const baselinePrice = parseFloat(pref.baselineValue);
+      if (isNaN(baselinePrice) || baselinePrice <= 0) return;
+
+      // Fire if resale price is ≥10% below the stored baseline
+      if (currentPrice <= baselinePrice * PRICE_DROP_THRESHOLD) {
+        const saved = (baselinePrice - currentPrice).toFixed(2);
+        detail = `Resale price dropped from $${baselinePrice.toFixed(2)} to $${currentPrice.toFixed(2)} — you save $${saved}.`;
+        shouldNotify = true;
+
+        // Lower baseline so the next alert requires a further drop
+        await db
+          .update(alertPrefsTable)
+          .set({ baselineValue: currentPrice.toFixed(2) })
           .where(eq(alertPrefsTable.id, pref.id));
       }
     }
