@@ -14,6 +14,7 @@ import consolesRouter    from "./consoles";
 import authRouter        from "./auth";
 import trackingRouter    from "./tracking";
 import alertsRouter      from "./alerts";
+import devToolsRouter    from "./devTools";
 
 const router: IRouter = Router();
 
@@ -33,5 +34,9 @@ router.use(consolesRouter);
 router.use(authRouter);
 router.use(trackingRouter);
 router.use(alertsRouter);
+// Development-only tools (not mounted in production)
+if (process.env.NODE_ENV !== "production") {
+  router.use(devToolsRouter);
+}
 
 export default router;

@@ -116,14 +116,15 @@ export default function TrackingPage() {
   });
 
   const toggleAlertMutation = useMutation({
-    mutationFn: async ({ trackedItemId, itemData, existingAlertId, currentEnabled }: {
-      trackedItemId: number;
-      itemData:      TrackedItem["itemData"];
+    mutationFn: async ({ trackedItemId, itemData, itemType, existingAlertId, currentEnabled }: {
+      trackedItemId:    number;
+      itemData:         TrackedItem["itemData"];
+      itemType:         TrackedItem["itemType"];
       existingAlertId?: number;
       currentEnabled?:  boolean;
     }) => {
       if (existingAlertId !== undefined) {
-        // Toggle enabled state
+        // Toggle enabled state on existing pref
         await fetch(`/api/alerts/${existingAlertId}`, {
           method:  "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -131,14 +132,18 @@ export default function TrackingPage() {
           body: JSON.stringify({ enabled: !currentEnabled }),
         });
       } else {
-        // Create new alert
-        const alertType = "status_change";
-        const baseline  = itemData.status ?? "unknown";
+        // Create new alert pref.
+        // Releases → status_change with the current status as baseline.
+        // Games / consoles → price_drop; baseline is omitted so the checker
+        // auto-initialises it on its first run (records current price, skips
+        // notification, then fires on any subsequent ≥10% drop).
+        const alertType     = itemType === "release" ? "status_change" : "price_drop";
+        const baselineValue = itemType === "release" ? (itemData.status ?? "unknown") : undefined;
         await fetch("/api/alerts", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ trackedItemId, alertType, baselineValue: baseline }),
+          body: JSON.stringify({ trackedItemId, alertType, baselineValue }),
         });
       }
     },
@@ -254,25 +259,31 @@ export default function TrackingPage() {
 
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Alert toggle — only for releases */}
-                            {item.itemType === "release" && (
-                              <button
-                                title={alert?.enabled ? "Turn off alert" : "Get email alert on status change"}
-                                onClick={() => toggleAlertMutation.mutate({
-                                  trackedItemId: item.id,
-                                  itemData:      item.itemData,
-                                  existingAlertId: alert?.id,
-                                  currentEnabled:  alert?.enabled,
-                                })}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                  alert?.enabled
-                                    ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                    : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
-                                }`}
-                              >
-                                {alert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
-                              </button>
-                            )}
+                            {/* Alert toggle — releases get status-change alerts,
+                                games and consoles get price-drop alerts */}
+                            <button
+                              title={
+                                alert?.enabled
+                                  ? "Turn off alert"
+                                  : item.itemType === "release"
+                                    ? "Get email alert on status change"
+                                    : "Get email alert on price drop (≥10% off)"
+                              }
+                              onClick={() => toggleAlertMutation.mutate({
+                                trackedItemId: item.id,
+                                itemData:      item.itemData,
+                                itemType:      item.itemType,
+                                existingAlertId: alert?.id,
+                                currentEnabled:  alert?.enabled,
+                              })}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                alert?.enabled
+                                  ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                  : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                              }`}
+                            >
+                              {alert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
+                            </button>
 
                             {/* Remove */}
                             <button

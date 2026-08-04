@@ -18,4 +18,4 @@
 - [eBay empty result retry](ebay-empty-result-retry.md) — a transient timeout during the startup call burst cached 0 listings for random consoles, stuck for 24h; retry once + don't treat empty as fresh
 - [Console listings startup race](console-listings-startup-race.md) — server accepted requests up to 30s before persisted eBay cache loaded, showing 0 listings on every restart; load persisted cache eagerly, delay only the live re-fetch
 - [Letterboxed image containers](letterboxed-image-hero.md) — a fixed-aspect box around object-contain images shows the box's own background color in the gaps; size the box to the image (max-height, w-auto) instead
-- [User accounts & auth](user-accounts-auth.md) — all 4 phases built; magic-link SMTP, session cookie pattern, DB tables, TrackButton, alert checker, email stub/Resend switchover point
+- [User accounts & auth](user-accounts-auth.md) — all phases SMTP-confirmed; magic-link + console price-drop + release status-change alerts all delivered via live test; game alerts no-op until pricing API key added
