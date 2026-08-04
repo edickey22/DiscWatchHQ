@@ -77,7 +77,7 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
     return;
   }
 
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: `DiscWatchHQ <${from}>`,
     to:   payload.to,
     subject: payload.subject,
@@ -85,7 +85,17 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
     text: payload.text,
   });
 
-  logger.info({ to: payload.to, subject: payload.subject }, "Email sent");
+  logger.info(
+    {
+      to:        payload.to,
+      subject:   payload.subject,
+      messageId: info.messageId,
+      response:  info.response,
+      accepted:  info.accepted,
+      rejected:  info.rejected,
+    },
+    "Email sent",
+  );
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
