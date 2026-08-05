@@ -192,12 +192,16 @@ function parseCard(html: string): ParsedCard | null {
  * SE puts the platform in the title for new releases ("OCTOPATH TRAVELER - Switch 2")
  * and sometimes in the URL slug ("final-fantasy-vii-rebirth---switch-2"). Older
  * listings have neither — in that case we return ["Unknown"] so the item is still
- * included rather than silently dropped.
+ * included rather than silently dropped (and eligible for detail-page enrichment).
  */
 function extractPlatforms(title: string, slug: string): string[] {
   // Combine title and URL slug — platforms appear in at least one of the two
   const combined = `${title} ${slug}`;
-  return extractPlatformsFromText(combined);
+  const found = extractPlatformsFromText(combined);
+  // Fall back to ["Unknown"] so the item is kept in results and can be enriched
+  // via its detail page. Returning [] would cause the unknownItems filter to miss
+  // these items, silently skipping detail-page enrichment for them.
+  return found.length > 0 ? found : ["Unknown"];
 }
 
 /**
@@ -414,6 +418,13 @@ async function fetchDetailPage(productUrl: string): Promise<string | null> {
 
   return html;
 }
+
+// ── Exports for testing ───────────────────────────────────────────────────────
+// These pure parsing functions are exported so the smoke-test suite can unit-test
+// each extraction strategy against fixture HTML without making network calls.
+
+/** @internal */
+export { extractPlatformFromDetailHtml, extractPlatformsFromText, parseCards };
 
 // ── Scraper export ────────────────────────────────────────────────────────────
 
