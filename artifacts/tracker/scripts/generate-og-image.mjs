@@ -94,24 +94,25 @@ function buildSvg(fontBase64) {
 
   // "DiscWatch" (white) + "HQ" badge (green rounded rect + white text).
   //
-  // Font metrics at 80px Space Grotesk Bold (re-measured via ImageMagick label):
-  //   "DiscWatch"  = 424px wide (actual glyph advance; 411px label + kerning margin)
+  // Font metrics at 80px Space Grotesk Bold — measured by rendering the SVG
+  // with the embedded font through rsvg (ImageMagick SVG path) and trimming:
+  //   "DiscWatch"  = 458px wide  (rsvg rendering; prior estimate of 424 was wrong)
   //   badge         = 80px wide, 42px tall, rx=9
-  //   gap           = 20px  (comfortable visual separation, badge fully clear)
-  //   total group   = 424 + 20 + 80 = 524px
-  //   left edge     = 600 - 524/2 = 338
+  //   gap           = 16px  (comfortable visual separation, badge fully clear)
+  //   total group   = 458 + 16 + 80 = 554px
+  //   left edge     = 600 - 554/2 = 323
   //
-  // "DiscWatch" text-anchor="start" → x=338
-  // badge rect → x = 338+424+20 = 782
-  // "HQ" centred → x = 782+40 = 822
+  // "DiscWatch" text-anchor="start" → x=323
+  // badge rect → x = 323+458+16 = 797
+  // "HQ" centred → x = 797+40 = 837
   const wordmarkGroup = `
     <g>
-      <text x="338" y="298"
+      <text x="323" y="298"
             font-family="SpaceGrotesk, 'Space Grotesk', sans-serif"
             font-weight="700" font-size="80" fill="${WHITE}"
             text-anchor="start" dominant-baseline="auto">DiscWatch</text>
-      <rect x="782" y="260" width="80" height="42" rx="9" fill="${GREEN}"/>
-      <text x="822" y="294"
+      <rect x="797" y="260" width="80" height="42" rx="9" fill="${GREEN}"/>
+      <text x="837" y="294"
             font-family="SpaceGrotesk, 'Space Grotesk', sans-serif"
             font-weight="700" font-size="24" fill="${WHITE}"
             text-anchor="middle" dominant-baseline="auto">HQ</text>
