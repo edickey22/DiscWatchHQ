@@ -127,7 +127,7 @@ export function Header() {
     return (
       <Link
         href={href}
-        className={`px-3 py-1.5 rounded transition-colors text-[13px] font-medium whitespace-nowrap ${
+        className={`px-3 py-1.5 rounded transition-colors text-[15px] font-medium whitespace-nowrap ${
           isActive
             ? "text-primary bg-primary/15"
             : "text-muted-foreground hover:text-primary hover:bg-primary/10"
@@ -169,11 +169,11 @@ export function Header() {
         {/* ── 2. MAIN NAV ───────────────────────────────────────────────── */}
         <nav className="hidden sm:flex items-center gap-1 shrink-0">
           {navLink("/games",    "Browse Games")}
-          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" />
+          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" />
           {navLink("/boutique", "Boutique")}
-          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" style={{ animationDelay: "0.53s" }} />
+          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" style={{ animationDelay: "1.17s" }} />
           {navLink("/consoles", "Consoles")}
-          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" style={{ animationDelay: "1.07s" }} />
+          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" style={{ animationDelay: "2.33s" }} />
           {navLink("/about",    "About")}
         </nav>
 

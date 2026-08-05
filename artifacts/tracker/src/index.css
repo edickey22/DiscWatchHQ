@@ -165,7 +165,7 @@
 }
 
 .animate-nav-breathe {
-  animation: nav-breathe 1.6s ease-in-out infinite;
+  animation: nav-breathe 3.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
