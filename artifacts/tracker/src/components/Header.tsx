@@ -162,18 +162,21 @@ export function Header() {
           </span>
         </Link>
 
-        {/* ── 2. MAIN NAV — breathing room after logo ──────────────────── */}
-        <nav className="hidden sm:flex items-center gap-1 ml-6 shrink-0">
+        {/* ── LEFT SPACER — equal flex weight with the right spacer so the
+             nav group lands centered between logo and the stats block. ──── */}
+        <div className="flex-1" />
+
+        {/* ── 2. MAIN NAV ───────────────────────────────────────────────── */}
+        <nav className="hidden sm:flex items-center gap-1 shrink-0">
           {navLink("/games",    "Browse Games")}
           {navLink("/boutique", "Boutique")}
           {navLink("/consoles", "Consoles")}
           {navLink("/about",    "About")}
         </nav>
 
-        {/* ── SPACER — pushes everything right of here to the right edge.
-             min-w-[64px] guarantees at least 64px of clear air between the
-             last nav link and the start of the stats divider at any width. ── */}
-        <div className="flex-1 min-w-[64px]" />
+        {/* ── RIGHT SPACER — mirrors the left spacer; equal flex weights
+             center the nav between logo and stats at every viewport width. ── */}
+        <div className="flex-1" />
 
         {/* ── 3. STATS — live boutique + catalog numbers ───────────────── */}
         {/* Vertical divider that marks the boundary between nav and stats  */}
@@ -220,8 +223,8 @@ export function Header() {
         </div>
 
         {/* ── 4. ACCOUNT — pinned to the far right ─────────────────────── */}
-        {/* Divider separating stats from account section */}
-        <div className="hidden xl:block w-px h-6 bg-border/60 mx-4" />
+        {/* Divider + deliberate breathing room between stats and account */}
+        <div className="hidden xl:block w-px h-6 bg-border/60 mx-6" />
 
         {/* User menu (desktop) */}
         <div className="hidden sm:block shrink-0">
