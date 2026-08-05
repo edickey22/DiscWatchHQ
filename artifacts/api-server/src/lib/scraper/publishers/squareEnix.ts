@@ -46,6 +46,8 @@
  * theme. Any theme update could break selectors. Validated 2026-08-05.
  */
 
+import { and, eq, inArray } from "drizzle-orm";
+import { db, publishersTable, releasesTable } from "@workspace/db";
 import { logger } from "../../logger";
 import type { PublisherScraper, ScrapedRelease } from "../types";
 
@@ -481,48 +483,129 @@ export const squareEnixScraper: PublisherScraper = {
     // ── Detail-page enrichment for "Unknown" platform items ──────────────────
     // Fetch individual product pages only for releases where neither the listing
     // title nor URL slug contained a recognisable platform keyword.
-    const unknownItems = results.filter((r) => r.platforms.length === 1 && r.platforms[0] === "Unknown");
-    const toEnrich = unknownItems.slice(0, MAX_DETAIL_FETCHES);
+    //
+    // Cache check: before making any network requests we query the DB for any
+    // externalId that already has a resolved (non-Unknown) platform from a
+    // prior run. Those items get the cached value applied immediately; only
+    // items still Unknown after the DB check consume a detail-page fetch.
+    // This cuts detail-page traffic to near zero after the first full pass.
+    const unknownItems = results.filter(
+      (r) => r.platforms.length === 1 && r.platforms[0] === "Unknown"
+    );
 
-    if (toEnrich.length > 0) {
-      logger.info(
-        { total: unknownItems.length, fetching: toEnrich.length, capped: unknownItems.length > MAX_DETAIL_FETCHES },
-        "Square Enix: enriching Unknown-platform releases via detail pages"
-      );
+    if (unknownItems.length > 0) {
+      // ── Step 1: apply DB-cached platforms (zero network cost) ─────────────
+      const unknownExternalIds = unknownItems.map((r) => r.externalId);
 
-      for (let i = 0; i < toEnrich.length; i++) {
-        const release = toEnrich[i];
+      let cachedCount = 0;
+      try {
+        const dbRows = await db
+          .select({
+            externalId: releasesTable.externalId,
+            platforms:  releasesTable.platforms,
+          })
+          .from(releasesTable)
+          .innerJoin(publishersTable, eq(releasesTable.publisherId, publishersTable.id))
+          .where(
+            and(
+              eq(publishersTable.slug, "square-enix"),
+              inArray(releasesTable.externalId, unknownExternalIds)
+            )
+          );
 
-        // Polite delay between detail fetches (skip before the first one)
-        if (i > 0) await new Promise((r) => setTimeout(r, DETAIL_FETCH_DELAY_MS));
-
-        const detailHtml = await fetchDetailPage(release.productUrl);
-        if (!detailHtml) {
-          logger.warn({ productUrl: release.productUrl }, "Square Enix: detail page unavailable, keeping Unknown");
-          continue;
+        // Build a map of externalId → already-resolved platforms
+        const resolvedInDb = new Map<string, string[]>();
+        for (const row of dbRows) {
+          const plats = row.platforms as string[];
+          // Only use the DB value if it was previously resolved to something real
+          if (plats.length > 0 && !(plats.length === 1 && plats[0] === "Unknown")) {
+            resolvedInDb.set(row.externalId as string, plats);
+          }
         }
 
-        const found = extractPlatformFromDetailHtml(detailHtml);
-        if (found.length > 0) {
+        // Apply cached platforms — no detail fetch needed for these items
+        for (const item of unknownItems) {
+          const cached = resolvedInDb.get(item.externalId);
+          if (cached) {
+            item.platforms = cached;
+            cachedCount++;
+          }
+        }
+
+        if (cachedCount > 0) {
           logger.info(
-            { productUrl: release.productUrl, title: release.title, platforms: found },
-            "Square Enix: resolved Unknown platform from detail page"
+            { cachedCount, total: unknownItems.length },
+            "Square Enix: applied DB-cached platforms, skipping detail fetches for resolved items"
           );
-          release.platforms = found;
-        } else {
-          logger.debug(
-            { productUrl: release.productUrl, title: release.title },
-            "Square Enix: detail page also has no platform, keeping Unknown"
-          );
+        }
+      } catch (err) {
+        // Non-fatal: if the DB query fails, fall through to detail-page fetches
+        logger.warn({ err: String(err) }, "Square Enix: DB cache check failed, will fetch all detail pages");
+      }
+
+      // ── Step 2: fetch detail pages only for items still Unknown ───────────
+      const stillUnknown = unknownItems.filter(
+        (r) => r.platforms.length === 1 && r.platforms[0] === "Unknown"
+      );
+      const toEnrich = stillUnknown.slice(0, MAX_DETAIL_FETCHES);
+
+      if (toEnrich.length > 0) {
+        logger.info(
+          {
+            total: unknownItems.length,
+            cachedCount,
+            fetching: toEnrich.length,
+            capped: stillUnknown.length > MAX_DETAIL_FETCHES,
+          },
+          "Square Enix: enriching remaining Unknown-platform releases via detail pages"
+        );
+
+        for (let i = 0; i < toEnrich.length; i++) {
+          const release = toEnrich[i];
+
+          // Polite delay between detail fetches (skip before the first one)
+          if (i > 0) await new Promise((r) => setTimeout(r, DETAIL_FETCH_DELAY_MS));
+
+          const detailHtml = await fetchDetailPage(release.productUrl);
+          if (!detailHtml) {
+            logger.warn(
+              { productUrl: release.productUrl },
+              "Square Enix: detail page unavailable, keeping Unknown"
+            );
+            continue;
+          }
+
+          const found = extractPlatformFromDetailHtml(detailHtml);
+          if (found.length > 0) {
+            logger.info(
+              { productUrl: release.productUrl, title: release.title, platforms: found },
+              "Square Enix: resolved Unknown platform from detail page"
+            );
+            release.platforms = found;
+          } else {
+            logger.debug(
+              { productUrl: release.productUrl, title: release.title },
+              "Square Enix: detail page also has no platform, keeping Unknown"
+            );
+          }
         }
       }
+
+      const fetchResolved = toEnrich.filter((r) => r.platforms[0] !== "Unknown").length;
+      logger.info(
+        {
+          count: results.length,
+          unknownTotal: unknownItems.length,
+          fromCache: cachedCount,
+          fromDetailPage: fetchResolved,
+          stillUnknown: unknownItems.filter((r) => r.platforms[0] === "Unknown").length,
+        },
+        "Square Enix scrape complete"
+      );
+    } else {
+      logger.info({ count: results.length }, "Square Enix scrape complete (no Unknown-platform items)");
     }
 
-    const resolvedCount = toEnrich.filter((r) => r.platforms[0] !== "Unknown").length;
-    logger.info(
-      { count: results.length, unknownTotal: unknownItems.length, resolved: resolvedCount },
-      "Square Enix scrape complete"
-    );
     return results;
   },
 };
