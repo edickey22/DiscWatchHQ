@@ -23,6 +23,18 @@
  * title contains no recognised platform keyword is treated as non-game and
  * skipped. Platform keywords are matched against the full title.
  *
+ * Platform detail-page enrichment: when neither the title nor URL slug
+ * contain a recognisable platform keyword the scraper fetches the product
+ * detail page and extracts platform from:
+ *   1. BigCommerce product spec table  (<th>Platform</th> / <td>…</td>)
+ *   2. JSON-LD Product schema          (additionalProperty[name=Platform])
+ *   3. <meta name="keywords">          (comma-split; keyword match)
+ *   4. Open Graph description          (<meta property="og:description">)
+ *   5. Plain-text meta description     (<meta name="description">)
+ * Fetches are rate-limited to 1 per 2 s and capped at MAX_DETAIL_FETCHES per
+ * run to stay polite. If the detail page also has no platform the item is
+ * kept with platforms = ["Unknown"].
+ *
  * Cloudflare notes: the store has Cloudflare in front but does NOT apply a
  * JS challenge to the /video-games listing path. Browser-like Accept and
  * Sec-Fetch headers are required; a bare User-Agent without Accept headers
@@ -38,6 +50,12 @@ import { logger } from "../../logger";
 import type { PublisherScraper, ScrapedRelease } from "../types";
 
 const BASE = "https://na.store.square-enix-games.com";
+
+/** Max detail-page fetches per scrape run — keeps total runtime reasonable */
+const MAX_DETAIL_FETCHES = 20;
+
+/** Delay (ms) between detail-page requests — polite rate limiting */
+const DETAIL_FETCH_DELAY_MS = 2_000;
 
 /** Browser-like headers required to pass Cloudflare's bot heuristics */
 const HEADERS: Record<string, string> = {
@@ -179,24 +197,33 @@ function parseCard(html: string): ParsedCard | null {
 function extractPlatforms(title: string, slug: string): string[] {
   // Combine title and URL slug — platforms appear in at least one of the two
   const combined = `${title} ${slug}`;
+  return extractPlatformsFromText(combined);
+}
+
+/**
+ * Core platform keyword matcher — works on any text (title, slug, description,
+ * meta keywords, spec table values, JSON-LD properties, etc.).
+ *
+ * Returns [] when no platform is found (callers decide the fallback).
+ */
+function extractPlatformsFromText(text: string): string[] {
   const platforms: string[] = [];
 
   // Switch 2 must be tested before plain Switch
-  if (/switch[\s-]?2/i.test(combined)) platforms.push("Switch 2");
+  if (/switch[\s-]?2/i.test(text)) platforms.push("Switch 2");
   if (
     !platforms.includes("Switch 2") &&
-    (/nintendo[\s-]switch/i.test(combined) || /\bswitch\b/i.test(combined))
+    (/nintendo[\s-]switch/i.test(text) || /\bswitch\b/i.test(text))
   ) {
     platforms.push("Switch");
   }
-  if (/\bps5\b|playstation[\s-]?5/i.test(combined)) platforms.push("PS5");
-  if (/\bps4\b|playstation[\s-]?4/i.test(combined)) platforms.push("PS4");
-  if (/xbox[\s-]series/i.test(combined)) platforms.push("Xbox Series");
-  if (/xbox[\s-]one(?![\s-]x\b)/i.test(combined)) platforms.push("Xbox One");
+  if (/\bps5\b|playstation[\s-]?5/i.test(text)) platforms.push("PS5");
+  if (/\bps4\b|playstation[\s-]?4/i.test(text)) platforms.push("PS4");
+  if (/xbox[\s-]series/i.test(text)) platforms.push("Xbox Series");
+  if (/xbox[\s-]one(?![\s-]x\b)/i.test(text)) platforms.push("Xbox One");
+  if (/\bpc\b|windows/i.test(text)) platforms.push("PC");
 
-  // No platform detected → return "Unknown" so the caller can still include
-  // the item rather than dropping it silently.
-  return platforms.length > 0 ? platforms : ["Unknown"];
+  return platforms;
 }
 
 function extractEditionType(title: string): string | null {
@@ -205,6 +232,125 @@ function extractEditionType(title: string): string | null {
   if (/deluxe\s+edition/i.test(title)) return "Deluxe Edition";
   if (/special\s+edition/i.test(title)) return "Special Edition";
   return null;
+}
+
+// ── Detail-page platform extraction ──────────────────────────────────────────
+
+/**
+ * Parse platform from a BigCommerce Stencil product detail page.
+ *
+ * Tries, in order:
+ *   1. BC product spec table  — <th>Platform</th> adjacent <td>
+ *   2. JSON-LD Product schema — additionalProperty array
+ *   3. <meta name="keywords"> — comma-split tokens, keyword-matched
+ *   4. og:description         — free-text keyword match
+ *   5. meta description       — free-text keyword match
+ *
+ * Returns [] if nothing is found.
+ */
+function extractPlatformFromDetailHtml(html: string): string[] {
+  // 1. BigCommerce product spec/details table
+  //    Pattern: <th ...>Platform</th> (any whitespace) <td ...>value</td>
+  //    BC Stencil also renders as <dt>Platform</dt><dd>value</dd>
+  const specPatterns = [
+    // Standard table row
+    /<th[^>]*>\s*Platform\s*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i,
+    // Definition list
+    /<dt[^>]*>\s*Platform\s*<\/dt>\s*<dd[^>]*>([^<]+)<\/dd>/i,
+    // Label-value span pair
+    /Platform\s*:\s*<\/[^>]+>\s*<[^>]+>([^<]+)</i,
+  ];
+  for (const pattern of specPatterns) {
+    const m = html.match(pattern);
+    if (m) {
+      const value = decodeEntities(m[1].trim());
+      const found = extractPlatformsFromText(value);
+      if (found.length > 0) {
+        logger.debug({ value, found }, "SE detail: platform from spec table");
+        return found;
+      }
+    }
+  }
+
+  // 2. JSON-LD Product schema
+  //    BC Stencil injects <script type="application/ld+json"> with Product data.
+  //    The schema may carry additionalProperty items or a "description" field.
+  const jsonLdPattern = /<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+  let jMatch: RegExpExecArray | null;
+  while ((jMatch = jsonLdPattern.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(jMatch[1]);
+      const items: unknown[] = Array.isArray(data) ? data : [data];
+      for (const item of items) {
+        if (typeof item !== "object" || item === null) continue;
+        const obj = item as Record<string, unknown>;
+
+        // additionalProperty: [{ "@type": "PropertyValue", "name": "Platform", "value": "PlayStation 5" }]
+        if (Array.isArray(obj.additionalProperty)) {
+          for (const prop of obj.additionalProperty as Record<string, unknown>[]) {
+            if (
+              typeof prop === "object" &&
+              prop !== null &&
+              /platform/i.test(String(prop.name ?? ""))
+            ) {
+              const val = String(prop.value ?? "");
+              const found = extractPlatformsFromText(val);
+              if (found.length > 0) {
+                logger.debug({ val, found }, "SE detail: platform from JSON-LD additionalProperty");
+                return found;
+              }
+            }
+          }
+        }
+
+        // description field — free-text fallback
+        if (typeof obj.description === "string") {
+          const found = extractPlatformsFromText(obj.description);
+          if (found.length > 0) {
+            logger.debug({ found }, "SE detail: platform from JSON-LD description");
+            return found;
+          }
+        }
+      }
+    } catch {
+      // malformed JSON-LD — skip
+    }
+  }
+
+  // 3. <meta name="keywords"> — comma-separated tokens
+  const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]+)"/i)
+    ?? html.match(/<meta\s+content="([^"]+)"\s+name="keywords"/i);
+  if (kwMatch) {
+    const found = extractPlatformsFromText(kwMatch[1]);
+    if (found.length > 0) {
+      logger.debug({ found }, "SE detail: platform from meta keywords");
+      return found;
+    }
+  }
+
+  // 4. og:description
+  const ogDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i)
+    ?? html.match(/<meta\s+content="([^"]+)"\s+property="og:description"/i);
+  if (ogDescMatch) {
+    const found = extractPlatformsFromText(decodeEntities(ogDescMatch[1]));
+    if (found.length > 0) {
+      logger.debug({ found }, "SE detail: platform from og:description");
+      return found;
+    }
+  }
+
+  // 5. Plain meta description
+  const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i)
+    ?? html.match(/<meta\s+content="([^"]+)"\s+name="description"/i);
+  if (metaDescMatch) {
+    const found = extractPlatformsFromText(decodeEntities(metaDescMatch[1]));
+    if (found.length > 0) {
+      logger.debug({ found }, "SE detail: platform from meta description");
+      return found;
+    }
+  }
+
+  return [];
 }
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
@@ -232,6 +378,37 @@ async function fetchPage(page: number): Promise<string | null> {
   // A Cloudflare challenge page is tiny (< 5 KB) — treat as a failed fetch.
   if (html.length < 5_000) {
     logger.warn({ page, url, bytes: html.length }, "Square Enix: response too small, likely CF challenge");
+    return null;
+  }
+
+  return html;
+}
+
+/**
+ * Fetch a single product detail page and return its HTML, or null on failure.
+ * Uses the same Cloudflare-friendly headers as the category page fetcher.
+ */
+async function fetchDetailPage(productUrl: string): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await fetch(productUrl, {
+      headers: HEADERS,
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err) {
+    logger.warn({ productUrl, err: String(err) }, "Square Enix: detail fetch error");
+    return null;
+  }
+
+  if (!res.ok) {
+    logger.warn({ productUrl, status: res.status }, "Square Enix: detail non-OK response");
+    return null;
+  }
+
+  const html = await res.text();
+
+  if (html.length < 5_000) {
+    logger.warn({ productUrl, bytes: html.length }, "Square Enix: detail response too small, likely CF challenge");
     return null;
   }
 
@@ -290,7 +467,51 @@ export const squareEnixScraper: PublisherScraper = {
       if (page < MAX_PAGES) await new Promise((r) => setTimeout(r, 1_500));
     }
 
-    logger.info({ count: results.length }, "Square Enix scrape complete");
+    // ── Detail-page enrichment for "Unknown" platform items ──────────────────
+    // Fetch individual product pages only for releases where neither the listing
+    // title nor URL slug contained a recognisable platform keyword.
+    const unknownItems = results.filter((r) => r.platforms.length === 1 && r.platforms[0] === "Unknown");
+    const toEnrich = unknownItems.slice(0, MAX_DETAIL_FETCHES);
+
+    if (toEnrich.length > 0) {
+      logger.info(
+        { total: unknownItems.length, fetching: toEnrich.length, capped: unknownItems.length > MAX_DETAIL_FETCHES },
+        "Square Enix: enriching Unknown-platform releases via detail pages"
+      );
+
+      for (let i = 0; i < toEnrich.length; i++) {
+        const release = toEnrich[i];
+
+        // Polite delay between detail fetches (skip before the first one)
+        if (i > 0) await new Promise((r) => setTimeout(r, DETAIL_FETCH_DELAY_MS));
+
+        const detailHtml = await fetchDetailPage(release.productUrl);
+        if (!detailHtml) {
+          logger.warn({ productUrl: release.productUrl }, "Square Enix: detail page unavailable, keeping Unknown");
+          continue;
+        }
+
+        const found = extractPlatformFromDetailHtml(detailHtml);
+        if (found.length > 0) {
+          logger.info(
+            { productUrl: release.productUrl, title: release.title, platforms: found },
+            "Square Enix: resolved Unknown platform from detail page"
+          );
+          release.platforms = found;
+        } else {
+          logger.debug(
+            { productUrl: release.productUrl, title: release.title },
+            "Square Enix: detail page also has no platform, keeping Unknown"
+          );
+        }
+      }
+    }
+
+    const resolvedCount = toEnrich.filter((r) => r.platforms[0] !== "Unknown").length;
+    logger.info(
+      { count: results.length, unknownTotal: unknownItems.length, resolved: resolvedCount },
+      "Square Enix scrape complete"
+    );
     return results;
   },
 };
