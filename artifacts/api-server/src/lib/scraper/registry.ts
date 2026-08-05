@@ -8,6 +8,8 @@ import { xboxGameStudiosScraper } from "./publishers/xboxGameStudios";
 import { blizzardGearScraper } from "./publishers/blizzardGear";
 import { eastasiasoftScraper } from "./publishers/eastasiasoft";
 import { redArtGamesScraper } from "./publishers/redArtGames";
+import { nisAmericaScraper } from "./publishers/nisAmerica";
+import { koeiTecmoScraper } from "./publishers/koeiTecmo";
 
 /**
  * Registry of all active publisher scrapers.
@@ -27,6 +29,9 @@ import { redArtGamesScraper } from "./publishers/redArtGames";
  *   Blizzard Gear Store       gear.blizzard.com             Shopify JSON  ✓ HIGH
  *   eastasiasoft               shop.eastasiasoft.com         Shopify JSON  ✓ HIGH
  *   Red Art Games             redartgames.com               HTML parsing ⚠ MEDIUM
+ *   NIS America               store.nisamerica.com          Shopify JSON  ✓ HIGH
+ *   Koei Tecmo                store.nisamerica.com (koei-tecmo collection)
+ *                                                           Shopify JSON  ✓ HIGH
  *
  * ── Seeded / disabled (no scraper yet) ──────────────────────────────────────
  *
@@ -35,6 +40,8 @@ import { redArtGamesScraper } from "./publishers/redArtGames";
  *   Special Reserve Games     Defunct (2024); domain → Devolver Digital
  *   Nintendo Official Store   Custom platform; no public product feed
  *   PlayStation Direct        Custom platform; no public product feed
+ *   Square Enix               NA+EU stores WAF-blocked (empty response to all server requests)
+ *   Bandai Namco              Angular SPA + AWS WAF Captcha; no public product API
  */
 const scrapers: PublisherScraper[] = [
   limitedRunScraper,         // limitedrungames.com          — Shopify JSON /collections/*
@@ -46,6 +53,8 @@ const scrapers: PublisherScraper[] = [
   blizzardGearScraper,       // gear.blizzard.com            — Shopify JSON /collections/limited-edition
   eastasiasoftScraper,       // shop.eastasiasoft.com        — Shopify JSON /collections/games
   redArtGamesScraper,        // redartgames.com              — HTML parsing of /33-games listing pages
+  nisAmericaScraper,         // store.nisamerica.com         — Shopify JSON /collections/games-limited-edition
+  koeiTecmoScraper,          // store.nisamerica.com         — Shopify JSON /collections/koei-tecmo
 ];
 
 export function getScraperBySlug(slug: string): PublisherScraper | undefined {

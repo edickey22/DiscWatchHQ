@@ -173,7 +173,7 @@ export function Header() {
 
         {/* ── CENTER: Live stats (flex-1 so it truly centers between left and right) */}
         <div className="flex-1 flex justify-center">
-          <div className="hidden md:flex items-center gap-5 text-sm font-mono tracking-tight">
+          <div className="hidden xl:flex items-center gap-5 text-sm font-mono tracking-tight">
             {stats && (
               <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
                 <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">

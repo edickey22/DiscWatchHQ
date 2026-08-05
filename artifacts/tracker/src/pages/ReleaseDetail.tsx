@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Skeleton } from "@/components/ui/skeleton"
-import { RetailerLinks } from "@/components/RetailerLinks"
+
 import { daysUntil, formatDate } from "@/lib/utils"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import {
@@ -289,30 +289,20 @@ export default function ReleaseDetail() {
                       </a>
                     </div>
 
-                    {/* ── SECONDARY: generic affiliate retailer searches — a fallback,
-                        not the primary path, since a boutique exclusive may not turn
-                        up on these at all. ── */}
-                    <div className="pt-3 border-t border-border/20">
-                      <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">
-                        Also try searching
-                      </p>
-                      <RetailerLinks
-                        urls={release.retailerSearchUrls}
-                        prices={release.retailerPrices}
-                        variant="detail"
-                        platforms={release.platforms ?? []}
-                        guideUrls={release.guideSearchUrls}
-                      />
-                      {/* eBay price trend — only meaningful for sold-out releases
-                          where the eBay price scheduler actually runs. */}
-                      {isSoldOut && (
+                    {/* eBay resale price trend — only shown for sold-out releases
+                        where the eBay price scheduler actually runs.
+                        Generic retailer search links (GameStop / Amazon / eBay
+                        search) are intentionally omitted: boutique exclusives
+                        are publisher-direct and not stocked by those retailers,
+                        so those searches produce dead-end results. */}
+                    {isSoldOut && (
+                      <div className="pt-3 border-t border-border/20">
                         <PriceTrend
                           url={`/api/price-history/release/${release.id}`}
                           queryKey={["price-history", "release", release.id]}
-                          className="mt-3"
                         />
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

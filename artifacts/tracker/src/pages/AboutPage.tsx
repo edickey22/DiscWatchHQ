@@ -17,21 +17,23 @@ import { buildCanonicalUrl } from "@/lib/seo"
 // ── Static data ───────────────────────────────────────────────────────────────
 
 const PUBLISHERS_TRACKED = [
-  "Limited Run Games",
-  "Strictly Limited Games",
-  "iam8bit",
-  "Super Rare Games",
-  "Fangamer",
-  "Xbox Game Studios Shop",
   "Blizzard Gear Store",
   "eastasiasoft",
+  "Fangamer",
+  "iam8bit",
+  "Koei Tecmo",
+  "Limited Run Games",
+  "NIS America",
   "Red Art Games",
+  "Strictly Limited Games",
+  "Super Rare Games",
+  "Xbox Game Studios Shop",
 ]
 
 const HERO_STATS = [
   { value: "900K+", label: "Physical games" },
   { value: "4",     label: "Retailers compared" },
-  { value: "9",     label: "Boutique publishers" },
+  { value: "11",    label: "Boutique publishers" },
   { value: "26+",   label: "Consoles tracked" },
 ]
 
