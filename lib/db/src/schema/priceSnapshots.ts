@@ -43,6 +43,10 @@ export const priceSnapshotsTable = pgTable("price_snapshots", {
   snappedAt: timestamp("snapped_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index("price_snapshots_item_idx").on(table.itemType, table.itemId, table.snappedAt),
+  // DESC variant used by the DISTINCT ON (item_id) query in scraper/runner.ts:
+  // ORDER BY item_id, snapped_at DESC needs (item_type, item_id, snapped_at DESC)
+  // to allow an index scan returning one row per release regardless of history depth.
+  index("price_snapshots_item_desc_idx").on(table.itemType, table.itemId, table.snappedAt.desc()),
   index("price_snapshots_snapped_at_idx").on(table.snappedAt),
 ]);
 

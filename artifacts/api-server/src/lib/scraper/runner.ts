@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, publishersTable, releasesTable, scrapeLogsTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "../logger";
 import { getAllScrapers, getScraperBySlug } from "./registry";
@@ -35,23 +35,25 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
 
   if (existingRows.length > 0) {
     const itemIds = existingRows.map(r => String(r.id));
-    // Fetch all recent release_list snapshots for these IDs in one query,
-    // newest first; keep only the first (latest) row encountered per itemId.
-    const snapshots = await db
-      .select({ itemId: priceSnapshotsTable.itemId, priceUsd: priceSnapshotsTable.priceUsd })
-      .from(priceSnapshotsTable)
-      .where(
-        and(
-          eq(priceSnapshotsTable.itemType, "release_list"),
-          inArray(priceSnapshotsTable.itemId, itemIds),
-        )
-      )
-      .orderBy(desc(priceSnapshotsTable.snappedAt));
+    // Lateral join: one index seek per release ID, returns exactly N rows total
+    // regardless of snapshot history depth (O(N releases), not O(N × history)).
+    // The (item_type, item_id, snapped_at DESC) index satisfies each sub-query's
+    // ORDER BY snapped_at DESC LIMIT 1 with a single index entry read per ID.
+    const result = await db.execute(sql`
+      SELECT ids.item_id, ps.price_usd
+      FROM unnest(ARRAY[${sql.join(itemIds.map(id => sql`${id}`), sql`, `)}]::text[]) AS ids(item_id)
+      CROSS JOIN LATERAL (
+        SELECT price_usd
+        FROM price_snapshots
+        WHERE item_type = 'release_list'
+          AND item_id = ids.item_id
+        ORDER BY snapped_at DESC
+        LIMIT 1
+      ) AS ps
+    `);
 
-    for (const row of snapshots) {
-      if (!lastSnapshotByItemId.has(row.itemId)) {
-        lastSnapshotByItemId.set(row.itemId, row.priceUsd);
-      }
+    for (const row of result.rows) {
+      lastSnapshotByItemId.set(row.item_id as string, row.price_usd as number);
     }
   }
 
