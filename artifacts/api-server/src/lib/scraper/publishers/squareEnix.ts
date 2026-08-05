@@ -185,6 +185,16 @@ function parseCard(html: string): ParsedCard | null {
   // ── Edition type ─────────────────────────────────────────────────────────
   const editionType = extractEditionType(title);
 
+  // ── Boutique filter ───────────────────────────────────────────────────────
+  // SE's /video-games page mixes genuine boutique items with standard retail
+  // back-catalog (clearance titles available at any major retailer). Keep only:
+  //   (a) Pre-orders (coming_soon) — SE Store-exclusive window while it lasts
+  //   (b) Named special editions   — Limited / Collector / Deluxe / Special
+  // Everything else is standard retail and should not appear in the boutique
+  // tracker. Future titles that lack a pre-order button today will re-appear
+  // once SE opens pre-orders and the card shows "Pre-Order Now".
+  if (status !== "coming_soon" && editionType === null) return null;
+
   return { title, productUrl, price, coverImageUrl, status, platforms, editionType };
 }
 
