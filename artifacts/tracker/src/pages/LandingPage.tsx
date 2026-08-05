@@ -20,7 +20,7 @@
  *   • Tiles are `aria-hidden` — purely decorative; no alt text needed.
  */
 
-import { type ReactNode } from "react"
+import { type ReactNode, useMemo } from "react"
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
@@ -29,7 +29,7 @@ import { ControllerIcon } from "@/components/ControllerIcon"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
-import { useGetReleaseStats } from "@workspace/api-client-react"
+import { useGetReleaseStats, useListPublishers } from "@workspace/api-client-react"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 
@@ -60,7 +60,11 @@ async function fetchConsolesCount(): Promise<number> {
   return Array.isArray(data.consoles) ? data.consoles.length : 0
 }
 
-const PUBLISHERS = [
+// Fallback publisher names used while useListPublishers loads (or if the API
+// is unavailable). Must match artifacts/api-server/src/lib/scraper/registry.ts.
+// ⚠ When adding/removing a publisher in registry.ts, update this list too —
+//   it's the only spot that doesn't auto-derive from the live endpoint.
+const PUBLISHER_FALLBACKS = [
   "Limited Run Games",
   "Strictly Limited Games",
   "iam8bit",
@@ -70,6 +74,9 @@ const PUBLISHERS = [
   "Blizzard Gear Store",
   "eastasiasoft",
   "Red Art Games",
+  "NIS America",
+  "Koei Tecmo",
+  "Square Enix",
 ]
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -152,26 +159,8 @@ const STEP_IMAGES = [
   { src: "/images/step-collector.jpg", alt: "Premium black collector's edition box"     },
 ]
 
-const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
-  {
-    num:   "01",
-    icon:  <Search className="text-primary" size={18} />,
-    title: "Search any title",
-    body:  "Search 899,000+ games across every platform and generation — NES to PS5, retro to new releases. Filter by platform, sort by Metacritic score or release date. Results are cached locally for instant repeat searches.",
-  },
-  {
-    num:   "02",
-    icon:  <ShoppingBag className="text-primary" size={18} />,
-    title: "Buy at four retailers",
-    body:  "Every game card links directly to GameStop, Amazon, eBay, and Best Buy. One search, four storefronts — find the best price or availability without tabbing between sites.",
-  },
-  {
-    num:   "03",
-    icon:  <Clock className="text-primary" size={18} />,
-    title: "Boutique drop tracker",
-    body:  "Limited-run physical releases from boutique publishers like Limited Run Games and Strictly Limited are monitored every 2 hours — Available\u00a0Now, Coming\u00a0Soon, and Sold\u00a0Out with preorder countdowns.",
-  },
-]
+// STEPS defined inside LandingPage (below) so step 03's body can reference
+// the live publisherCount from useListPublishers.
 
 // ── Step row — zigzag alternating layout with scroll-reveal + photo ──────────
 
@@ -239,6 +228,41 @@ export default function LandingPage() {
     queryFn:   fetchConsolesCount,
     staleTime: 5 * 60_000,
   })
+
+  // Live publisher list — auto-updates when publishers are added/removed.
+  // Falls back to PUBLISHER_FALLBACKS during initial load.
+  const { data: publishersData } = useListPublishers({})
+  const publisherList  = useMemo(() => {
+    const live = (publishersData ?? []).filter(p => p.enabled).map(p => p.name)
+    return live.length > 0 ? live : PUBLISHER_FALLBACKS
+  }, [publishersData])
+  const publisherCount = publisherList.length
+
+  // STEPS defined here (not at module level) so step 03 can reference publisherCount.
+  const steps = useMemo<{ num: string; icon: ReactNode; title: string; body: string }[]>(
+    () => [
+      {
+        num:   "01",
+        icon:  <Search className="text-primary" size={18} />,
+        title: "Search any title",
+        body:  "Search 899,000+ games across every platform and generation — NES to PS5, retro to new releases. Filter by platform, sort by Metacritic score or release date. Results are cached locally for instant repeat searches.",
+      },
+      {
+        num:   "02",
+        icon:  <ShoppingBag className="text-primary" size={18} />,
+        title: "Buy at four retailers",
+        body:  "Every game card links directly to GameStop, Amazon, eBay, and Best Buy. One search, four storefronts — find the best price or availability without tabbing between sites.",
+      },
+      {
+        num:   "03",
+        icon:  <Clock className="text-primary" size={18} />,
+        title: "Boutique drop tracker",
+        // Publisher count is live — no hardcoded number here.
+        body:  `Limited-run physical releases from ${publisherCount} boutique publishers are monitored every 2 hours — Available\u00a0Now, Coming\u00a0Soon, and Sold\u00a0Out with preorder countdowns.`,
+      },
+    ],
+    [publisherCount],
+  )
 
   // Use the live catalog count when available (e.g. "899K+"), fall back to
   // the same static figure used in index.html so the two never disagree.
@@ -486,7 +510,7 @@ export default function LandingPage() {
         </div>
         <div className="container mx-auto max-w-6xl px-4 pb-10">
           <div className="divide-y divide-border/20">
-            {STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <StepRow key={step.num} {...step} index={i} />
             ))}
           </div>
@@ -503,8 +527,8 @@ export default function LandingPage() {
           WHY IT EXISTS — editorial "problem being solved" section
       ════════════════════════════════════════════════════════════════════ */}
       <section className="py-16 bg-background border-b border-border/20">
-        <div className="container mx-auto max-w-6xl px-4">
-          <div className="max-w-3xl">
+        <div className="container mx-auto max-w-3xl px-4">
+          <div>
             <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-5">
               Why DiscWatchHQ exists
             </p>
@@ -530,8 +554,12 @@ export default function LandingPage() {
                 print runs of just a few thousand units. These releases frequently sell out within
                 hours of going live, and the preorder windows are short. Miss the window and you're
                 paying two or three times the original price on the secondary market. The Boutique
-                Tracker exists specifically to solve this: we check publisher storefronts every two
-                hours so you don't have to.
+                {/* Publisher count is live — derived from useListPublishers, not hardcoded.
+                    Example names above are the three founding boutique publishers and are unlikely
+                    to change; spot-check them if the publisher roster changes significantly. */}
+                Tracker exists specifically to solve this: we currently monitor{" "}
+                <span className="text-foreground/80 font-medium">{publisherCount} publisher storefronts</span>,
+                checked every two hours so you don't have to.
               </p>
               <p>
                 The hardware side has its own challenges. Retro console prices are driven largely
@@ -630,7 +658,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                    Real-time scarcity tracking for limited-run physical releases from 9
+                    Real-time scarcity tracking for limited-run physical releases from {publisherCount}
                     boutique publishers. Preorder windows, countdowns, and secondary-market
                     links for sold-out titles.
                   </p>
@@ -693,7 +721,7 @@ export default function LandingPage() {
             Boutique publishers we monitor
           </p>
           <div className="flex flex-wrap gap-2.5">
-            {PUBLISHERS.map(pub => (
+            {publisherList.map(pub => (
               <span
                 key={pub}
                 className="text-xs font-mono text-muted-foreground/90 border border-border/25 px-3 py-1.5 rounded-full"
@@ -734,10 +762,10 @@ export default function LandingPage() {
             <div className="space-y-4">
               <p>
                 The <strong className="text-foreground/80">boutique tracker</strong> monitors
-                limited-run physical releases from publishers like Limited Run Games, Strictly
-                Limited Games, iam8bit, Super Rare Games, and Fangamer — updated every two
-                hours. See what's available now, what's coming soon, and find sold-out titles
-                on the secondary market via eBay.
+                limited-run physical releases from {publisherCount} boutique publishers —
+                including Limited Run Games, Strictly Limited Games, iam8bit, and Super Rare
+                Games — updated every two hours. See what's available now, what's coming soon,
+                and find sold-out titles on the secondary market via eBay.
               </p>
               <p>
                 Need hardware? Browse live eBay listings for 26+ console models across every

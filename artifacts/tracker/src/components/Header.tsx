@@ -169,8 +169,11 @@ export function Header() {
         {/* ── 2. MAIN NAV ───────────────────────────────────────────────── */}
         <nav className="hidden sm:flex items-center gap-1 shrink-0">
           {navLink("/games",    "Browse Games")}
+          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" />
           {navLink("/boutique", "Boutique")}
+          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" style={{ animationDelay: "0.53s" }} />
           {navLink("/consoles", "Consoles")}
+          <ControllerIcon size={15} aria-hidden className="mx-1.5 shrink-0 animate-nav-breathe" style={{ animationDelay: "1.07s" }} />
           {navLink("/about",    "About")}
         </nav>
 
@@ -223,8 +226,9 @@ export function Header() {
         </div>
 
         {/* ── 4. ACCOUNT — pinned to the far right ─────────────────────── */}
-        {/* Divider + deliberate breathing room between stats and account */}
-        <div className="hidden xl:block w-px h-6 bg-border/60 mx-6" />
+        {/* Divider between stats and account — muted-foreground/30 is a genuine
+             mid-gray that reads clearly on the near-black header background */}
+        <div className="hidden xl:block w-px h-7 bg-muted-foreground/30 mx-6" />
 
         {/* User menu (desktop) */}
         <div className="hidden sm:block shrink-0">

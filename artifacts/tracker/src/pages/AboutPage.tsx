@@ -5,6 +5,7 @@
 
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useListPublishers } from "@workspace/api-client-react"
 import { Link } from "wouter"
 import { ExternalLink, Search, ShoppingBag, Bell, Database, BarChart2 } from "lucide-react"
 import { ControllerIcon } from "@/components/ControllerIcon"
@@ -16,7 +17,11 @@ import { buildCanonicalUrl } from "@/lib/seo"
 
 // ── Static data ───────────────────────────────────────────────────────────────
 
-const PUBLISHERS_TRACKED = [
+// Fallback publisher list used while useListPublishers loads.
+// ⚠ Keep in sync with artifacts/api-server/src/lib/scraper/registry.ts when
+//   adding or removing publishers — this is the only place that still needs
+//   a manual update (everything else derives from the live /api/publishers endpoint).
+const PUBLISHER_FALLBACKS = [
   "Blizzard Gear Store",
   "eastasiasoft",
   "Fangamer",
@@ -31,10 +36,9 @@ const PUBLISHERS_TRACKED = [
   "Xbox Game Studios Shop",
 ]
 
-const HERO_STATS = [
+const HERO_STATS_BASE = [
   { value: "900K+", label: "Physical games" },
   { value: "4",     label: "Retailers compared" },
-  { value: "12",    label: "Boutique publishers" },
   { value: "26+",   label: "Consoles tracked" },
 ]
 
@@ -103,6 +107,20 @@ function SectionEyebrow({ label }: { label: string }) {
 // ── Page component ────────────────────────────────────────────────────────────
 
 export default function AboutPage() {
+  // Live publisher list — auto-updates when publishers are added/removed in the DB.
+  // Falls back to PUBLISHER_FALLBACKS while loading.
+  const { data: publishersData } = useListPublishers({})
+  const publisherList = useMemo(() => {
+    const live = (publishersData ?? []).filter(p => p.enabled).map(p => p.name)
+    return live.length > 0 ? live.sort() : PUBLISHER_FALLBACKS
+  }, [publishersData])
+  const publisherCount = publisherList.length
+
+  const heroStats = useMemo(() => [
+    ...HERO_STATS_BASE,
+    { value: String(publisherCount), label: "Boutique publishers" },
+  ], [publisherCount])
+
   useDocumentHead({
     title:       "About DiscWatchHQ — Physical Game Tracker & Price Comparison",
     description: "DiscWatchHQ tracks 900,000+ physical video games and compares prices on GameStop, Amazon, eBay, and Best Buy. Built for collectors and fans of physical media.",
@@ -175,7 +193,7 @@ export default function AboutPage() {
 
           {/* Stat row */}
           <div className="flex flex-wrap gap-x-10 gap-y-5">
-            {HERO_STATS.map(s => (
+            {heroStats.map(s => (
               <div key={s.label} className="flex flex-col gap-1.5">
                 <span className="font-display font-black text-2xl md:text-3xl text-primary leading-none tabular-nums">
                   {s.value}
@@ -249,7 +267,7 @@ export default function AboutPage() {
                   monitors releases from these publishers in real time, updated every 2 hours:
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {PUBLISHERS_TRACKED.map(p => (
+                  {publisherList.map(p => (
                     <span
                       key={p}
                       className="text-sm font-mono text-primary/90 border border-primary/25 bg-primary/5 px-3 py-2 rounded-full hover:border-primary/45 hover:bg-primary/10 transition-colors"
