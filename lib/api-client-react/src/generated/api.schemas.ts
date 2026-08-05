@@ -16,6 +16,7 @@ export const ReleaseStatus = {
   available: 'available',
   sold_out: 'sold_out',
   coming_soon: 'coming_soon',
+  announced: 'announced',
 } as const;
 
 /**
@@ -94,6 +95,7 @@ export interface ReleaseStats {
   available: number;
   soldOut: number;
   comingSoon: number;
+  announced: number;
   totalTracked: number;
   /** @nullable */
   lastUpdated: string | null;
@@ -207,6 +209,7 @@ export const ListReleasesStatus = {
   available: 'available',
   sold_out: 'sold_out',
   coming_soon: 'coming_soon',
+  announced: 'announced',
 } as const;
 
 export type ListAvailableReleasesParams = {
@@ -238,6 +241,23 @@ export type ListSoldOutReleasesSort = typeof ListSoldOutReleasesSort[keyof typeo
 
 
 export const ListSoldOutReleasesSort = {
+  updated: 'updated',
+  title: 'title',
+  publisher: 'publisher',
+  newest: 'newest',
+} as const;
+
+export type ListAnnouncedReleasesParams = {
+platform?: string;
+publisher?: string;
+search?: string;
+sort?: ListAnnouncedReleasesSort;
+};
+
+export type ListAnnouncedReleasesSort = typeof ListAnnouncedReleasesSort[keyof typeof ListAnnouncedReleasesSort];
+
+
+export const ListAnnouncedReleasesSort = {
   updated: 'updated',
   title: 'title',
   publisher: 'publisher',

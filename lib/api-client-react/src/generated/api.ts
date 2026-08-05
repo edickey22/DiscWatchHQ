@@ -23,6 +23,7 @@ import type {
   AffiliateConfig,
   ErrorResponse,
   HealthStatus,
+  ListAnnouncedReleasesParams,
   ListAvailableReleasesParams,
   ListComingSoonReleasesParams,
   ListReleasesParams,
@@ -383,6 +384,90 @@ export function useListSoldOutReleases<TData = Awaited<ReturnType<typeof listSol
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListSoldOutReleasesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAnnouncedReleasesUrl = (params?: ListAnnouncedReleasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/releases/announced?${stringifiedParams}` : `/api/releases/announced`
+}
+
+/**
+ * @summary Listed by publisher but not yet open for preorder (announced status)
+ */
+export const listAnnouncedReleases = async (params?: ListAnnouncedReleasesParams, options?: RequestInit): Promise<ReleaseListResponse> => {
+
+  return customFetch<ReleaseListResponse>(getListAnnouncedReleasesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAnnouncedReleasesQueryKey = (params?: ListAnnouncedReleasesParams,) => {
+    return [
+    `/api/releases/announced`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAnnouncedReleasesQueryOptions = <TData = Awaited<ReturnType<typeof listAnnouncedReleases>>, TError = ErrorType<unknown>>(params?: ListAnnouncedReleasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAnnouncedReleases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAnnouncedReleasesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnnouncedReleases>>> = ({ signal }) => listAnnouncedReleases(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAnnouncedReleases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAnnouncedReleasesQueryResult = NonNullable<Awaited<ReturnType<typeof listAnnouncedReleases>>>
+export type ListAnnouncedReleasesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Listed by publisher but not yet open for preorder (announced status)
+ */
+
+export function useListAnnouncedReleases<TData = Awaited<ReturnType<typeof listAnnouncedReleases>>, TError = ErrorType<unknown>>(
+ params?: ListAnnouncedReleasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAnnouncedReleases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAnnouncedReleasesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

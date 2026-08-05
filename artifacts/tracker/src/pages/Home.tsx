@@ -15,7 +15,8 @@ import {
   useListPublishers,
   useListAvailableReleases,
   useListComingSoonReleases,
-  useListSoldOutReleases
+  useListSoldOutReleases,
+  useListAnnouncedReleases
 } from "@workspace/api-client-react"
 import { GameCard, GameCardSkeleton } from "@/components/GameCard"
 import { NewsletterSignup } from "@/components/NewsletterSignup"
@@ -28,13 +29,14 @@ import { buildCanonicalUrl } from "@/lib/seo"
 import { trackSearchEvent } from "@/lib/analytics"
 
 type SortOption = "updated" | "title" | "publisher" | "newest" | "release_date_asc" | "release_date_desc"
-type StatusFilter = "_all" | "available" | "coming_soon" | "sold_out"
+type StatusFilter = "_all" | "available" | "coming_soon" | "sold_out" | "announced"
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "_all",        label: "All Statuses"  },
-  { value: "available",   label: "Available Now"  },
-  { value: "coming_soon", label: "Coming Soon"    },
-  { value: "sold_out",    label: "Sold Out"       },
+  { value: "_all",        label: "All Statuses"      },
+  { value: "available",   label: "Available Now"      },
+  { value: "coming_soon", label: "Coming Soon"        },
+  { value: "announced",   label: "Announced"          },
+  { value: "sold_out",    label: "Sold Out"           },
 ]
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -115,6 +117,7 @@ export default function Home() {
 
   const { data: availableData,  isLoading: isLoadingAvailable }  = useListAvailableReleases(queryParams)
   const { data: comingSoonData, isLoading: isLoadingComingSoon } = useListComingSoonReleases(queryParams)
+  const { data: announcedData,  isLoading: isLoadingAnnounced }  = useListAnnouncedReleases(queryParams)
   const { data: soldOutData,    isLoading: isLoadingSoldOut }    = useListSoldOutReleases(queryParams)
 
   const clearFilters = () => {
@@ -325,6 +328,38 @@ export default function Home() {
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
                   <p className="text-muted-foreground font-mono">No upcoming releases match your filters.</p>
+                  {hasActiveFilters && (
+                    <Button variant="link" onClick={clearFilters} className="mt-2">Clear filters</Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>}
+
+          {/* Announced — listed but no pre-order button yet */}
+          {(status === "_all" || status === "announced") && <section>
+            <div className="flex items-baseline justify-between mb-6 opacity-80">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
+                  Announced
+                </h2>
+                <p className="text-muted-foreground mt-1 font-mono text-base">Listed but not yet open for pre-order</p>
+              </div>
+              <div className="text-sm font-mono text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+                {isLoadingAnnounced ? "…" : (announcedData?.total ?? 0)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {isLoadingAnnounced ? (
+                Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
+              ) : announcedData?.releases.length ? (
+                announcedData.releases.map(release => (
+                  <GameCard key={release.id} release={release} />
+                ))
+              ) : (
+                <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
+                  <p className="text-muted-foreground font-mono">No announced titles match your filters.</p>
                   {hasActiveFilters && (
                     <Button variant="link" onClick={clearFilters} className="mt-2">Clear filters</Button>
                   )}

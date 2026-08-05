@@ -10,6 +10,7 @@ export interface ReleaseStats {
   available: number;
   soldOut: number;
   comingSoon: number;
+  announced: number;
   totalTracked: number;
   /** @nullable */
   lastUpdated: string | null;

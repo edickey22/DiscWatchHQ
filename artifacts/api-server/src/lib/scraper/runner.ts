@@ -73,7 +73,7 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         .set({
           title: item.title,
           platforms: item.platforms,
-          status: item.status,
+          status: sql<"available" | "sold_out" | "coming_soon" | "announced">`${item.status}`,
           coverImageUrl: item.coverImageUrl,
           price: item.price,
           editionType: item.editionType,
@@ -112,7 +112,7 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         externalId: item.externalId,
         title: item.title,
         platforms: item.platforms,
-        status: item.status,
+        status: sql<"available" | "sold_out" | "coming_soon" | "announced">`${item.status}`,
         coverImageUrl: item.coverImageUrl,
         productUrl: item.productUrl,
         price: item.price,

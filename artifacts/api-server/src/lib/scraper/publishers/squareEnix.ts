@@ -216,13 +216,29 @@ function parseCard(html: string): ParsedCard | null {
 
   // ── Boutique filter ───────────────────────────────────────────────────────
   // SE's /video-games page mixes genuine boutique items with standard retail
-  // back-catalog (clearance titles available at any major retailer). Keep only:
+  // back-catalog (clearance titles available at any major retailer). Keep:
   //   (a) Pre-orders (coming_soon) — SE Store-exclusive window while it lasts
   //   (b) Named special editions   — Limited / Collector / Deluxe / Special
-  // Everything else is standard retail and should not appear in the boutique
-  // tracker. Future titles that lack a pre-order button today will re-appear
-  // once SE opens pre-orders and the card shows "Pre-Order Now".
-  if (status !== "coming_soon" && editionType === null) return null;
+  //   (c) Announced titles         — SE has listed the game but not yet opened
+  //       pre-orders. These show no CTA button so they land in "sold_out" by
+  //       default. We identify them by price >= $39.99 (real upcoming games are
+  //       full-price; clearance back-catalog is $9.99–$19.99).
+  if (status !== "coming_soon" && editionType === null) {
+    // Keep high-price sold_out items as "announced" — upcoming titles without
+    // an open pre-order button yet (e.g. OCTOPATH TRAVELER 0, DRAGON QUEST VII
+    // Reimagined). The no-CTA state maps to sold_out by default; that is the
+    // only status eligible for reclassification. Available items (Add to Cart)
+    // and items with no price are always dropped here.
+    // Clearance back-catalog (Outriders $9.99, Forspoken $14.99) is excluded
+    // by the $39.99 floor.
+    if (status === "sold_out" && price !== null) {
+      const numPrice = parseFloat(price.replace(/[^0-9.]/g, ""));
+      if (!isNaN(numPrice) && numPrice >= 39.99) {
+        return { title, productUrl, price, coverImageUrl, status: "announced", platforms, editionType };
+      }
+    }
+    return null;
+  }
 
   return { title, productUrl, price, coverImageUrl, status, platforms, editionType };
 }

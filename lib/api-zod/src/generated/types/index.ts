@@ -14,6 +14,8 @@ export * from './affiliateConfigGamestop';
 export * from './errorResponse';
 export * from './guideSearchUrls';
 export * from './healthStatus';
+export * from './listAnnouncedReleasesParams';
+export * from './listAnnouncedReleasesSort';
 export * from './listAvailableReleasesParams';
 export * from './listAvailableReleasesSort';
 export * from './listComingSoonReleasesParams';

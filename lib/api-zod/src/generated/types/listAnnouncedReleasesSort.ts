@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListSoldOutReleasesSort = typeof ListSoldOutReleasesSort[keyof typeof ListSoldOutReleasesSort];
+export type ListAnnouncedReleasesSort = typeof ListAnnouncedReleasesSort[keyof typeof ListAnnouncedReleasesSort];
 
 
-export const ListSoldOutReleasesSort = {
+export const ListAnnouncedReleasesSort = {
   updated: 'updated',
   title: 'title',
   publisher: 'publisher',

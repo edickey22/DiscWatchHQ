@@ -24,6 +24,7 @@ export function GameCard({ release, priority = false }: GameCardProps) {
   const isAvailable = release.status === ReleaseStatus.available
   const isSoldOut = release.status === ReleaseStatus.sold_out
   const isComingSoon = release.status === ReleaseStatus.coming_soon
+  const isAnnounced = release.status === ReleaseStatus.announced
   const [imgFailed, setImgFailed] = useState(false)
 
   const daysLeft = isAvailable ? daysUntil(release.preorderCloseDate) : null
@@ -81,6 +82,13 @@ export function GameCard({ release, priority = false }: GameCardProps) {
             <div className="absolute top-2 right-2">
               <Badge variant="secondary" className="bg-black/80 text-white backdrop-blur-md border-transparent">
                 Coming Soon
+              </Badge>
+            </div>
+          )}
+          {isAnnounced && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="bg-black/70 text-white/80 backdrop-blur-md border-transparent text-[10px] tracking-wide">
+                Announced
               </Badge>
             </div>
           )}
