@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db, publishersTable, releasesTable, scrapeLogsTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "../logger";
 import { getAllScrapers, getScraperBySlug } from "./registry";
@@ -53,18 +53,42 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
 
       // Snapshot the publisher list price when it is present.
       // Only snapshot for existing releases where we have a DB id.
+      //
+      // Dedup: publisher list prices rarely change (a $49.99 edition stays at
+      // $49.99 for months). Inserting on every 2-hour scrape run generates
+      // ~500 redundant rows per run — ~540k unnecessary rows over 90 days.
+      // We skip the insert when the most recent release_list snapshot for this
+      // release already has the same price (within floating-point tolerance).
       if (item.price) {
         const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
         if (!isNaN(parsed) && parsed > 0) {
-          await db.insert(priceSnapshotsTable).values({
-            itemType:  "release_list",
-            itemId:    String(existing.id),
-            source:    "publisher",
-            priceUsd:  parsed,
-            snappedAt: new Date(),
-          }).catch(err =>
-            logger.warn({ err, releaseId: existing.id }, "List price snapshot write failed — non-fatal"),
-          );
+          const [lastSnapshot] = await db
+            .select({ priceUsd: priceSnapshotsTable.priceUsd })
+            .from(priceSnapshotsTable)
+            .where(
+              and(
+                eq(priceSnapshotsTable.itemType, "release_list"),
+                eq(priceSnapshotsTable.itemId, String(existing.id)),
+              )
+            )
+            .orderBy(desc(priceSnapshotsTable.snappedAt))
+            .limit(1);
+
+          const priceUnchanged =
+            lastSnapshot?.priceUsd != null &&
+            Math.abs(lastSnapshot.priceUsd - parsed) < 0.001;
+
+          if (!priceUnchanged) {
+            await db.insert(priceSnapshotsTable).values({
+              itemType:  "release_list",
+              itemId:    String(existing.id),
+              source:    "publisher",
+              priceUsd:  parsed,
+              snappedAt: new Date(),
+            }).catch(err =>
+              logger.warn({ err, releaseId: existing.id }, "List price snapshot write failed — non-fatal"),
+            );
+          }
         }
       }
     } else {
