@@ -138,16 +138,17 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
 export async function sendAlertEmail(opts: {
   to:         string;
   itemTitle:  string;
-  alertType:  "restock" | "price_drop" | "status_change";
+  alertType:  "restock" | "price_drop" | "status_change" | "price_drop_low";
   detail:     string;
   itemUrl:    string;
   /** Absolute URL to the item's cover art / product photo. Optional — omit the image block if absent. */
   imageUrl?:  string | null;
 }): Promise<void> {
   const typeLabel: Record<string, string> = {
-    restock:       "Back in stock",
-    price_drop:    "Price drop",
-    status_change: "Status update",
+    restock:        "Back in stock",
+    price_drop:     "Price drop",
+    status_change:  "Status update",
+    price_drop_low: "New 30-day low",
   };
 
   const label = typeLabel[opts.alertType] ?? "Update";

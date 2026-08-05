@@ -51,8 +51,8 @@ router.post("/alerts", requireAuth, async (req, res) => {
     return;
   }
 
-  if (!["restock", "price_drop", "status_change"].includes(alertType)) {
-    res.status(400).json({ error: "alertType must be restock, price_drop, or status_change" });
+  if (!["restock", "price_drop", "status_change", "price_drop_low"].includes(alertType)) {
+    res.status(400).json({ error: "alertType must be restock, price_drop, status_change, or price_drop_low" });
     return;
   }
 
@@ -79,7 +79,7 @@ router.post("/alerts", requireAuth, async (req, res) => {
       .values({
         userId:        req.user!.id,
         trackedItemId,
-        alertType:     alertType as "restock" | "price_drop" | "status_change",
+        alertType:     alertType as "restock" | "price_drop" | "status_change" | "price_drop_low",
         baselineValue: baselineValue ?? null,
         enabled:       true,
       })

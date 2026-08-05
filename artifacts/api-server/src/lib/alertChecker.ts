@@ -47,9 +47,10 @@ import {
   trackedItemsTable,
   usersTable,
   releasesTable,
+  priceSnapshotsTable,
 } from "@workspace/db/schema";
 // NOTE: releasesTable.ebayPrice is used for boutique release price-drop alerts.
-import { eq, and, or, isNull, lt } from "drizzle-orm";
+import { eq, and, or, isNull, lt, gte, sql } from "drizzle-orm";
 import { sendAlertEmail } from "./email";
 import { logger } from "./logger";
 import { fetchLivePricing } from "./catalogLivePricing";
@@ -203,6 +204,116 @@ async function checkSingleAlert(ctx: {
           .set({ baselineValue: currentPrice.toFixed(2) })
           .where(eq(alertPrefsTable.id, pref.id));
       }
+
+    } else if (pref.alertType === "price_drop_low") {
+      // ── New 30-day eBay low ──────────────────────────────────────────────────
+      // Source: price_snapshots (item_type="release_ebay"), written by
+      // ebayPriceScheduler on a 72-hour cycle.
+      //
+      // Logic:
+      //   1. Query the 30-day window of non-null snapshots.
+      //   2. Require ≥7 days of history (oldest snapshot ≤ 7 days ago) so the
+      //      window is representative before any alert fires.
+      //   3. On first run: record the 30-day min as baseline_value, skip notify.
+      //   4. Fire when current 30-day min is strictly below the stored baseline.
+      //   5. After firing: lower baseline to new min so the next alert requires
+      //      a further drop (no repeat spam at the same low).
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo  = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000);
+
+      const [stats] = await db
+        .select({
+          minPrice:   sql<number | null>`min(${priceSnapshotsTable.priceUsd})`,
+          oldestSnap: sql<Date>`min(${priceSnapshotsTable.snappedAt})`,
+        })
+        .from(priceSnapshotsTable)
+        .where(
+          and(
+            eq(priceSnapshotsTable.itemType, "release_ebay"),
+            eq(priceSnapshotsTable.itemId, String(releaseId)),
+            gte(priceSnapshotsTable.snappedAt, thirtyDaysAgo),
+            sql`${priceSnapshotsTable.priceUsd} is not null`,
+          ),
+        );
+
+      if (!stats || stats.minPrice == null) {
+        logger.debug(
+          { itemId: item.itemId },
+          "alertChecker: no eBay snapshot history for release — skipping 30d low",
+        );
+        return;
+      }
+
+      // Require ≥7 days of history before the alert can fire
+      if (new Date(stats.oldestSnap) > sevenDaysAgo) {
+        logger.debug(
+          { itemId: item.itemId, oldestSnap: stats.oldestSnap },
+          "alertChecker: insufficient snapshot history (<7 days) — skipping 30d low",
+        );
+        return;
+      }
+
+      const thirtyDayLow = stats.minPrice;
+
+      // First run: initialise baseline, skip notification
+      if (!pref.baselineValue) {
+        await db
+          .update(alertPrefsTable)
+          .set({ baselineValue: thirtyDayLow.toFixed(2) })
+          .where(eq(alertPrefsTable.id, pref.id));
+        logger.info(
+          { itemId: item.itemId, thirtyDayLow },
+          "alertChecker: 30d low baseline initialised",
+        );
+        return;
+      }
+
+      const baselineLow = parseFloat(pref.baselineValue);
+      if (isNaN(baselineLow) || baselineLow <= 0) return;
+
+      // ── Rolling-window baseline maintenance ─────────────────────────────────
+      // The 30-day window slides forward on every check run. When the snapshot
+      // that established the stored low ages out, thirtyDayLow rises above the
+      // stored baseline. In that case we silently update the baseline to the
+      // current window floor so the NEXT genuine drop fires correctly — without
+      // sending an email.
+      //
+      //   thirtyDayLow < baselineLow  → new all-time low in window → FIRE + update
+      //   thirtyDayLow > baselineLow  → old low aged out → quietly reset baseline
+      //   thirtyDayLow === baselineLow → window unchanged → no-op
+      if (thirtyDayLow < baselineLow) {
+        // eBay search link for this release title (with affiliate tag if set)
+        const ebayQuery    = encodeURIComponent(`"${release.title}"`);
+        const campaignId   = process.env.EBAY_CAMPAIGN_ID;
+        const affiliateSfx = campaignId
+          ? `&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=${campaignId}&toolid=10001&mkevt=1`
+          : "";
+        const ebaySearchUrl =
+          `https://www.ebay.com/sch/i.html?_nkw=${ebayQuery}&_sacat=139973&LH_BIN=1${affiliateSfx}`;
+
+        detail  = `"${release.title}" hit a new 30-day eBay low: $${thirtyDayLow.toFixed(2)} (previous low was $${baselineLow.toFixed(2)}).`;
+        itemUrl = ebaySearchUrl;
+        shouldNotify = true;
+
+        // Lower baseline so the next alert requires a further drop
+        await db
+          .update(alertPrefsTable)
+          .set({ baselineValue: thirtyDayLow.toFixed(2) })
+          .where(eq(alertPrefsTable.id, pref.id));
+
+      } else if (thirtyDayLow > baselineLow) {
+        // The snapshot that established the stored low has aged out of the window.
+        // Reset baseline to the current window floor — no email, no notification.
+        await db
+          .update(alertPrefsTable)
+          .set({ baselineValue: thirtyDayLow.toFixed(2) })
+          .where(eq(alertPrefsTable.id, pref.id));
+        logger.debug(
+          { itemId: item.itemId, oldBaseline: baselineLow, newBaseline: thirtyDayLow },
+          "alertChecker: 30d low baseline reset upward (old low aged out of window)",
+        );
+      }
+      // thirtyDayLow === baselineLow → window floor unchanged, no action needed.
     }
   }
 
@@ -315,7 +426,7 @@ async function checkSingleAlert(ctx: {
   await sendAlertEmail({
     to:        email,
     itemTitle: title,
-    alertType: pref.alertType as "restock" | "price_drop" | "status_change",
+    alertType: pref.alertType as "restock" | "price_drop" | "status_change" | "price_drop_low",
     detail,
     itemUrl,
     imageUrl,

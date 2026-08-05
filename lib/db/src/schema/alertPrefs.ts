@@ -6,9 +6,11 @@ import { trackedItemsTable } from "./trackedItems";
  * alert_prefs — per-item email alert preferences for a tracked user.
  *
  * alert_type controls what condition triggers a notification:
- *   'restock'       → boutique release status changes to 'in_stock'
- *   'price_drop'    → game/console listing price drops below baseline_value
- *   'status_change' → any status change on a boutique release
+ *   'restock'         → boutique release status changes to 'in_stock'
+ *   'price_drop'      → game/console listing price drops ≥10% below baseline_value
+ *   'status_change'   → any status change on a boutique release
+ *   'price_drop_low'  → boutique release hits a new 30-day eBay low (from
+ *                        price_snapshots); requires ≥7 days of history before firing
  *
  * baseline_value stores the reference value at opt-in time (serialised as text):
  *   price_drop:    the USD price as a string, e.g. "49.99"
@@ -29,7 +31,7 @@ export const alertPrefsTable = pgTable("alert_prefs", {
   id:             serial("id").primaryKey(),
   userId:         integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   trackedItemId:  integer("tracked_item_id").notNull().references(() => trackedItemsTable.id, { onDelete: "cascade" }),
-  alertType:      text("alert_type", { enum: ["restock", "price_drop", "status_change"] }).notNull(),
+  alertType:      text("alert_type", { enum: ["restock", "price_drop", "status_change", "price_drop_low"] }).notNull(),
   /** Reference value at opt-in time. Compared against current value to detect changes. */
   baselineValue:  text("baseline_value"),
   enabled:        boolean("enabled").notNull().default(true),
