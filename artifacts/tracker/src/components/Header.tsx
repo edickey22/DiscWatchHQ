@@ -140,96 +140,96 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center">
+      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center gap-0">
 
-        {/* ── LEFT: Logo + page navigation (pinned left) ───────────────── */}
-        <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group">
-            <span className="[&>svg]:w-[22px] [&>svg]:h-[22px] lg:[&>svg]:w-[30px] lg:[&>svg]:h-[30px]">
-              <ControllerIcon size={30} />
+        {/* ── 1. LOGO — pinned to the far left ─────────────────────────── */}
+        <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group shrink-0">
+          <span className="[&>svg]:w-[22px] [&>svg]:h-[22px] lg:[&>svg]:w-[30px] lg:[&>svg]:h-[30px]">
+            <ControllerIcon size={30} />
+          </span>
+          <span className="flex items-center gap-1 lg:gap-1.5 leading-none">
+            <span className="font-display text-[1.05rem] lg:text-[1.2rem] font-bold tracking-tight">
+              <span className="text-gray-900 dark:text-foreground">Disc</span>
+              <span className="text-primary">Watch</span>
             </span>
-            <span className="flex items-center gap-1 lg:gap-1.5 leading-none">
-              <span className="font-display text-[1.05rem] lg:text-[1.2rem] font-bold tracking-tight">
-                <span className="text-gray-900 dark:text-foreground">Disc</span>
-                <span className="text-primary">Watch</span>
-              </span>
-              <span className="
-                text-[9px] lg:text-[10px] font-bold tracking-wide leading-none
-                text-primary border border-primary/40 bg-primary/10
-                rounded px-1 lg:px-1.5 py-0.5 select-none
-              ">
-                HQ
-              </span>
+            <span className="
+              text-[9px] lg:text-[10px] font-bold tracking-wide leading-none
+              text-primary border border-primary/40 bg-primary/10
+              rounded px-1 lg:px-1.5 py-0.5 select-none
+            ">
+              HQ
             </span>
-          </Link>
+          </span>
+        </Link>
 
-          <nav className="hidden sm:flex items-center gap-1 ml-2">
-            {navLink("/games",    "Browse Games")}
-            {navLink("/boutique", "Boutique")}
-            {navLink("/consoles", "Consoles")}
-            {navLink("/about",    "About")}
-          </nav>
+        {/* ── 2. MAIN NAV — breathing room after logo ──────────────────── */}
+        <nav className="hidden sm:flex items-center gap-1 ml-6 shrink-0">
+          {navLink("/games",    "Browse Games")}
+          {navLink("/boutique", "Boutique")}
+          {navLink("/consoles", "Consoles")}
+          {navLink("/about",    "About")}
+        </nav>
+
+        {/* ── SPACER — pushes everything right of here to the right edge.
+             min-w-[64px] guarantees at least 64px of clear air between the
+             last nav link and the start of the stats divider at any width. ── */}
+        <div className="flex-1 min-w-[64px]" />
+
+        {/* ── 3. STATS — live boutique + catalog numbers ───────────────── */}
+        {/* Vertical divider that marks the boundary between nav and stats  */}
+        <div className="hidden xl:flex items-center self-stretch">
+          <div className="w-px h-7 bg-border mx-5" />
         </div>
 
-        {/* ── SPACER: fills space between nav and the right group, guaranteeing
-             the nav can never visually crowd the stats block regardless of
-             how long the nav labels grow ─────────────────────────────────── */}
-        <div className="flex-1" />
-
-        {/* ── RIGHT: stats + user menu + mobile hamburger, all right-anchored
-             as one unit. flex-1 spacer above ensures the nav never reaches
-             this group. ───────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 shrink-0 pr-1">
-
-          {/* Live stats — hidden below xl (1280px) */}
-          <div className="hidden xl:flex items-center gap-4 text-sm font-mono tracking-tight">
-            {stats && (
-              <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
-                <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
-                  Boutique
+        <div className="hidden xl:flex items-center gap-4 text-sm font-mono tracking-tight shrink-0">
+          {stats && (
+            <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
+              <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+                Boutique
+              </span>
+              <div className="flex flex-col items-center" title="Open for order right now">
+                <span className="text-muted-foreground text-[10px] uppercase">In Stock</span>
+                <span className="text-primary font-bold">{stats.available}</span>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex flex-col items-center" title="Announced, not yet open for order">
+                <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
+                <span className="text-foreground font-semibold">{stats.comingSoon}</span>
+              </div>
+              <div className="w-px h-6 bg-border" />
+              <div className="flex flex-col items-center" title="Previously tracked, no longer available new — check eBay">
+                <span className="text-muted-foreground text-[10px] uppercase">Sold Out</span>
+                <span className="text-foreground/80">{stats.soldOut}</span>
+              </div>
+            </div>
+          )}
+          {catalogStats && catalogStats.count > 0 && (
+            <>
+              <div className="w-px h-7 bg-border/80" />
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  Catalog
                 </span>
-                <div className="flex flex-col items-center" title="Open for order right now">
-                  <span className="text-muted-foreground text-[10px] uppercase">In Stock</span>
-                  <span className="text-primary font-bold">{stats.available}</span>
-                </div>
-                <div className="w-px h-6 bg-border" />
-                <div className="flex flex-col items-center" title="Announced, not yet open for order">
-                  <span className="text-muted-foreground text-[10px] uppercase">Coming Soon</span>
-                  <span className="text-foreground font-semibold">{stats.comingSoon}</span>
-                </div>
-                <div className="w-px h-6 bg-border" />
-                <div className="flex flex-col items-center" title="Previously tracked, no longer available new — check eBay">
-                  <span className="text-muted-foreground text-[10px] uppercase">Sold Out</span>
-                  <span className="text-foreground/80">{stats.soldOut}</span>
+                <div className="flex flex-col items-center" title="Games indexed locally — full 900K+ catalog searchable via live lookup on Browse Games">
+                  <span className="text-muted-foreground text-[10px] uppercase">Indexed</span>
+                  <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
                 </div>
               </div>
-            )}
-            {catalogStats && catalogStats.count > 0 && (
-              <>
-                <div className="w-px h-7 bg-border/80" />
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60">
-                    Catalog
-                  </span>
-                  <div className="flex flex-col items-center" title="Games indexed locally — full 900K+ catalog searchable via live lookup on Browse Games">
-                    <span className="text-muted-foreground text-[10px] uppercase">Indexed</span>
-                    <span className="text-foreground/70">{catalogStats.count.toLocaleString()}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+            </>
+          )}
+        </div>
 
-          {/* Divider between stats and user menu — only visible when stats show */}
-          <div className="hidden xl:block w-px h-6 bg-border/60" />
+        {/* ── 4. ACCOUNT — pinned to the far right ─────────────────────── */}
+        {/* Divider separating stats from account section */}
+        <div className="hidden xl:block w-px h-6 bg-border/60 mx-4" />
 
-          {/* User menu (desktop) */}
-          <div className="hidden sm:block">
-            <UserMenu />
-          </div>
+        {/* User menu (desktop) */}
+        <div className="hidden sm:block shrink-0">
+          <UserMenu />
+        </div>
 
-          {/* Mobile hamburger */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        {/* Mobile hamburger */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
@@ -304,7 +304,6 @@ export function Header() {
               </nav>
             </SheetContent>
           </Sheet>
-        </div>
       </div>
     </header>
   )

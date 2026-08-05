@@ -4,6 +4,8 @@ import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal }    from '@/components/AuthModal';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster }         from '@/components/ui/sonner';
 
 import LandingPage    from '@/pages/LandingPage';
 import Home           from '@/pages/Home';
@@ -124,7 +126,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <AuthProvider>
-          <AppRouter />
+          <TooltipProvider delayDuration={300}>
+            <AppRouter />
+            <Toaster position="bottom-center" />
+          </TooltipProvider>
         </AuthProvider>
       </WouterRouter>
     </QueryClientProvider>

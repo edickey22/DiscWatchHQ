@@ -14,9 +14,15 @@ import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Heart, Gamepad2, Package, Monitor,
-  Trash2, Bell, BellOff, DollarSign, TrendingDown,
+  Trash2, Bell, BellOff, Tag, ArrowDownToLine,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -162,7 +168,26 @@ export default function TrackingPage() {
         });
       }
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["alerts"] }),
+    onSuccess: (_, variables) => {
+      // Toast for mobile/touch where hover tooltips don't exist.
+      const nowEnabled =
+        variables.existingAlertId !== undefined
+          ? !variables.currentEnabled   // toggled existing
+          : true;                       // newly created → enabled
+
+      const labels: Record<string, string> = {
+        status_change:  "Restock / status alerts",
+        price_drop:     "Price-drop alerts",
+        price_drop_low: "30-day low alerts",
+      };
+      const label = labels[variables.alertType] ?? "Alert";
+      toast(nowEnabled ? `${label} on` : `${label} off`, {
+        description: nowEnabled ? "We'll email you when this triggers." : "You won't be notified.",
+        duration: 2500,
+      });
+
+      void queryClient.invalidateQueries({ queryKey: ["alerts"] });
+    },
   });
 
   if (authLoading || !user) return null;
@@ -289,98 +314,130 @@ export default function TrackingPage() {
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 shrink-0">
 
-                            {/* ── Status-change bell — releases only ──────── */}
-                            {item.itemType === "release" && (
-                              <button
-                                title={
-                                  statusAlert?.enabled
-                                    ? "Turn off status-change alert"
-                                    : "Alert me when status changes"
-                                }
-                                onClick={() => toggleAlertMutation.mutate({
-                                  trackedItemId:   item.id,
-                                  itemData:        item.itemData,
-                                  alertType:       "status_change",
-                                  existingAlertId: statusAlert?.id,
-                                  currentEnabled:  statusAlert?.enabled,
-                                })}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                  statusAlert?.enabled
-                                    ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                    : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
-                                }`}
-                              >
-                                {statusAlert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
-                              </button>
-                            )}
+                            {/* ── Status / restock bell — releases only ───── */}
+                            {item.itemType === "release" && (() => {
+                              const on = statusAlert?.enabled;
+                              const label = on
+                                ? "Turn off restock & status alerts"
+                                : "Alert me when status changes (restock, sold out, etc.)";
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      aria-label={label}
+                                      onClick={() => toggleAlertMutation.mutate({
+                                        trackedItemId:   item.id,
+                                        itemData:        item.itemData,
+                                        alertType:       "status_change",
+                                        existingAlertId: statusAlert?.id,
+                                        currentEnabled:  statusAlert?.enabled,
+                                      })}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                        on
+                                          ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                          : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                                      }`}
+                                    >
+                                      {on ? <Bell size={14} /> : <BellOff size={14} />}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">{label}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })()}
 
                             {/* ── 30-day eBay low alert — releases only ────── */}
-                            {item.itemType === "release" && (
-                              <button
-                                title={
-                                  priceLowAlert?.enabled
-                                    ? "Turn off 30-day low alert"
-                                    : "Alert me when this hits a new 30-day eBay resale low"
-                                }
-                                onClick={() => toggleAlertMutation.mutate({
-                                  trackedItemId:   item.id,
-                                  itemData:        item.itemData,
-                                  alertType:       "price_drop_low",
-                                  existingAlertId: priceLowAlert?.id,
-                                  currentEnabled:  priceLowAlert?.enabled,
-                                })}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                  priceLowAlert?.enabled
-                                    ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                    : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
-                                }`}
-                              >
-                                <TrendingDown size={14} />
-                              </button>
-                            )}
+                            {item.itemType === "release" && (() => {
+                              const on = priceLowAlert?.enabled;
+                              const label = on
+                                ? "Turn off 30-day low alert"
+                                : "Alert me when resale hits a new 30-day eBay low";
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      aria-label={label}
+                                      onClick={() => toggleAlertMutation.mutate({
+                                        trackedItemId:   item.id,
+                                        itemData:        item.itemData,
+                                        alertType:       "price_drop_low",
+                                        existingAlertId: priceLowAlert?.id,
+                                        currentEnabled:  priceLowAlert?.enabled,
+                                      })}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                        on
+                                          ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                          : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                                      }`}
+                                    >
+                                      {/* ArrowDownToLine = "new floor" is more legible than
+                                          TrendingDown which could mean general price direction */}
+                                      <ArrowDownToLine size={14} />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">{label}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })()}
 
                             {/* ── Price-drop toggle ──────────────────────────
-                                Games / consoles: Bell icon (single alert type).
-                                Releases: DollarSign icon (resale price via eBay,
-                                updated every 72h; auto-inits baseline on first check). */}
-                            <button
-                              title={
-                                priceAlert?.enabled
-                                  ? "Turn off price-drop alert"
-                                  : item.itemType === "release"
-                                    ? "Alert me when resale price drops ≥10% (eBay data, updates every 72h)"
-                                    : "Alert me when price drops ≥10%"
-                              }
-                              onClick={() => toggleAlertMutation.mutate({
-                                trackedItemId:   item.id,
-                                itemData:        item.itemData,
-                                alertType:       "price_drop",
-                                existingAlertId: priceAlert?.id,
-                                currentEnabled:  priceAlert?.enabled,
-                              })}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                priceAlert?.enabled
-                                  ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                  : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
-                              }`}
-                            >
-                              {item.itemType === "release"
-                                ? <DollarSign size={14} />
-                                : priceAlert?.enabled
-                                  ? <Bell size={14} />
-                                  : <BellOff size={14} />
-                              }
-                            </button>
+                                Releases: Tag icon (price tag → price alert).
+                                Games / consoles: Bell/BellOff (single alert type). */}
+                            {(() => {
+                              const on = priceAlert?.enabled;
+                              const label = on
+                                ? "Turn off price-drop alert"
+                                : item.itemType === "release"
+                                  ? "Alert me when eBay resale price drops ≥10%"
+                                  : "Alert me when price drops ≥10%";
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      aria-label={label}
+                                      onClick={() => toggleAlertMutation.mutate({
+                                        trackedItemId:   item.id,
+                                        itemData:        item.itemData,
+                                        alertType:       "price_drop",
+                                        existingAlertId: priceAlert?.id,
+                                        currentEnabled:  priceAlert?.enabled,
+                                      })}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                        on
+                                          ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                          : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                                      }`}
+                                    >
+                                      {item.itemType === "release"
+                                        ? <Tag size={14} />           /* price tag = price alert */
+                                        : on
+                                          ? <Bell size={14} />
+                                          : <BellOff size={14} />
+                                      }
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">{label}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })()}
 
-                            {/* Remove */}
-                            <button
-                              title="Remove from watchlist"
-                              onClick={() => removeMutation.mutate(item.id)}
-                              disabled={removeMutation.isPending}
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {/* ── Remove from watchlist ─────────────────────── */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  aria-label="Remove from watchlist"
+                                  onClick={() => {
+                                    removeMutation.mutate(item.id);
+                                    toast("Removed from watchlist", { duration: 2000 });
+                                  }}
+                                  disabled={removeMutation.isPending}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Remove from watchlist</TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       );
