@@ -141,6 +141,8 @@ export async function sendAlertEmail(opts: {
   alertType:  "restock" | "price_drop" | "status_change";
   detail:     string;
   itemUrl:    string;
+  /** Absolute URL to the item's cover art / product photo. Optional — omit the image block if absent. */
+  imageUrl?:  string | null;
 }): Promise<void> {
   const typeLabel: Record<string, string> = {
     restock:       "Back in stock",
@@ -149,6 +151,22 @@ export async function sendAlertEmail(opts: {
   };
 
   const label = typeLabel[opts.alertType] ?? "Update";
+
+  // Image block — uses a plain <img> so it works across Gmail, Outlook, Apple Mail.
+  // CSS background-image is stripped by most email clients, so we never use it here.
+  // width=480 + height=auto keeps the layout stable even when images are blocked.
+  const imageBlock = opts.imageUrl
+    ? `
+  <div style="margin-bottom:24px;text-align:center">
+    <img
+      src="${opts.imageUrl}"
+      alt="${opts.itemTitle}"
+      width="480"
+      height="270"
+      style="display:block;width:100%;max-width:480px;height:auto;max-height:270px;object-fit:cover;border-radius:8px;border:1px solid #1e2d1e"
+    />
+  </div>`
+    : "";
 
   await sendEmail({
     to:      opts.to,
@@ -161,7 +179,7 @@ export async function sendAlertEmail(opts: {
   <div style="margin-bottom:24px">
     <span style="font-size:20px;font-weight:bold;color:#ffffff">Disc</span><span style="font-size:20px;font-weight:bold;color:#21b557">Watch</span>
     <span style="font-size:11px;font-weight:bold;color:#21b557;border:1px solid #21b557;border-radius:4px;padding:2px 6px;margin-left:6px">HQ</span>
-  </div>
+  </div>${imageBlock}
   <h2 style="color:#21b557;margin:0 0 8px">${label}</h2>
   <h3 style="color:#ffffff;margin:0 0 16px">${opts.itemTitle}</h3>
   <p style="color:#a0a0a0;margin:0 0 28px">${opts.detail}</p>

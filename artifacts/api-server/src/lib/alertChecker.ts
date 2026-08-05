@@ -122,6 +122,7 @@ async function checkSingleAlert(ctx: {
   let shouldNotify = false;
   let detail       = "";
   let itemUrl      = APP_URL;
+  let imageUrl: string | null = null;
 
   // ── Release alerts (restock / status_change / price_drop) ───────────────
   if (item.itemType === "release") {
@@ -130,9 +131,10 @@ async function checkSingleAlert(ctx: {
 
     const [release] = await db
       .select({
-        status:    releasesTable.status,
-        title:     releasesTable.title,
-        ebayPrice: releasesTable.ebayPrice,
+        status:        releasesTable.status,
+        title:         releasesTable.title,
+        ebayPrice:     releasesTable.ebayPrice,
+        coverImageUrl: releasesTable.coverImageUrl,
       })
       .from(releasesTable)
       .where(eq(releasesTable.id, releaseId))
@@ -140,7 +142,8 @@ async function checkSingleAlert(ctx: {
 
     if (!release) return;
 
-    itemUrl = `${APP_URL}/boutique`;
+    itemUrl  = `${APP_URL}/boutique`;
+    imageUrl = release.coverImageUrl ?? null;
 
     if (pref.alertType === "restock" && pref.baselineValue !== "available") {
       if (release.status === "available") {
@@ -286,6 +289,11 @@ async function checkSingleAlert(ctx: {
     const baselinePrice = parseFloat(pref.baselineValue);
     if (isNaN(baselinePrice) || baselinePrice <= 0) return;
 
+    // Use the cheapest BIN listing's image as the email hero image.
+    // Prefer a listing that actually has an image; fall back to the first overall.
+    const listingWithImage = allListings.find(l => l.imageUrl);
+    imageUrl = listingWithImage?.imageUrl ?? allListings[0]?.imageUrl ?? null;
+
     // Fire if lowest BIN listing is ≥10% below baseline
     if (currentPrice <= baselinePrice * PRICE_DROP_THRESHOLD) {
       const saved = (baselinePrice - currentPrice).toFixed(2);
@@ -310,6 +318,7 @@ async function checkSingleAlert(ctx: {
     alertType: pref.alertType as "restock" | "price_drop" | "status_change",
     detail,
     itemUrl,
+    imageUrl,
   });
 
   await db
