@@ -140,7 +140,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto max-w-6xl px-4 flex h-16 items-center gap-0">
+      <div className="w-full px-6 flex h-16 items-center gap-0">
 
         {/* ── 1. LOGO — pinned to the far left ─────────────────────────── */}
         <Link href="/" className="flex items-center gap-1.5 lg:gap-2.5 group shrink-0">
