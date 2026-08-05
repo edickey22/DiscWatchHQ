@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from "react"
 import { useRoute, Link } from "wouter"
 import {
   useGetRelease,
@@ -69,6 +70,17 @@ export default function ReleaseDetail() {
     ...(moreComingSoon?.releases ?? []),
   ].filter(r => r.id !== id).slice(0, 4)
 
+  // ── Hover-to-zoom ────────────────────────────────────────────────────────
+  const [zoomPos, setZoomPos] = useState<{ x: number; y: number } | null>(null)
+  const imgContainerRef = useRef<HTMLDivElement>(null)
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setZoomPos({
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)),
+    })
+  }, [])
+
   // ── SEO — injected once data is loaded ─────────────────────────────────────
   const canonical = buildCanonicalUrl(`/releases/${id}`)
 
@@ -125,31 +137,62 @@ export default function ReleaseDetail() {
           </Button>
 
           <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
-            {/* Left: cover art */}
+            {/* Left: cover art + hover-to-zoom */}
             <div className="relative">
               {isLoading ? (
                 <Skeleton className="aspect-[3/4] w-full rounded-xl bg-muted/60" />
               ) : (
-                <div className={`relative aspect-[3/4] w-full rounded-xl overflow-hidden shadow-2xl bg-muted ${isSoldOut ? "opacity-70 grayscale-[30%]" : ""}`}>
-                  {release?.coverImageUrl ? (
-                    <img
-                      src={release.coverImageUrl}
-                      alt={`${release.title} limited-run physical edition cover`}
-                      className="w-full h-full object-cover"
+                <>
+                  {/* Image container — crosshair cursor signals zoom-on-hover */}
+                  <div
+                    ref={imgContainerRef}
+                    className={[
+                      "relative aspect-[3/4] w-full rounded-xl overflow-hidden shadow-2xl",
+                      isSoldOut ? "opacity-70 grayscale-[30%]" : "",
+                      release?.coverImageUrl ? "cursor-crosshair" : "",
+                    ].join(" ")}
+                    onMouseMove={release?.coverImageUrl ? handleMouseMove : undefined}
+                    onMouseLeave={release?.coverImageUrl ? () => setZoomPos(null) : undefined}
+                  >
+                    {release?.coverImageUrl ? (
+                      <img
+                        src={release.coverImageUrl}
+                        alt={`${release.title} limited-run physical edition cover`}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-secondary">
+                        <span className="text-muted-foreground font-mono">No cover art</span>
+                      </div>
+                    )}
+                    {isSoldOut && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+                        <span className="font-display text-3xl font-bold tracking-widest text-white border-y-4 border-white/50 py-3 px-8 rotate-[-12deg]">
+                          SOLD OUT
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Zoom panel — 300×300 magnifier, desktop only, appears to the
+                      right of the image column. Uses background-image at 250% so
+                      the area near the cursor is shown at ~2.5× magnification.
+                      Background-position percentage maps the cursor's location in
+                      the image container directly to the focal point of the zoom. */}
+                  {zoomPos && release?.coverImageUrl && (
+                    <div
+                      className="absolute top-0 left-[calc(100%+1.25rem)] z-50 hidden md:block rounded-xl shadow-2xl border border-border/20"
+                      style={{
+                        width: 300,
+                        height: 300,
+                        backgroundImage:    `url(${release.coverImageUrl})`,
+                        backgroundRepeat:   "no-repeat",
+                        backgroundSize:     "250% 250%",
+                        backgroundPosition: `${zoomPos.x * 100}% ${zoomPos.y * 100}%`,
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-secondary">
-                      <span className="text-muted-foreground font-mono">No cover art</span>
-                    </div>
                   )}
-                  {isSoldOut && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                      <span className="font-display text-3xl font-bold tracking-widest text-white border-y-4 border-white/50 py-3 px-8 rotate-[-12deg]">
-                        SOLD OUT
-                      </span>
-                    </div>
-                  )}
-                </div>
+                </>
               )}
             </div>
 

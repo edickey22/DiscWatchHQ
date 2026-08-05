@@ -192,10 +192,14 @@ function parseCard(html: string): ParsedCard | null {
 
   // ── Cover image ──────────────────────────────────────────────────────────
   // <img class="card-image lazyload" data-src="https://cdn11.bigcommerce.com/...">
+  // BigCommerce serves /stencil/{WxH}/ thumbnails on listing pages (270x360).
+  // Upgrade to 1280x1280 so the stored URL is high-resolution.
   const imgMatch = html.match(
     /<img[^>]+class="[^"]*card-image[^"]*"[^>]+data-src="([^"]+)"/
   );
-  const coverImageUrl = imgMatch ? imgMatch[1].trim() : null;
+  const coverImageUrl = imgMatch
+    ? imgMatch[1].trim().replace(/\/stencil\/\d+x\d+\//, "/stencil/1280x1280/")
+    : null;
 
   // ── Status ───────────────────────────────────────────────────────────────
   // "Pre-Order Now" button → coming_soon; any "Add to Cart" CTA → available.
@@ -497,11 +501,13 @@ function parseMerchCard(html: string): ParsedCard | null {
   );
   const price = priceMatch ? priceMatch[1].trim() : null;
 
-  // Cover image
+  // Cover image — upgrade BigCommerce thumbnail (270x360) to full-res (1280x1280)
   const imgMatch = html.match(
     /<img[^>]+class="[^"]*card-image[^"]*"[^>]+data-src="([^"]+)"/
   );
-  const coverImageUrl = imgMatch ? imgMatch[1].trim() : null;
+  const coverImageUrl = imgMatch
+    ? imgMatch[1].trim().replace(/\/stencil\/\d+x\d+\//, "/stencil/1280x1280/")
+    : null;
 
   // Status (same CTA-button heuristic as game cards)
   let status: ScrapedRelease["status"] = "sold_out";
