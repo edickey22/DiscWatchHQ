@@ -67,7 +67,7 @@ function UserMenu() {
         <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
           <User size={11} className="text-primary" />
         </div>
-        <span className="max-w-[100px] truncate text-xs">{user.email.split("@")[0]}</span>
+        <span className="max-w-[100px] truncate text-xs">{user.displayName ?? user.email.split("@")[0]}</span>
         <ChevronDown size={12} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 

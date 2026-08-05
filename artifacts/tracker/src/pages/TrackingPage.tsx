@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { Header } from "@/components/Header";
 import {
   Tooltip,
   TooltipContent,
@@ -217,6 +218,7 @@ export default function TrackingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto max-w-4xl px-4 py-10">
 
         {/* Header */}

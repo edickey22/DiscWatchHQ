@@ -318,10 +318,13 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Left vignette — keeps hero text fully legible */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/10 pointer-events-none" />
-            {/* Top vignette */}
-            <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80 pointer-events-none" />
+            {/* Left vignette — lightened so artwork shows through behind text
+                 while still providing enough contrast for WCAG-safe reading.
+                 from-background/75 keeps left legible; via-background/40 lets
+                 midpoint art breathe; right fades to near-transparent. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background/75 via-background/40 to-background/5 pointer-events-none" />
+            {/* Top/bottom vignette — softened top to match lighter left */}
+            <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-background/75 pointer-events-none" />
           </div>
         )}
 

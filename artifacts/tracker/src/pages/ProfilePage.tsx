@@ -1,22 +1,34 @@
 /**
  * ProfilePage — user's account page.
- * Shows email, tracked item count, alert count, and account deletion.
+ * Shows email, display name (editable), tracked item count, alert count, and account deletion.
  * Requires authentication; redirects to home if not logged in.
  */
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { User, Heart, Bell, Trash2, LogOut, AlertTriangle } from "lucide-react";
+import { User, Heart, Bell, Trash2, LogOut, AlertTriangle, Pencil, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { Header } from "@/components/Header";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading, logout, openLogin } = useAuth();
-  const [, navigate] = useLocation();
-  const queryClient  = useQueryClient();
+  const { user, loading: authLoading, logout, openLogin, refresh } = useAuth();
+  const [, navigate]     = useLocation();
+  const queryClient      = useQueryClient();
 
-  const [deleteState,    setDeleteState]    = useState<"idle" | "confirm" | "deleting">("idle");
-  const [deleteError,    setDeleteError]    = useState("");
+  const [deleteState, setDeleteState] = useState<"idle" | "confirm" | "deleting">("idle");
+  const [deleteError, setDeleteError] = useState("");
+
+  // ── Display name editing ──────────────────────────────────────────────────
+  const [editingName,  setEditingName]  = useState(false);
+  const [nameValue,    setNameValue]    = useState("");
+  const [nameSaving,   setNameSaving]   = useState(false);
+
+  // Sync input with current user value when it loads / changes
+  useEffect(() => {
+    if (user) setNameValue(user.displayName ?? "");
+  }, [user?.displayName]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -46,6 +58,35 @@ export default function ProfilePage() {
     enabled: !!user,
   });
 
+  async function saveName() {
+    setNameSaving(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ displayName: nameValue }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        toast.error(data.error ?? "Failed to save name.");
+        return;
+      }
+      await refresh();   // re-fetches /api/auth/me so header updates too
+      setEditingName(false);
+      toast("Display name saved");
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setNameSaving(false);
+    }
+  }
+
+  function cancelNameEdit() {
+    setNameValue(user?.displayName ?? "");
+    setEditingName(false);
+  }
+
   async function handleDeleteAccount() {
     setDeleteState("deleting");
     setDeleteError("");
@@ -60,7 +101,6 @@ export default function ProfilePage() {
         setDeleteState("confirm");
         return;
       }
-      // Clear all cached data and redirect
       queryClient.clear();
       await logout();
       navigate("/");
@@ -85,9 +125,10 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto max-w-2xl px-4 py-10">
 
-        {/* Header */}
+        {/* Page header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
             <User size={22} className="text-primary" />
@@ -121,16 +162,72 @@ export default function ProfilePage() {
         </div>
 
         {/* Account info */}
-        <div className="rounded-xl border border-border bg-card p-5 mb-6 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">Account</h2>
+        <div className="rounded-xl border border-border bg-card p-5 mb-6 space-y-1">
+          <h2 className="text-sm font-semibold text-foreground mb-3">Account</h2>
+
+          {/* Display name — editable */}
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Display name</span>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter")  void saveName();
+                    if (e.key === "Escape") cancelNameEdit();
+                  }}
+                  maxLength={60}
+                  placeholder="Your name"
+                  className="w-36 sm:w-48 rounded-md border border-border bg-background px-2.5 py-1 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/60"
+                />
+                <button
+                  onClick={() => void saveName()}
+                  disabled={nameSaving}
+                  aria-label="Save display name"
+                  className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  <Check size={15} />
+                </button>
+                <button
+                  onClick={cancelNameEdit}
+                  disabled={nameSaving}
+                  aria-label="Cancel"
+                  className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {user.displayName ?? <span className="text-muted-foreground/60 italic">Not set</span>}
+                </span>
+                <button
+                  onClick={() => setEditingName(true)}
+                  aria-label="Edit display name"
+                  className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Pencil size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Email */}
           <div className="flex items-center justify-between py-2 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Email</span>
             <span className="text-sm font-medium text-foreground">{user.email}</span>
           </div>
+
+          {/* Member since */}
           <div className="flex items-center justify-between py-2 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Member since</span>
             <span className="text-sm text-foreground">{memberSince}</span>
           </div>
+
+          {/* Auth method */}
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-muted-foreground">Auth method</span>
             <span className="text-sm text-foreground">Magic link (passwordless)</span>

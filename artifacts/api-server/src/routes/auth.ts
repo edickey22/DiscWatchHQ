@@ -209,10 +209,34 @@ router.get("/auth/verify", async (req, res) => {
 
 router.get("/auth/me", requireAuth, (req, res) => {
   res.json({
-    id:        req.user!.id,
-    email:     req.user!.email,
-    createdAt: req.user!.createdAt,
+    id:          req.user!.id,
+    email:       req.user!.email,
+    displayName: req.user!.displayName ?? null,
+    createdAt:   req.user!.createdAt,
   });
+});
+
+// ── PATCH /api/auth/profile ───────────────────────────────────────────────────
+
+router.patch("/auth/profile", requireAuth, async (req, res) => {
+  const { displayName } = req.body as { displayName?: string };
+  // Sanitise: trim whitespace, cap at 60 chars, treat blank as null (clear)
+  const trimmed = typeof displayName === "string"
+    ? displayName.trim().slice(0, 60) || null
+    : null;
+
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ displayName: trimmed })
+      .where(eq(usersTable.id, req.user!.id))
+      .returning({ displayName: usersTable.displayName });
+
+    res.json({ ok: true, displayName: updated.displayName });
+  } catch (err) {
+    logger.error({ err }, "Error updating profile");
+    res.status(500).json({ error: "Failed to update profile. Please try again." });
+  }
 });
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────

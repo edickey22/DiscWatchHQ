@@ -11,9 +11,10 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AuthUser {
-  id:        number;
-  email:     string;
-  createdAt: string;
+  id:          number;
+  email:       string;
+  displayName: string | null;
+  createdAt:   string;
 }
 
 interface AuthContextValue {
