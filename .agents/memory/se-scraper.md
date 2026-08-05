@@ -31,7 +31,7 @@ description: BigCommerce Stencil HTML scraper for na.store.square-enix-games.com
 - Card: `<article class="card" data-product-id="...">`
 - Title: `<h3 class="prod-name"><a href="...">Title</a></h3>`
 - Price: `<span data-product-price-without-tax class="price price--withoutTax">$59.99</span>`
-- Image: `<img class="card-image lazyload" data-src="https://cdn11.bigcommerce.com/...jpg">`
+- Image: `<img class="card-image lazyload" data-src="https://cdn11.bigcommerce.com/...jpg">` — CDN serves `/stencil/{WxH}/` size variants; scraper upgrades `270x360` → `1280x1280` at capture time. Other publishers use Shopify JSON which already returns full-res.
 - Status from button: "Pre-Order Now" → coming_soon; "Add to Cart" → available; neither → sold_out
 - Titles contain HTML entities (`&amp;`, `&#x27;`) — must be decoded before storing
 

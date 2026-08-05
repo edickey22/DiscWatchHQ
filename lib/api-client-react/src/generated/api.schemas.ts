@@ -217,6 +217,8 @@ platform?: string;
 publisher?: string;
 search?: string;
 sort?: ListAvailableReleasesSort;
+limit?: number;
+offset?: number;
 };
 
 export type ListAvailableReleasesSort = typeof ListAvailableReleasesSort[keyof typeof ListAvailableReleasesSort];
@@ -252,6 +254,8 @@ platform?: string;
 publisher?: string;
 search?: string;
 sort?: ListAnnouncedReleasesSort;
+limit?: number;
+offset?: number;
 };
 
 export type ListAnnouncedReleasesSort = typeof ListAnnouncedReleasesSort[keyof typeof ListAnnouncedReleasesSort];
@@ -269,6 +273,8 @@ platform?: string;
 publisher?: string;
 search?: string;
 sort?: ListComingSoonReleasesSort;
+limit?: number;
+offset?: number;
 };
 
 export type ListComingSoonReleasesSort = typeof ListComingSoonReleasesSort[keyof typeof ListComingSoonReleasesSort];

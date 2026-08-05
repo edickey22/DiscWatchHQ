@@ -105,18 +105,25 @@ export function GameCard({ release, priority = false }: GameCardProps) {
 
       {/* Details */}
       <div className="flex flex-col flex-1 space-y-1">
-        <div className="flex flex-wrap gap-1.5 mb-1">
-          {release.platforms?.slice(0, 3).map(p => (
-            <span key={p} className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
-              {p}
-            </span>
-          ))}
-          {(release.platforms?.length ?? 0) > 3 && (
-            <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
-              +{(release.platforms?.length ?? 0) - 3}
-            </span>
-          )}
-        </div>
+        {/* Platform badges — "Unknown" is hidden; merch/no-platform items show nothing */}
+        {(() => {
+          const ps = release.platforms?.filter(p => p !== "Unknown") ?? []
+          if (!ps.length) return null
+          return (
+            <div className="flex flex-wrap gap-1.5 mb-1">
+              {ps.slice(0, 3).map(p => (
+                <span key={p} className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
+                  {p}
+                </span>
+              ))}
+              {ps.length > 3 && (
+                <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
+                  +{ps.length - 3}
+                </span>
+              )}
+            </div>
+          )
+        })()}
 
         <Link href={`/releases/${release.id}`} className="block">
           <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">

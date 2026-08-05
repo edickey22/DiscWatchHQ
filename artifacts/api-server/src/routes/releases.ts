@@ -192,8 +192,8 @@ router.get("/releases/available", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, search, sort } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort });
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort, limit, offset });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
@@ -214,8 +214,8 @@ router.get("/releases/coming-soon", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, search, sort } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort });
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort, limit, offset });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
@@ -225,8 +225,8 @@ router.get("/releases/announced", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, search, sort } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "announced", platform, publisher, search, sort });
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "announced", platform, publisher, search, sort, limit, offset });
   res.json({ releases: releases.map(formatRelease), total });
 });
 

@@ -115,10 +115,30 @@ export default function Home() {
     lastTrackedSearch.current = term
   }, [analyticsSearch])
 
-  const { data: availableData,  isLoading: isLoadingAvailable }  = useListAvailableReleases(queryParams)
-  const { data: comingSoonData, isLoading: isLoadingComingSoon } = useListComingSoonReleases(queryParams)
-  const { data: announcedData,  isLoading: isLoadingAnnounced }  = useListAnnouncedReleases(queryParams)
-  const { data: soldOutData,    isLoading: isLoadingSoldOut }    = useListSoldOutReleases(queryParams)
+  // ── Per-section "Load More" limits ──────────────────────────────────────
+  // PAGE_SIZE = 48: multiple of LCM(2,3,4)=12, so grid rows are always complete
+  // at every responsive breakpoint (2-col mobile, 3-col tablet, 4-col desktop).
+  const PAGE_SIZE = 48
+  const [availableLimit, setAvailableLimit] = useState(PAGE_SIZE)
+  const [comingSoonLimit, setComingSoonLimit] = useState(PAGE_SIZE)
+  const [announcedLimit, setAnnouncedLimit] = useState(PAGE_SIZE)
+  const [soldOutLimit, setSoldOutLimit] = useState(PAGE_SIZE)
+
+  // Reset per-section limits whenever any filter changes — avoids stale pages
+  // bleeding through when the user narrows the result set.
+  const resetLimits = () => {
+    setAvailableLimit(PAGE_SIZE)
+    setComingSoonLimit(PAGE_SIZE)
+    setAnnouncedLimit(PAGE_SIZE)
+    setSoldOutLimit(PAGE_SIZE)
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(resetLimits, [platform, publisher, debouncedSearch, sort])
+
+  const { data: availableData,  isLoading: isLoadingAvailable }  = useListAvailableReleases({ ...queryParams, limit: availableLimit })
+  const { data: comingSoonData, isLoading: isLoadingComingSoon } = useListComingSoonReleases({ ...queryParams, limit: comingSoonLimit })
+  const { data: announcedData,  isLoading: isLoadingAnnounced }  = useListAnnouncedReleases({ ...queryParams, limit: announcedLimit })
+  const { data: soldOutData,    isLoading: isLoadingSoldOut }    = useListSoldOutReleases({ ...queryParams, limit: soldOutLimit })
 
   const clearFilters = () => {
     setSearch("")
@@ -290,11 +310,17 @@ export default function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {isLoadingAvailable ? (
-                Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
+                Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)
               ) : availableData?.releases.length ? (
-                availableData.releases.map((release, i) => (
-                  <GameCard key={release.id} release={release} priority={i < 4} />
-                ))
+                <>
+                  {availableData.releases.map((release, i) => (
+                    <GameCard key={release.id} release={release} priority={i < 4} />
+                  ))}
+                  {/* Invisible spacers — pad last row to a multiple of 4 (lg breakpoint) */}
+                  {Array.from({ length: (4 - (availableData.releases.length % 4)) % 4 }).map((_, i) => (
+                    <div key={`avail-spacer-${i}`} aria-hidden="true" />
+                  ))}
+                </>
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
                   <p className="text-muted-foreground font-mono">No open preorders match your filters.</p>
@@ -302,6 +328,17 @@ export default function Home() {
                 </div>
               )}
             </div>
+            {/* Load More — only shown when there are more results than the current page */}
+            {!isLoadingAvailable && (availableData?.total ?? 0) > (availableData?.releases.length ?? 0) && (
+              <div className="flex flex-col items-center gap-2 pt-6">
+                <Button variant="outline" onClick={() => setAvailableLimit(l => l + PAGE_SIZE)} className="min-w-[200px]">
+                  Load More
+                </Button>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Showing {availableData?.releases.length ?? 0} of {availableData?.total ?? 0}
+                </p>
+              </div>
+            )}
           </section>}
 
           {/* Coming Soon */}
@@ -320,11 +357,16 @@ export default function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {isLoadingComingSoon ? (
-                Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
+                Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)
               ) : comingSoonData?.releases.length ? (
-                comingSoonData.releases.map(release => (
-                  <GameCard key={release.id} release={release} />
-                ))
+                <>
+                  {comingSoonData.releases.map(release => (
+                    <GameCard key={release.id} release={release} />
+                  ))}
+                  {Array.from({ length: (4 - (comingSoonData.releases.length % 4)) % 4 }).map((_, i) => (
+                    <div key={`cs-spacer-${i}`} aria-hidden="true" />
+                  ))}
+                </>
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
                   <p className="text-muted-foreground font-mono">No upcoming releases match your filters.</p>
@@ -334,6 +376,16 @@ export default function Home() {
                 </div>
               )}
             </div>
+            {!isLoadingComingSoon && (comingSoonData?.total ?? 0) > (comingSoonData?.releases.length ?? 0) && (
+              <div className="flex flex-col items-center gap-2 pt-6">
+                <Button variant="outline" onClick={() => setComingSoonLimit(l => l + PAGE_SIZE)} className="min-w-[200px]">
+                  Load More
+                </Button>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Showing {comingSoonData?.releases.length ?? 0} of {comingSoonData?.total ?? 0}
+                </p>
+              </div>
+            )}
           </section>}
 
           {/* Announced — listed but no pre-order button yet */}
@@ -354,9 +406,14 @@ export default function Home() {
               {isLoadingAnnounced ? (
                 Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
               ) : announcedData?.releases.length ? (
-                announcedData.releases.map(release => (
-                  <GameCard key={release.id} release={release} />
-                ))
+                <>
+                  {announcedData.releases.map(release => (
+                    <GameCard key={release.id} release={release} />
+                  ))}
+                  {Array.from({ length: (4 - (announcedData.releases.length % 4)) % 4 }).map((_, i) => (
+                    <div key={`ann-spacer-${i}`} aria-hidden="true" />
+                  ))}
+                </>
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
                   <p className="text-muted-foreground font-mono">No announced titles match your filters.</p>
@@ -366,6 +423,16 @@ export default function Home() {
                 </div>
               )}
             </div>
+            {!isLoadingAnnounced && (announcedData?.total ?? 0) > (announcedData?.releases.length ?? 0) && (
+              <div className="flex flex-col items-center gap-2 pt-6">
+                <Button variant="outline" onClick={() => setAnnouncedLimit(l => l + PAGE_SIZE)} className="min-w-[200px]">
+                  Load More
+                </Button>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Showing {announcedData?.releases.length ?? 0} of {announcedData?.total ?? 0}
+                </p>
+              </div>
+            )}
           </section>}
 
           {/* Recently Sold Out */}
@@ -384,11 +451,16 @@ export default function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {isLoadingSoldOut ? (
-                Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)
+                Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)
               ) : soldOutData?.releases.length ? (
-                soldOutData.releases.map(release => (
-                  <GameCard key={release.id} release={release} />
-                ))
+                <>
+                  {soldOutData.releases.map(release => (
+                    <GameCard key={release.id} release={release} />
+                  ))}
+                  {Array.from({ length: (4 - (soldOutData.releases.length % 4)) % 4 }).map((_, i) => (
+                    <div key={`sold-spacer-${i}`} aria-hidden="true" />
+                  ))}
+                </>
               ) : (
                 <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed">
                   <p className="text-muted-foreground font-mono">No sold out releases match your filters.</p>
@@ -398,6 +470,16 @@ export default function Home() {
                 </div>
               )}
             </div>
+            {!isLoadingSoldOut && (soldOutData?.total ?? 0) > (soldOutData?.releases.length ?? 0) && (
+              <div className="flex flex-col items-center gap-2 pt-6">
+                <Button variant="outline" onClick={() => setSoldOutLimit(l => l + PAGE_SIZE)} className="min-w-[200px]">
+                  Load More
+                </Button>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Showing {soldOutData?.releases.length ?? 0} of {soldOutData?.total ?? 0}
+                </p>
+              </div>
+            )}
           </section>}
 
         </div>
