@@ -78,9 +78,10 @@ export async function checkAlerts(): Promise<void> {
     // Load all enabled prefs where cooloff has passed
     const prefs = await db
       .select({
-        pref:  alertPrefsTable,
-        item:  trackedItemsTable,
-        email: usersTable.email,
+        pref:        alertPrefsTable,
+        item:        trackedItemsTable,
+        email:       usersTable.email,
+        displayName: usersTable.displayName,
       })
       .from(alertPrefsTable)
       .innerJoin(trackedItemsTable, eq(alertPrefsTable.trackedItemId, trackedItemsTable.id))
@@ -97,9 +98,9 @@ export async function checkAlerts(): Promise<void> {
 
     logger.info({ count: prefs.length }, "alertChecker: prefs to check");
 
-    for (const { pref, item, email } of prefs) {
+    for (const { pref, item, email, displayName } of prefs) {
       try {
-        await checkSingleAlert({ pref, item, email });
+        await checkSingleAlert({ pref, item, email, displayName });
       } catch (err) {
         logger.error({ err, prefId: pref.id }, "alertChecker: error checking pref");
       }
@@ -112,11 +113,12 @@ export async function checkAlerts(): Promise<void> {
 // ── Per-alert logic ───────────────────────────────────────────────────────────
 
 async function checkSingleAlert(ctx: {
-  pref:  typeof alertPrefsTable.$inferSelect;
-  item:  typeof trackedItemsTable.$inferSelect;
-  email: string;
+  pref:        typeof alertPrefsTable.$inferSelect;
+  item:        typeof trackedItemsTable.$inferSelect;
+  email:       string;
+  displayName: string | null;
 }): Promise<void> {
-  const { pref, item, email } = ctx;
+  const { pref, item, email, displayName } = ctx;
   const itemData = item.itemData as Record<string, unknown>;
   const title    = (itemData.title as string | undefined) ?? "Tracked item";
 
@@ -424,12 +426,13 @@ async function checkSingleAlert(ctx: {
   if (!shouldNotify) return;
 
   await sendAlertEmail({
-    to:        email,
-    itemTitle: title,
-    alertType: pref.alertType as "restock" | "price_drop" | "status_change" | "price_drop_low",
+    to:          email,
+    itemTitle:   title,
+    alertType:   pref.alertType as "restock" | "price_drop" | "status_change" | "price_drop_low",
     detail,
     itemUrl,
     imageUrl,
+    displayName,
   });
 
   await db

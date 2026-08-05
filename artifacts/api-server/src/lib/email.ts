@@ -102,14 +102,20 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
 
 /**
  * Send a magic-link login email.
- * @param email  Recipient email address.
- * @param link   The full verify URL including the raw token as a query param.
+ * @param email        Recipient email address.
+ * @param link         The full verify URL including the raw token as a query param.
+ * @param displayName  Optional display name for personalised greeting.
  */
-export async function sendMagicLinkEmail(email: string, link: string): Promise<void> {
+export async function sendMagicLinkEmail(email: string, link: string, displayName?: string | null): Promise<void> {
+  // Greeting: use display name if set, fall back to the local part of the email address.
+  const greeting = displayName?.trim()
+    ? `Hi ${displayName.trim()},`
+    : `Hi ${email.split("@")[0]},`;
+
   await sendEmail({
     to:      email,
     subject: "Your DiscWatchHQ login link",
-    text:    `Click this link to log in to DiscWatchHQ (expires in 15 minutes):\n\n${link}\n\nIf you didn't request this, you can safely ignore it.`,
+    text:    `${greeting}\n\nClick this link to log in to DiscWatchHQ (expires in 15 minutes):\n\n${link}\n\nIf you didn't request this, you can safely ignore it.`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -119,6 +125,7 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
     <span style="font-size:11px;font-weight:bold;color:#21b557;border:1px solid #21b557;border-radius:4px;padding:2px 6px;margin-left:6px">HQ</span>
   </div>
   <h2 style="color:#ffffff;margin:0 0 16px">Your login link</h2>
+  <p style="color:#a0a0a0;margin:0 0 8px">${greeting}</p>
   <p style="color:#a0a0a0;margin:0 0 28px">Click the button below to sign in. This link expires in <strong style="color:#f0f0f0">15 minutes</strong> and can only be used once.</p>
   <a href="${link}" style="display:inline-block;background:#21b557;color:#000000;font-weight:bold;font-size:16px;padding:14px 32px;border-radius:8px;text-decoration:none">Sign in to DiscWatchHQ</a>
   <p style="color:#666;font-size:12px;margin-top:32px">If you didn't request this email, you can safely ignore it. No account changes will be made.</p>
@@ -136,13 +143,15 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
  * provider here (see top of file) before enabling real alert delivery.
  */
 export async function sendAlertEmail(opts: {
-  to:         string;
-  itemTitle:  string;
-  alertType:  "restock" | "price_drop" | "status_change" | "price_drop_low";
-  detail:     string;
-  itemUrl:    string;
+  to:           string;
+  itemTitle:    string;
+  alertType:    "restock" | "price_drop" | "status_change" | "price_drop_low";
+  detail:       string;
+  itemUrl:      string;
   /** Absolute URL to the item's cover art / product photo. Optional — omit the image block if absent. */
-  imageUrl?:  string | null;
+  imageUrl?:    string | null;
+  /** Display name for personalised greeting. Falls back to email prefix if absent. */
+  displayName?: string | null;
 }): Promise<void> {
   const typeLabel: Record<string, string> = {
     restock:        "Back in stock",
@@ -152,6 +161,11 @@ export async function sendAlertEmail(opts: {
   };
 
   const label = typeLabel[opts.alertType] ?? "Update";
+
+  // Greeting: use display name if set, fall back to the local part of the email address.
+  const greeting = opts.displayName?.trim()
+    ? `Hi ${opts.displayName.trim()},`
+    : `Hi ${opts.to.split("@")[0]},`;
 
   // Image block — uses a plain <img> so it works across Gmail, Outlook, Apple Mail.
   // CSS background-image is stripped by most email clients, so we never use it here.
@@ -172,7 +186,7 @@ export async function sendAlertEmail(opts: {
   await sendEmail({
     to:      opts.to,
     subject: `[DiscWatchHQ] ${label}: ${opts.itemTitle}`,
-    text:    `${label} for "${opts.itemTitle}"\n\n${opts.detail}\n\nView it here: ${opts.itemUrl}\n\nTo manage your alerts, visit ${process.env.APP_URL ?? "https://discwatchhq.com"}/profile`,
+    text:    `${greeting}\n\n${label} for "${opts.itemTitle}"\n\n${opts.detail}\n\nView it here: ${opts.itemUrl}\n\nTo manage your alerts, visit ${process.env.APP_URL ?? "https://discwatchhq.com"}/profile`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -183,6 +197,7 @@ export async function sendAlertEmail(opts: {
   </div>${imageBlock}
   <h2 style="color:#21b557;margin:0 0 8px">${label}</h2>
   <h3 style="color:#ffffff;margin:0 0 16px">${opts.itemTitle}</h3>
+  <p style="color:#a0a0a0;margin:0 0 4px">${greeting}</p>
   <p style="color:#a0a0a0;margin:0 0 28px">${opts.detail}</p>
   <a href="${opts.itemUrl}" style="display:inline-block;background:#21b557;color:#000000;font-weight:bold;font-size:16px;padding:14px 32px;border-radius:8px;text-decoration:none">View item</a>
   <p style="color:#666;font-size:12px;margin-top:32px">Manage your alerts at <a href="${process.env.APP_URL ?? "https://discwatchhq.com"}/profile" style="color:#21b557">DiscWatchHQ Profile</a></p>

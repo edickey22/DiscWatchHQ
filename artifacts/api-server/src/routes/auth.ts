@@ -124,7 +124,7 @@ router.post("/auth/request-link", requestLinkLimiter, async (req, res) => {
     const verifyUrl = `${base}/api/auth/verify?token=${rawToken}`;
 
     logger.info({ base, to: normalised }, "Magic-link base URL (confirm this is the production domain in prod)");
-    await sendMagicLinkEmail(normalised, verifyUrl);
+    await sendMagicLinkEmail(normalised, verifyUrl, user.displayName);
 
     // Opportunistic cleanup (fire-and-forget)
     void pruneExpiredTokens();
