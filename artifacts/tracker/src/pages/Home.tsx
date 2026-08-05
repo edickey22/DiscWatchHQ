@@ -28,6 +28,14 @@ import { buildCanonicalUrl } from "@/lib/seo"
 import { trackSearchEvent } from "@/lib/analytics"
 
 type SortOption = "updated" | "title" | "publisher" | "newest" | "release_date_asc" | "release_date_desc"
+type StatusFilter = "_all" | "available" | "coming_soon" | "sold_out"
+
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "_all",        label: "All Statuses"  },
+  { value: "available",   label: "Available Now"  },
+  { value: "coming_soon", label: "Coming Soon"    },
+  { value: "sold_out",    label: "Sold Out"       },
+]
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "updated",          label: "Recently Updated"         },
@@ -42,6 +50,7 @@ export default function Home() {
   const [search, setSearch]       = useState("")
   const [platform, setPlatform]   = useState<string>("_all")
   const [publisher, setPublisher] = useState<string>("_all")
+  const [status, setStatus]       = useState<StatusFilter>("_all")
   const [sort, setSort]           = useState<SortOption>("updated")
 
   useDocumentHead({
@@ -55,7 +64,7 @@ export default function Home() {
           "@type":       "CollectionPage",
           "name":        "Boutique Tracker — Limited-Run Physical Game Releases | DiscWatchHQ",
           "url":         "https://discwatchhq.com/boutique",
-          "description": "Real-time tracking of limited-run physical game releases from boutique publishers including Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and Fangamer.",
+          "description": "Real-time tracking of limited-run physical game releases and collector merchandise from boutique publishers including Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, Fangamer, Square Enix, and more.",
           "isPartOf":    { "@id": "https://discwatchhq.com/#website" },
         },
         {
@@ -112,11 +121,12 @@ export default function Home() {
     setSearch("")
     setPlatform("_all")
     setPublisher("_all")
+    setStatus("_all")
     setSort("updated")
   }
 
   const hasActiveFilters =
-    search !== "" || platform !== "_all" || publisher !== "_all" || sort !== "updated"
+    search !== "" || platform !== "_all" || publisher !== "_all" || status !== "_all" || sort !== "updated"
 
   // Hero marquee — real photos of currently-available and coming-soon boutique
   // items (already fetched for the grids below), so the strip reflects live
@@ -152,8 +162,9 @@ export default function Home() {
           <p className="text-muted-foreground/80 mt-3 text-sm leading-relaxed max-w-2xl">
             Boutique game publishers release physical editions in limited quantities — often a
             few thousand units — that sell out in hours or days and rarely restock. Once they're
-            gone, you're paying secondary-market prices. The Boutique Tracker monitors twelve
-            publishers every two hours and organizes their releases into three buckets:{" "}
+            gone, you're paying secondary-market prices. The Boutique Tracker monitors{" "}
+            {publishers?.length ?? "every"} publishers every two hours and organizes their
+            releases into three buckets:{" "}
             <span className="text-foreground/70 font-medium">Available Now</span> (open for
             order today),{" "}
             <span className="text-foreground/70 font-medium">Coming Soon</span> (announced,
@@ -204,17 +215,29 @@ export default function Home() {
                 </SelectContent>
               </Select>
 
-              {/* Publisher filter */}
+              {/* Publisher filter — only show publishers with at least one release */}
               <Select value={publisher} onValueChange={setPublisher}>
                 <SelectTrigger className="w-full md:w-[200px] bg-background">
                   <SelectValue placeholder="Publisher" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_all">All Publishers</SelectItem>
-                  {publishers?.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                  {publishers?.filter(p => p.releaseCount > 0).slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                     <SelectItem key={p.slug} value={p.slug}>
                       {p.name}
                     </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status filter */}
+              <Select value={status} onValueChange={v => setStatus(v as StatusFilter)}>
+                <SelectTrigger className="w-full md:w-[165px] bg-background">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -245,7 +268,7 @@ export default function Home() {
         <div className="container mx-auto max-w-[1600px] px-4 py-8 space-y-16">
 
           {/* Currently Available */}
-          <section>
+          {(status === "_all" || status === "available") && <section>
             <div className="flex items-baseline justify-between mb-6">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground flex items-center gap-3">
@@ -276,10 +299,10 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </section>
+          </section>}
 
           {/* Coming Soon */}
-          <section>
+          {(status === "_all" || status === "coming_soon") && <section>
             <div className="flex items-baseline justify-between mb-6">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
@@ -308,10 +331,10 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </section>
+          </section>}
 
           {/* Recently Sold Out */}
-          <section>
+          {(status === "_all" || status === "sold_out") && <section>
             <div className="flex items-baseline justify-between mb-6 opacity-70">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold font-display tracking-tight text-foreground">
@@ -340,7 +363,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </section>
+          </section>}
 
         </div>
       </main>

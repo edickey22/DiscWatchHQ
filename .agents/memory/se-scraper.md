@@ -1,6 +1,6 @@
 ---
 name: Square Enix NA store scraper
-description: BigCommerce Stencil HTML scraper for na.store.square-enix-games.com/video-games
+description: BigCommerce Stencil HTML scraper for na.store.square-enix-games.com — video games + 7 merch categories
 ---
 
 ## Key facts
@@ -9,36 +9,35 @@ description: BigCommerce Stencil HTML scraper for na.store.square-enix-games.com
 - Platform: BigCommerce Stencil; server-rendered HTML, no JS execution needed
 - CDN: Cloudflare — browser-like headers required (User-Agent, Accept, Accept-Language, Sec-Fetch-*)
 - No trailing slash or `/collections/` prefix — those get Cloudflare-blocked (empty responses < 5KB)
-- Category: `/video-games` (no trailing slash), paginated with `?page=N`, 16 items/page, ~5 pages as of 2026-08-05
+- DB id: 15, slug: `square-enix`, enabled: true
 
-## HTML structure (BC Stencil card)
+## Video games: /video-games
 
-- Card: `<article class="card" data-product-id="...">` (16 per page)
-- Title: `<h3 class="prod-name"><a href="https://na.store.square-enix-games.com/slug">Title</a></h3>`
+- Paginated with `?page=N`, 16 items/page, ~2-5 pages; max 15 pages
+- **Boutique filter:** keeps ONLY `coming_soon` OR items with a named edition (Collector's/Limited/Deluxe/Special); everything else dropped
+- **Why:** /video-games mixes genuine SE-exclusive pre-orders with standard retail back-catalog (available everywhere)
+
+## Merch categories (7) — no boutique filter
+
+- `/merchandise/figures`, `/merchandise/plush`, `/merchandise/jewelry`, `/merchandise/accessories`, `/merchandise/home-goods`, `/merchandise/apparel`, `/ffxiv-merchandise`
+- All in-stock AND pre-order items included; `platforms: []`; `editionType: null`
+- 3 s inter-category delay; 1.5 s inter-page delay; max 15 pages/category
+- **Why:** SE merch is SE-store-exclusive by nature — no boutique quality filter needed (same rationale as Blizzard Gear Store)
+- `parseMerchCard()` is separate from `parseCard()` so video-games filter is never touched
+- Scale: ~894 merch items + 7 game items ≈ 901 total per full scrape run
+
+## HTML structure (BC Stencil card — same for all categories)
+
+- Card: `<article class="card" data-product-id="...">`
+- Title: `<h3 class="prod-name"><a href="...">Title</a></h3>`
 - Price: `<span data-product-price-without-tax class="price price--withoutTax">$59.99</span>`
 - Image: `<img class="card-image lazyload" data-src="https://cdn11.bigcommerce.com/...jpg">`
-- Status from button text: "Pre-Order Now" → coming_soon; "Add to Cart" → available; neither → sold_out
-- Titles may contain HTML entities (`&amp;`, `&#x27;`) — must be decoded before storing
+- Status from button: "Pre-Order Now" → coming_soon; "Add to Cart" → available; neither → sold_out
+- Titles contain HTML entities (`&amp;`, `&#x27;`) — must be decoded before storing
 
-## Platform detection
+## Platform detection (video games only)
 
-- SE puts platform in title for some products ("OCTOPATH TRAVELER - Switch 2") but not others ("FINAL FANTASY VII REBIRTH")
-- Also check URL slug — sometimes platform appears there but not title ("final-fantasy-vii-rebirth---switch-2")
-- Combined title+slug search is the most reliable approach
-- When neither has a platform keyword: use `["Unknown"]` rather than skipping the item
-
-**Why:** SE's `/video-games` category contains a mix of platform-specific and platform-agnostic listings. Requiring a platform in the title dropped ~75% of valid products.
-
-## isGame filter
-
-Block on keyword blocklist, NOT on requiring a platform:
-- Digital: "game time card", "day game time", "free trial", "- digital"
-- Art/companion: "art book", "artbook", "art of ", "making of"
-- Merch: "crystal monsters gallery", "figure", "statue", "plush", "soundtrack", "t-shirt", "hoodie", "poster", "pin set", "lanyard"
-
-**Why:** The `/video-games` category is games-focused but digital subscription codes and a few companion items slip through. The platform filter was rejecting ~75% of valid physical games.
-
-## Publisher DB
-
-- DB id: 15, slug: `square-enix`, enabled: true
-- No affiliate program (SE is itself an Amazon affiliate, no external program)
+- Check combined title + URL slug — platform often in one but not the other
+- Fallback: `["Unknown"]` — never skip; item stays eligible for detail-page enrichment
+- Detail-page enrichment: spec table → JSON-LD additionalProperty → meta keywords → og:description → meta description
+- DB-cached platforms skip re-fetch on subsequent runs

@@ -16,7 +16,7 @@ router.get("/publishers", async (_req, res): Promise<void> => {
       enabled: publishersTable.enabled,
       lastScrapedAt: publishersTable.lastScrapedAt,
       releaseCount: sql<number>`(
-        select count(*)::int from releases where publisher_id = ${publishersTable.id}
+        select count(*)::int from releases where publisher_id = publishers.id
       )`,
     })
     .from(publishersTable)

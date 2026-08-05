@@ -199,7 +199,7 @@ export function CatalogGameCard({
           <img
             src={game.coverImageUrl}
             alt={game.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain"
             loading={priority ? "eager" : "lazy"}
             decoding={priority ? "sync" : "async"}
             onError={() => setImgFailed(true)}

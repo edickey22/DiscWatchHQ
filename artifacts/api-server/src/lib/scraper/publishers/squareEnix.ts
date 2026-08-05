@@ -59,6 +59,31 @@ const MAX_DETAIL_FETCHES = 20;
 /** Delay (ms) between detail-page requests — polite rate limiting */
 const DETAIL_FETCH_DELAY_MS = 2_000;
 
+/**
+ * Merchandise category paths to scrape in addition to /video-games.
+ * These are SE-Store-exclusive items (figures, plush, apparel, etc.) —
+ * no boutique quality filter is applied; all in-stock and pre-order items
+ * are included, consistent with how Blizzard Gear Store merch is handled.
+ */
+const MERCH_CATEGORIES = [
+  "/merchandise/figures",
+  "/merchandise/plush",
+  "/merchandise/jewelry",
+  "/merchandise/accessories",
+  "/merchandise/home-goods",
+  "/merchandise/apparel",
+  "/ffxiv-merchandise",
+] as const;
+
+/** Max pages per merch category (16 products/page → up to ~240 per category) */
+const MAX_MERCH_PAGES = 15;
+
+/** Delay (ms) between pages within a merch category */
+const MERCH_PAGE_DELAY_MS = 1_500;
+
+/** Delay (ms) between consecutive merch categories — stay polite to Cloudflare */
+const INTER_CATEGORY_DELAY_MS = 3_000;
+
 /** Browser-like headers required to pass Cloudflare's bot heuristics */
 const HEADERS: Record<string, string> = {
   "User-Agent":
@@ -371,8 +396,12 @@ function extractPlatformFromDetailHtml(html: string): string[] {
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
-async function fetchPage(page: number): Promise<string | null> {
-  const url = `${BASE}/video-games${page > 1 ? `?page=${page}` : ""}`;
+/**
+ * Fetch one page of a SE Store category listing.
+ * Works for both /video-games and the merch category paths.
+ */
+async function fetchCategoryPage(categoryPath: string, page: number): Promise<string | null> {
+  const url = `${BASE}${categoryPath}${page > 1 ? `?page=${page}` : ""}`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -399,6 +428,9 @@ async function fetchPage(page: number): Promise<string | null> {
 
   return html;
 }
+
+/** Convenience wrapper kept for backward-compat with the /video-games loop below. */
+const fetchPage = (page: number) => fetchCategoryPage("/video-games", page);
 
 /**
  * Fetch a single product detail page and return its HTML, or null on failure.
@@ -431,12 +463,81 @@ async function fetchDetailPage(productUrl: string): Promise<string | null> {
   return html;
 }
 
+// ── Merch card parsing ────────────────────────────────────────────────────────
+// Separate from parseCard() — merch items need no platform extraction, no
+// boutique-quality filter, and no non-game keyword blocklist.
+
+/**
+ * Parse a single product card from a SE merch category page.
+ *
+ * Unlike parseCard() for /video-games this function:
+ *   - Applies NO platform extraction (platforms = [])
+ *   - Applies NO boutique-quality filter (all in-stock/pre-order items kept)
+ *   - Applies NO non-game keyword blocklist (figures, plush, etc. are fine)
+ *   - Only skips digital-only/gift-card items that have no physical fulfilment
+ */
+function parseMerchCard(html: string): ParsedCard | null {
+  // Title + URL (same selector as game cards — BC Stencil is consistent)
+  const titleMatch = html.match(
+    /<h3[^>]+class="[^"]*prod-name[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/
+  );
+  if (!titleMatch) return null;
+
+  const productUrl = titleMatch[1].trim();
+  const title = decodeEntities(titleMatch[2]);
+  if (!title || !productUrl) return null;
+
+  // Skip digital-only / subscription / gift card items (no physical item shipped)
+  const titleLower = title.toLowerCase();
+  if (/gift\s*card|free\s*trial|\bdigital\b|\bsubscription\b/.test(titleLower)) return null;
+
+  // Price
+  const priceMatch = html.match(
+    /<span[^>]+data-product-price-without-tax[^>]*class="[^"]*price[^"]*"[^>]*>\s*(\$[\d,]+\.?\d*)\s*<\/span>/
+  );
+  const price = priceMatch ? priceMatch[1].trim() : null;
+
+  // Cover image
+  const imgMatch = html.match(
+    /<img[^>]+class="[^"]*card-image[^"]*"[^>]+data-src="([^"]+)"/
+  );
+  const coverImageUrl = imgMatch ? imgMatch[1].trim() : null;
+
+  // Status (same CTA-button heuristic as game cards)
+  let status: ScrapedRelease["status"] = "sold_out";
+  if (/Pre-Order Now/i.test(html)) {
+    status = "coming_soon";
+  } else if (/Add to Cart|\+\s*Add to Cart/i.test(html)) {
+    status = "available";
+  }
+
+  // Merch has no game platform and no game-edition type
+  return { title, productUrl, price, coverImageUrl, status, platforms: [], editionType: null };
+}
+
+/**
+ * Extract all product cards from a SE merch category page using parseMerchCard().
+ * Uses the same <article class="card"> selector as parseCards() —
+ * BC Stencil uses identical markup for all category pages.
+ */
+function parseMerchCards(html: string): ParsedCard[] {
+  const cardPattern =
+    /<article[^>]+class="[^"]*\bcard\b[^"]*"[^>]*>([\s\S]*?)<\/article>/g;
+  const cards: ParsedCard[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = cardPattern.exec(html)) !== null) {
+    const parsed = parseMerchCard(match[1]);
+    if (parsed) cards.push(parsed);
+  }
+  return cards;
+}
+
 // ── Exports for testing ───────────────────────────────────────────────────────
 // These pure parsing functions are exported so the smoke-test suite can unit-test
 // each extraction strategy against fixture HTML without making network calls.
 
 /** @internal */
-export { extractPlatformFromDetailHtml, extractPlatformsFromText, parseCards };
+export { extractPlatformFromDetailHtml, extractPlatformsFromText, parseCards, parseMerchCards };
 
 // ── Scraper export ────────────────────────────────────────────────────────────
 
@@ -489,6 +590,71 @@ export const squareEnixScraper: PublisherScraper = {
       // Polite delay between pages — Cloudflare rate-limits aggressive bursts
       if (page < MAX_PAGES) await new Promise((r) => setTimeout(r, 1_500));
     }
+
+    // ── Merchandise categories ────────────────────────────────────────────────
+    // All SE merch is SE-Store-exclusive by nature — no boutique filter needed.
+    // Consistent with Blizzard Gear Store's approach: include everything except
+    // digital/gift-card items. platforms=[] since merch has no game platform.
+    logger.info({ categories: MERCH_CATEGORIES.length }, "Square Enix: starting merch category scrape");
+    let totalMerchFound = 0;
+
+    for (let ci = 0; ci < MERCH_CATEGORIES.length; ci++) {
+      const categoryPath = MERCH_CATEGORIES[ci];
+
+      // Polite pause between categories
+      if (ci > 0) await new Promise((r) => setTimeout(r, INTER_CATEGORY_DELAY_MS));
+
+      logger.debug({ categoryPath }, "Square Enix: scraping merch category");
+      let categoryCount = 0;
+
+      for (let page = 1; page <= MAX_MERCH_PAGES; page++) {
+        const html = await fetchCategoryPage(categoryPath, page);
+
+        if (!html) {
+          logger.warn({ categoryPath, page }, "Square Enix: merch fetch failed, skipping rest of category");
+          break;
+        }
+
+        const cards = parseMerchCards(html);
+
+        if (cards.length === 0) {
+          logger.info({ categoryPath, page }, "Square Enix: merch pagination done");
+          break;
+        }
+
+        logger.debug({ categoryPath, page, count: cards.length }, "Square Enix: parsed merch cards");
+
+        for (const card of cards) {
+          const slug = card.productUrl.replace(/^https?:\/\/[^/]+/, "");
+          if (seen.has(slug)) continue;
+          seen.add(slug);
+          categoryCount++;
+
+          results.push({
+            externalId:       slug,
+            title:            card.title,
+            platforms:        card.platforms,       // [] for merch
+            status:           card.status,
+            coverImageUrl:    card.coverImageUrl,
+            productUrl:       card.productUrl,
+            price:            card.price,
+            editionType:      card.editionType,     // null for merch
+            preorderCloseDate: null,
+            releaseDate:      null,
+          });
+        }
+
+        if (page < MAX_MERCH_PAGES) await new Promise((r) => setTimeout(r, MERCH_PAGE_DELAY_MS));
+      }
+
+      logger.info({ categoryPath, found: categoryCount }, "Square Enix: merch category done");
+      totalMerchFound += categoryCount;
+    }
+
+    logger.info(
+      { videoGamesCount: results.length - totalMerchFound, totalMerchFound, total: results.length },
+      "Square Enix: all categories scraped"
+    );
 
     // ── Detail-page enrichment for "Unknown" platform items ──────────────────
     // Fetch individual product pages only for releases where neither the listing

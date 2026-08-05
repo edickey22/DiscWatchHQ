@@ -1,5 +1,10 @@
 import { useRoute, Link } from "wouter"
-import { useGetRelease, ReleaseStatus } from "@workspace/api-client-react"
+import {
+  useGetRelease,
+  useListAvailableReleases,
+  useListComingSoonReleases,
+  ReleaseStatus,
+} from "@workspace/api-client-react"
 import { ArrowLeft, ExternalLink, Calendar, Package } from "lucide-react"
 import { PriceTrend } from "@/components/PriceTrend"
 
@@ -47,6 +52,22 @@ export default function ReleaseDetail() {
 
   const { data: release, isLoading, isError } = useGetRelease(id)
   const publisherHasNotifyFeature = !!release?.publisherSlug && PUBLISHERS_WITH_NOTIFY_FEATURE.has(release.publisherSlug)
+
+  // ── Related releases: up to 4 from the same publisher (available + coming soon),
+  //    excluding the current item. Used in the About section sidebar.
+  const publisherSlug = release?.publisherSlug ?? undefined
+  const { data: moreAvailable }  = useListAvailableReleases(
+    publisherSlug ? { publisher: publisherSlug } : undefined,
+    { query: { enabled: !!publisherSlug } }
+  )
+  const { data: moreComingSoon } = useListComingSoonReleases(
+    publisherSlug ? { publisher: publisherSlug } : undefined,
+    { query: { enabled: !!publisherSlug } }
+  )
+  const relatedReleases = [
+    ...(moreAvailable?.releases  ?? []),
+    ...(moreComingSoon?.releases ?? []),
+  ].filter(r => r.id !== id).slice(0, 4)
 
   // ── SEO — injected once data is loaded ─────────────────────────────────────
   const canonical = buildCanonicalUrl(`/releases/${id}`)
@@ -162,7 +183,7 @@ export default function ReleaseDetail() {
                     )}
                   </div>
 
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight mb-4 text-foreground leading-[1.1]">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold tracking-tight mb-4 text-foreground leading-[1.15]">
                     {release.title}
                   </h1>
 
@@ -317,22 +338,69 @@ export default function ReleaseDetail() {
               AI citation, not just schema markup presence.
           ─────────────────────────────────────────────────────────────────────── */}
           {release && (
-            <div className="mt-12 pt-10 border-t border-border/30">
-              <h2 className="text-lg font-display font-bold text-foreground mb-4">
-                About this release
-              </h2>
-              <p className="text-muted-foreground leading-relaxed max-w-2xl font-mono text-sm">
-                {buildReleaseDescriptiveCopy(release)}
-              </p>
-              <p className="text-muted-foreground/90 leading-relaxed max-w-2xl font-mono text-xs mt-4">
-                DiscWatchHQ automatically tracks new and upcoming limited-run physical game
-                releases from {release.publisherName} and other boutique publishers — so you
-                never miss a drop.
-              </p>
+            <div className="mt-6 pt-6 border-t border-border/30">
+              <div className={relatedReleases.length > 0 ? "md:grid md:grid-cols-5 md:gap-12" : ""}>
+
+                {/* Left: descriptive copy */}
+                <div className={relatedReleases.length > 0 ? "md:col-span-3" : ""}>
+                  <h2 className="text-lg font-display font-bold text-foreground mb-4">
+                    About this release
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed font-mono text-sm">
+                    {buildReleaseDescriptiveCopy(release)}
+                  </p>
+                  <p className="text-muted-foreground/90 leading-relaxed font-mono text-xs mt-4">
+                    DiscWatchHQ automatically tracks new and upcoming limited-run physical game
+                    releases from {release.publisherName} and other boutique publishers — so you
+                    never miss a drop.
+                  </p>
+                </div>
+
+                {/* Right: more from this publisher */}
+                {relatedReleases.length > 0 && (
+                  <aside className="md:col-span-2 mt-8 md:mt-0">
+                    <h3 className="text-sm font-mono font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                      More from {release.publisherName}
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      {relatedReleases.map(r => (
+                        <Link
+                          key={r.id}
+                          href={`/releases/${r.id}`}
+                          className="flex items-center gap-3 rounded-lg p-2.5 border border-border/40 hover:border-primary/50 hover:bg-card/60 transition-colors group"
+                        >
+                          <div className="w-10 h-10 shrink-0 rounded bg-muted overflow-hidden">
+                            {r.coverImageUrl ? (
+                              <img
+                                src={r.coverImageUrl}
+                                alt={r.title}
+                                className="w-full h-full object-contain"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-secondary" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+                              {r.title}
+                            </p>
+                            <p className="text-[10px] font-mono text-muted-foreground mt-0.5 uppercase tracking-wide">
+                              {r.status === ReleaseStatus.available  ? "Available Now"
+                               : r.status === ReleaseStatus.coming_soon ? "Coming Soon"
+                               : "Sold Out"}
+                            </p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </aside>
+                )}
+              </div>
             </div>
           )}
           {isLoading && (
-            <div className="mt-12 pt-10 border-t border-border/30 space-y-3">
+            <div className="mt-6 pt-6 border-t border-border/30 space-y-3">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-full max-w-2xl" />
               <Skeleton className="h-4 w-5/6 max-w-2xl" />

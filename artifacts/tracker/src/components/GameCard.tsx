@@ -56,7 +56,7 @@ export function GameCard({ release, priority = false }: GameCardProps) {
               src={release.coverImageUrl}
               alt={`${release.title} cover`}
               className={cn(
-                "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
+                "h-full w-full object-contain",
                 isSoldOut && "grayscale-[50%]"
               )}
               loading={priority ? "eager" : "lazy"}
