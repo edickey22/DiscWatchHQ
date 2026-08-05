@@ -14,7 +14,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Heart, Gamepad2, Package, Monitor,
-  Trash2, Bell, BellOff, DollarSign,
+  Trash2, Bell, BellOff, DollarSign, TrendingDown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -135,7 +135,7 @@ export default function TrackingPage() {
     }: {
       trackedItemId:    number;
       itemData:         TrackedItem["itemData"];
-      alertType:        "status_change" | "price_drop";
+      alertType:        "status_change" | "price_drop" | "price_drop_low";
       existingAlertId?: number;
       currentEnabled?:  boolean;
     }) => {
@@ -169,15 +169,18 @@ export default function TrackingPage() {
 
   const items = trackingData?.items ?? [];
 
-  // Build two alert maps keyed by trackedItem.id — one per alert type.
-  // Releases can have both a status_change pref and a price_drop pref simultaneously.
-  const statusAlertMap = new Map<number, AlertEntry>();
-  const priceAlertMap  = new Map<number, AlertEntry>();
+  // Build three alert maps keyed by trackedItem.id — one per alert type.
+  // Releases can have all three simultaneously.
+  const statusAlertMap   = new Map<number, AlertEntry>();
+  const priceAlertMap    = new Map<number, AlertEntry>();
+  const priceLowAlertMap = new Map<number, AlertEntry>();
   for (const p of (alertsData?.prefs ?? [])) {
     if (p.alert.alertType === "status_change" || p.alert.alertType === "restock") {
       statusAlertMap.set(p.item.id, p.alert);
     } else if (p.alert.alertType === "price_drop") {
       priceAlertMap.set(p.item.id, p.alert);
+    } else if (p.alert.alertType === "price_drop_low") {
+      priceLowAlertMap.set(p.item.id, p.alert);
     }
   }
 
@@ -239,10 +242,11 @@ export default function TrackingPage() {
                   </h2>
                   <div className="space-y-2">
                     {typeItems.map((item) => {
-                      const img         = itemImage(item);
-                      const title       = itemTitle(item);
-                      const statusAlert = statusAlertMap.get(item.id);
-                      const priceAlert  = priceAlertMap.get(item.id);
+                      const img          = itemImage(item);
+                      const title        = itemTitle(item);
+                      const statusAlert  = statusAlertMap.get(item.id);
+                      const priceAlert   = priceAlertMap.get(item.id);
+                      const priceLowAlert = priceLowAlertMap.get(item.id);
 
                       return (
                         <div
@@ -307,6 +311,31 @@ export default function TrackingPage() {
                                 }`}
                               >
                                 {statusAlert?.enabled ? <Bell size={14} /> : <BellOff size={14} />}
+                              </button>
+                            )}
+
+                            {/* ── 30-day eBay low alert — releases only ────── */}
+                            {item.itemType === "release" && (
+                              <button
+                                title={
+                                  priceLowAlert?.enabled
+                                    ? "Turn off 30-day low alert"
+                                    : "Alert me when this hits a new 30-day eBay resale low"
+                                }
+                                onClick={() => toggleAlertMutation.mutate({
+                                  trackedItemId:   item.id,
+                                  itemData:        item.itemData,
+                                  alertType:       "price_drop_low",
+                                  existingAlertId: priceLowAlert?.id,
+                                  currentEnabled:  priceLowAlert?.enabled,
+                                })}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                  priceLowAlert?.enabled
+                                    ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                    : "text-muted-foreground bg-secondary/40 hover:bg-primary/10 hover:text-primary"
+                                }`}
+                              >
+                                <TrendingDown size={14} />
                               </button>
                             )}
 

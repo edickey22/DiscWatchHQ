@@ -13,8 +13,9 @@ import {
   trackedItemsTable,
   alertPrefsTable,
   releasesTable,
+  priceSnapshotsTable,
 } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { checkAlerts } from "../lib/alertChecker";
 import { getConsoleListingsEntry } from "../lib/consoleListingsCache";
 import { logger } from "../lib/logger";
@@ -404,6 +405,169 @@ router.post("/dev/test-release-price-alert", async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "devTools: test-release-price-alert error");
+    res.status(500).json({ error: String(err), steps });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/dev/test-30day-low-alert
+//
+// Forces a price_drop_low alert for a boutique release by inserting synthetic
+// price_snapshots spanning >7 days, then creating an alert_pref whose baseline
+// is 2× the synthetic price so the checker fires immediately.
+//
+// Body: { email: string, releaseId: number }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/dev/test-30day-low-alert", async (req, res) => {
+  const { email, releaseId } = req.body as { email?: string; releaseId?: number };
+
+  if (!email || !releaseId) {
+    res.status(400).json({ error: "email and releaseId are required" });
+    return;
+  }
+
+  const steps: string[] = [];
+  const syntheticSnapIds: number[] = [];
+
+  try {
+    // 1. Verify release exists
+    const [release] = await db
+      .select({ id: releasesTable.id, title: releasesTable.title, status: releasesTable.status, coverImageUrl: releasesTable.coverImageUrl })
+      .from(releasesTable)
+      .where(eq(releasesTable.id, releaseId))
+      .limit(1);
+
+    if (!release) {
+      res.status(404).json({ error: `Release id=${releaseId} not found` });
+      return;
+    }
+    steps.push(`Found release "${release.title}" (id=${release.id}, status="${release.status}")`);
+
+    // 2. Insert synthetic price_snapshots that satisfy the alertChecker's history guard:
+    //    - Oldest snapshot must be ≤ 7 days ago (i.e. at least 7 days of history)
+    //    - All snapshots within the 30-day window
+    const syntheticPrice = 34.99;
+    const now = new Date();
+    const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() -  2 * 24 * 60 * 60 * 1000);
+
+    const [snap1] = await db.insert(priceSnapshotsTable).values({
+      itemType:  "release_ebay",
+      itemId:    String(releaseId),
+      source:    "ebay",
+      priceUsd:  syntheticPrice,
+      snappedAt: tenDaysAgo,
+    }).returning();
+    syntheticSnapIds.push(snap1.id);
+
+    const [snap2] = await db.insert(priceSnapshotsTable).values({
+      itemType:  "release_ebay",
+      itemId:    String(releaseId),
+      source:    "ebay",
+      priceUsd:  syntheticPrice,
+      snappedAt: twoDaysAgo,
+    }).returning();
+    syntheticSnapIds.push(snap2.id);
+
+    steps.push(`Inserted synthetic snapshots: $${syntheticPrice} at -10d (id=${snap1.id}) and -2d (id=${snap2.id})`);
+    steps.push(`30-day min will be $${syntheticPrice} — oldest snapshot 10 days ago satisfies ≥7-day history guard`);
+
+    // 3. Upsert test user
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    let userId: number;
+    if (existing.length > 0) {
+      userId = existing[0].id;
+      steps.push(`Using existing user id=${userId} for ${email}`);
+    } else {
+      const [newUser] = await db.insert(usersTable).values({ email }).returning();
+      userId = newUser.id;
+      steps.push(`Created test user id=${userId} for ${email}`);
+    }
+
+    // 4. Upsert tracked_item for this release
+    let trackedId: number;
+    const existingItem = await db
+      .select()
+      .from(trackedItemsTable)
+      .where(and(eq(trackedItemsTable.userId, userId), eq(trackedItemsTable.itemId, String(releaseId))))
+      .limit(1);
+
+    if (existingItem.length > 0) {
+      trackedId = existingItem[0].id;
+      steps.push(`Using existing tracked_item id=${trackedId}`);
+    } else {
+      const [ti] = await db
+        .insert(trackedItemsTable)
+        .values({
+          userId,
+          itemType: "release",
+          itemId:   String(releaseId),
+          itemData: { title: release.title, status: release.status, coverImageUrl: release.coverImageUrl ?? undefined },
+        })
+        .returning();
+      trackedId = ti.id;
+      steps.push(`Created tracked_item id=${trackedId}`);
+    }
+
+    // 5. Insert price_drop_low pref with baseline 2× synthetic price
+    //    (guarantees thirtyDayLow < baseline → checker fires)
+    const baseline = parseFloat((syntheticPrice * 2).toFixed(2));
+    const [pref] = await db
+      .insert(alertPrefsTable)
+      .values({
+        userId,
+        trackedItemId: trackedId,
+        alertType:     "price_drop_low" as "price_drop_low",
+        baselineValue: baseline.toFixed(2),
+        enabled:       true,
+      })
+      .returning();
+
+    steps.push(`Created alert_pref id=${pref.id} (type=price_drop_low) with baseline $${baseline.toFixed(2)}`);
+    steps.push(`Expected: $${syntheticPrice} < $${baseline} → should fire`);
+
+    // 6. Run the full alert check
+    steps.push("Running checkAlerts()…");
+    await checkAlerts();
+
+    // 7. Re-read pref to confirm it fired
+    const [updated] = await db
+      .select()
+      .from(alertPrefsTable)
+      .where(eq(alertPrefsTable.id, pref.id))
+      .limit(1);
+
+    const fired = updated?.lastNotifiedAt != null;
+    steps.push(fired
+      ? `✅ Alert fired — lastNotifiedAt=${updated!.lastNotifiedAt!.toISOString()}`
+      : "❌ Alert did NOT fire — check logs for reason");
+
+    // 8. Clean up synthetic pref + snapshots
+    await db.delete(alertPrefsTable).where(eq(alertPrefsTable.id, pref.id));
+    steps.push(`Cleaned up synthetic alert_pref id=${pref.id}`);
+
+    if (syntheticSnapIds.length > 0) {
+      await db.delete(priceSnapshotsTable).where(inArray(priceSnapshotsTable.id, syntheticSnapIds));
+      steps.push(`Cleaned up ${syntheticSnapIds.length} synthetic snapshot(s): ids=${syntheticSnapIds.join(",")}`);
+    }
+
+    res.json({
+      ok:           fired,
+      email,
+      releaseId,
+      releaseName:  release.title,
+      syntheticPrice,
+      baseline,
+      steps,
+    });
+  } catch (err) {
+    // Best-effort cleanup on error
+    if (syntheticSnapIds.length > 0) {
+      await db.delete(priceSnapshotsTable)
+        .where(inArray(priceSnapshotsTable.id, syntheticSnapIds))
+        .catch(() => {});
+    }
+    logger.error({ err }, "devTools: test-30day-low-alert error");
     res.status(500).json({ error: String(err), steps });
   }
 });
