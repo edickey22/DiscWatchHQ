@@ -527,7 +527,7 @@ export default function LandingPage() {
           WHY IT EXISTS — editorial "problem being solved" section
       ════════════════════════════════════════════════════════════════════ */}
       <section className="py-16 bg-background border-b border-border/20">
-        <div className="container mx-auto max-w-3xl px-4">
+        <div className="container mx-auto max-w-5xl px-4">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-5">
               Why DiscWatchHQ exists
