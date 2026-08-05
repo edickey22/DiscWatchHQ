@@ -20,7 +20,7 @@
  *   • Tiles are `aria-hidden` — purely decorative; no alt text needed.
  */
 
-import { useRef, useEffect, useState, type ReactNode } from "react"
+import { type ReactNode } from "react"
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
@@ -178,23 +178,10 @@ const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
 function StepRow({
   num, icon, title, body, index,
 }: { num: string; icon: ReactNode; title: string; body: string; index: number }) {
-  const rowRef                = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = rowRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === "undefined") { setVisible(true); return }
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      // rootMargin keeps the animation from firing until the user has
-      // genuinely scrolled the section into view — avoids instant-trigger
-      // on tall viewports where the section is technically "visible" on load.
-      { threshold: 0.15, rootMargin: "-100px" },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+  // Content is always visible at initial render — no scroll-triggered opacity.
+  // This ensures Googlebot (which does not scroll) can read the text.
+  // The num prop is kept in the signature for future use.
+  void num
 
   // true  → image on the LEFT,  text on the right
   // false → text on the LEFT,   image on the right
@@ -227,19 +214,7 @@ function StepRow({
   )
 
   return (
-    <div
-      ref={rowRef}
-      // All transition properties set inline so Tailwind class ordering
-      // can never accidentally reset transition-duration to its 150ms default.
-      style={{
-        opacity:                visible ? 1 : 0,
-        transform:              visible ? "translateY(0)" : "translateY(2rem)",
-        transitionProperty:     "opacity, transform",
-        transitionDuration:     "700ms",
-        transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-        transitionDelay:        `${index * 120}ms`,
-      }}
-    >
+    <div>
       {/* Simple flex-row; swap JSX child order to achieve the left/right alternation.
           No flex-row-reverse (which would invert both DOM order AND visual order,
           accidentally putting both halves on the same side). */}
@@ -296,20 +271,8 @@ export default function LandingPage() {
       },
     },
   })
-  // Scroll-reveal for the staggered pathway cards
-  const cardsRef                = useRef<HTMLDivElement>(null)
-  const [cardsVisible, setCardsVisible] = useState(false)
-  useEffect(() => {
-    const el = cardsRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === "undefined") { setCardsVisible(true); return }
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setCardsVisible(true); obs.disconnect() } },
-      { threshold: 0.1, rootMargin: "-100px" },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+  // No scroll-reveal for pathway cards — content is always visible so
+  // Googlebot (which does not scroll) can read it without JS interaction.
 
   const { data: covers = [] } = useQuery({
     queryKey:  ["landing-covers-v2"],
@@ -597,19 +560,10 @@ export default function LandingPage() {
             Where to start
           </p>
           {/* Single column on mobile, straight to 3 columns at lg */}
-          <div ref={cardsRef} className="grid lg:grid-cols-3 gap-5">
+          <div className="grid lg:grid-cols-3 gap-5">
 
             {/* ── Browse Games — primary green accent, photo bg ── */}
-            <div
-              style={{
-                opacity:                cardsVisible ? 1 : 0,
-                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionProperty:     "opacity, transform",
-                transitionDuration:     "700ms",
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-                transitionDelay:        "0ms",
-              }}
-            >
+            <div>
               <Link
                 href="/games"
                 className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 border-t-primary overflow-hidden hover:border-border/50 hover:border-t-primary transition-colors duration-200 p-8"
@@ -645,16 +599,7 @@ export default function LandingPage() {
             </div>
 
             {/* ── Boutique Tracker — amber accent, photo bg ── */}
-            <div
-              style={{
-                opacity:                cardsVisible ? 1 : 0,
-                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionProperty:     "opacity, transform",
-                transitionDuration:     "700ms",
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-                transitionDelay:        "120ms",
-              }}
-            >
+            <div>
               <Link
                 href="/boutique"
                 className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"
@@ -694,16 +639,7 @@ export default function LandingPage() {
             </div>
 
             {/* ── Consoles — sky-blue accent, photo bg ── */}
-            <div
-              style={{
-                opacity:                  cardsVisible ? 1 : 0,
-                transform:                cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionProperty:       "opacity, transform",
-                transitionDuration:       "700ms",
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-                transitionDelay:          "240ms",
-              }}
-            >
+            <div>
               <Link
                 href="/consoles"
                 className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"

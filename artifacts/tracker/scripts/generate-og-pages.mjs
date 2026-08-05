@@ -51,6 +51,7 @@
  *     that game's own cover art are a separate, already-reviewed situation.
  */
 
+import { createRequire } from "module";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -277,9 +278,25 @@ function injectMeta(baseHtml, meta) {
   return h;
 }
 
+// ── Noindex injection ─────────────────────────────────────────────────────────
+
+/**
+ * Replace the robots meta tag content with "noindex, follow".
+ * index.html ships with <meta name="robots" content="index, follow" />.
+ * This swaps only that tag's content value so release pages are excluded
+ * from Google's indexing pool — and from AdSense quality evaluation —
+ * while remaining fully accessible to real visitors.
+ */
+function injectNoindex(html) {
+  return html.replace(
+    /(<meta\s+name="robots"\s+content=")[^"]*(")/,
+    '$1noindex, follow$2',
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-function main() {
+async function main() {
   const htmlPath = resolve(outDir, "index.html");
   if (!existsSync(htmlPath)) {
     console.error(`[generate-og-pages] ERROR: ${htmlPath} not found — run vite build first`);
@@ -306,7 +323,70 @@ function main() {
     generated++;
   }
 
-  console.log(`\n[generate-og-pages] ✓ ${generated} route HTML files written to ${outDir}`);
+  // ── Release pages — noindex static shells ──────────────────────────────────
+  // /releases/:id pages are database product records with no editorial writing.
+  // They're thin by Google's definition and drag down the site's sitewide
+  // content-quality score. We generate a static HTML shell for each release
+  // with <meta name="robots" content="noindex, follow"> so Googlebot removes
+  // them from its indexing pool and AdSense quality evaluation, while the
+  // pages remain fully live and functional for real visitors.
+  //
+  // Uses the same DB query pattern as build-sitemap.mjs.
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    try {
+      const dbPkgDir = resolve(__dirname, "../../../lib/db");
+      const require  = createRequire(resolve(dbPkgDir, "package.json"));
+      const { Client } = require("pg");
+      const client = new Client({ connectionString: dbUrl });
+      await client.connect();
+
+      let rows;
+      try {
+        ({ rows } = await client.query(
+          `SELECT id FROM releases ORDER BY id`
+        ));
+      } finally {
+        await client.end();
+      }
+
+      for (const r of rows) {
+        const routePath = `releases/${r.id}`;
+        const dir       = resolve(outDir, routePath);
+        const outFile   = resolve(dir, "index.html");
+
+        mkdirSync(dir, { recursive: true });
+
+        // Start from the base HTML, inject canonical URL + noindex.
+        // We deliberately do NOT inject release-specific og:title/description
+        // here — that content is handled client-side by ReleaseDetail.tsx for
+        // real visitors. The only goal of this file is the noindex signal.
+        const canonicalUrl = `${BASE_URL}/releases/${r.id}`;
+        let html = baseHtml.replace(
+          /(<link\s+rel="canonical"\s+href=")[^"]*(")/,
+          `$1${canonicalUrl}$2`,
+        );
+        html = injectNoindex(html);
+
+        writeFileSync(outFile, html, "utf-8");
+      }
+
+      console.log(`[generate-og-pages] ✓ ${rows.length} release pages written with noindex`);
+      generated += rows.length;
+    } catch (err) {
+      // Non-fatal: if DB is unavailable during build, skip release shells.
+      // Release pages will still be served from the SPA fallback (index.html)
+      // which carries "index, follow" — worse than noindex but not broken.
+      console.warn(`[generate-og-pages] release noindex skipped (DB unavailable): ${err.message}`);
+    }
+  } else {
+    console.warn("[generate-og-pages] DATABASE_URL not set — skipping release noindex pages");
+  }
+
+  console.log(`\n[generate-og-pages] ✓ ${generated} total HTML files written to ${outDir}`);
 }
 
-main();
+main().catch((err) => {
+  console.error("[generate-og-pages] fatal:", err);
+  process.exit(1);
+});

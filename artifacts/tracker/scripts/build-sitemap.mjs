@@ -73,6 +73,8 @@ async function main() {
   entries.push(urlEntry({ loc: `${baseUrl}/`,        changefreq: "hourly", priority: "1.0" }));
   entries.push(urlEntry({ loc: `${baseUrl}/games`,   changefreq: "daily",  priority: "0.9" }));
   entries.push(urlEntry({ loc: `${baseUrl}/boutique`,changefreq: "hourly", priority: "0.9" }));
+  entries.push(urlEntry({ loc: `${baseUrl}/about`,   changefreq: "monthly", priority: "0.8" }));
+  entries.push(urlEntry({ loc: `${baseUrl}/consoles`,changefreq: "daily",  priority: "0.8" }));
 
   // Dynamic release pages — query DB if DATABASE_URL is available
   const dbUrl = process.env.DATABASE_URL;
