@@ -50,7 +50,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { db, releasesTable } from "@workspace/db";
+import { db, releasesTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { getEbayLowestPrice, ebayBrowseConfigured, EbayRateLimitError } from "./ebayBrowseClient";
 
@@ -109,10 +109,21 @@ async function refreshEbayPrices(): Promise<void> {
   for (const release of soldOut) {
     try {
       const price = await getEbayLowestPrice(release.title);
+      const now = new Date();
       await db
         .update(releasesTable)
-        .set({ ebayPrice: price, ebayPriceUpdatedAt: new Date() })
+        .set({ ebayPrice: price, ebayPriceUpdatedAt: now })
         .where(eq(releasesTable.id, release.id));
+
+      // Append a price snapshot — even when price is null (no listings found),
+      // so trend calcs can distinguish "checked, nothing" from "not checked".
+      await db.insert(priceSnapshotsTable).values({
+        itemType:  "release_ebay",
+        itemId:    String(release.id),
+        source:    "ebay",
+        priceUsd:  price,
+        snappedAt: now,
+      });
 
       if (price !== null) updated++; else noData++;
     } catch (err) {

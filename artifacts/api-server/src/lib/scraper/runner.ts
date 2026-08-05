@@ -1,5 +1,5 @@
 import { eq, and } from "drizzle-orm";
-import { db, publishersTable, releasesTable, scrapeLogsTable } from "@workspace/db";
+import { db, publishersTable, releasesTable, scrapeLogsTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "../logger";
 import { getAllScrapers, getScraperBySlug } from "./registry";
 import type { ScrapedRelease } from "./types";
@@ -50,8 +50,25 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
           amazonUrl: item.amazonUrl ?? null,
         })
         .where(eq(releasesTable.id, existing.id));
+
+      // Snapshot the publisher list price when it is present.
+      // Only snapshot for existing releases where we have a DB id.
+      if (item.price) {
+        const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed) && parsed > 0) {
+          await db.insert(priceSnapshotsTable).values({
+            itemType:  "release_list",
+            itemId:    String(existing.id),
+            source:    "publisher",
+            priceUsd:  parsed,
+            snappedAt: new Date(),
+          }).catch(err =>
+            logger.warn({ err, releaseId: existing.id }, "List price snapshot write failed — non-fatal"),
+          );
+        }
+      }
     } else {
-      await db.insert(releasesTable).values({
+      const [inserted] = await db.insert(releasesTable).values({
         publisherId,
         externalId: item.externalId,
         title: item.title,
@@ -66,7 +83,23 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         soldOutAt,
         amazonUrl: item.amazonUrl ?? null,
         firstSeenAt: new Date(),
-      });
+      }).returning({ id: releasesTable.id });
+
+      // Snapshot the initial publisher list price for the new release.
+      if (inserted && item.price) {
+        const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed) && parsed > 0) {
+          await db.insert(priceSnapshotsTable).values({
+            itemType:  "release_list",
+            itemId:    String(inserted.id),
+            source:    "publisher",
+            priceUsd:  parsed,
+            snappedAt: new Date(),
+          }).catch(err =>
+            logger.warn({ err, releaseId: inserted.id }, "Initial list price snapshot write failed — non-fatal"),
+          );
+        }
+      }
     }
     upserted++;
   }

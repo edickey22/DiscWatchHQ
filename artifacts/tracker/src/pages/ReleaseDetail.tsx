@@ -1,6 +1,7 @@
 import { useRoute, Link } from "wouter"
 import { useGetRelease, ReleaseStatus } from "@workspace/api-client-react"
-import { ArrowLeft, Clock, ExternalLink, Calendar, Package } from "lucide-react"
+import { ArrowLeft, ExternalLink, Calendar, Package } from "lucide-react"
+import { PriceTrend } from "@/components/PriceTrend"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -302,6 +303,15 @@ export default function ReleaseDetail() {
                         platforms={release.platforms ?? []}
                         guideUrls={release.guideSearchUrls}
                       />
+                      {/* eBay price trend — only meaningful for sold-out releases
+                          where the eBay price scheduler actually runs. */}
+                      {isSoldOut && (
+                        <PriceTrend
+                          url={`/api/price-history/release/${release.id}`}
+                          queryKey={["price-history", "release", release.id]}
+                          className="mt-3"
+                        />
+                      )}
                     </div>
                   </div>
                 </>

@@ -5,6 +5,7 @@ import { startEbayPriceScheduler } from "./lib/ebayPriceScheduler";
 import { startConsoleListingsScheduler } from "./lib/consoleListingsScheduler";
 import { startCatalogBackfill } from "./lib/catalogBackfill";
 import { startAlertChecker } from "./lib/alertChecker";
+import { startPriceSnapshotCleanup } from "./lib/priceSnapshotCleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -50,4 +51,9 @@ app.listen(port, (err) => {
   // Runs 2 min after startup, then every 4 hours. Requires SMTP credentials
   // for real delivery; logs to console in stub mode (see lib/email.ts).
   startAlertChecker();
+
+  // Price snapshot cleanup — purges rows older than 90 days. Runs 5 min after
+  // startup and then every 24 hours. Keeps the table bounded as snapshots
+  // accumulate from the three scheduler write points.
+  startPriceSnapshotCleanup();
 });

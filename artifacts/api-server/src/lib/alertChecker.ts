@@ -142,8 +142,8 @@ async function checkSingleAlert(ctx: {
 
     itemUrl = `${APP_URL}/boutique`;
 
-    if (pref.alertType === "restock" && pref.baselineValue !== "in_stock") {
-      if (release.status === "in_stock") {
+    if (pref.alertType === "restock" && pref.baselineValue !== "available") {
+      if (release.status === "available") {
         shouldNotify = true;
         detail = `"${release.title}" is now available for order.`;
       }

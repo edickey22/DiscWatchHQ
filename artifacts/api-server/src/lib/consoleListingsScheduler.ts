@@ -43,6 +43,7 @@
  *                                          total across price/console/catalog.
  */
 
+import { db, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { CONSOLE_MODELS } from "./consoleModels";
 import { getEbayConsoleListings, ebayConsolesConfigured } from "./ebayConsolesClient";
@@ -103,6 +104,22 @@ async function refreshConsoleListings(): Promise<void> {
         failed++;
       } else {
         setConsoleListings(model.id, listings);
+
+        // Snapshot the lowest BIN price across all filtered listings.
+        // Only Buy-It-Now listings are priced consistently; auctions use the
+        // current bid (floor) which is not a reliable "market price" reference.
+        const binListings = listings.filter(l => !l.isAuction);
+        const minPrice    = binListings.length > 0 ? binListings[0].price : null;
+        await db.insert(priceSnapshotsTable).values({
+          itemType:  "console_ebay",
+          itemId:    model.id,
+          source:    "ebay",
+          priceUsd:  minPrice,
+          snappedAt: new Date(),
+        }).catch(err =>
+          logger.warn({ err, consoleId: model.id }, "Console price snapshot write failed — non-fatal"),
+        );
+
         if (listings.length > 0) updated++; else empty++;
       }
     } catch (err) {

@@ -11,3 +11,4 @@ export * from "./authTokens";
 export * from "./sessions";
 export * from "./trackedItems";
 export * from "./alertPrefs";
+export * from "./priceSnapshots";

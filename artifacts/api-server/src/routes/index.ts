@@ -15,6 +15,7 @@ import authRouter        from "./auth";
 import trackingRouter    from "./tracking";
 import alertsRouter      from "./alerts";
 import devToolsRouter    from "./devTools";
+import priceHistoryRouter from "./priceHistory";
 
 const router: IRouter = Router();
 
@@ -34,6 +35,7 @@ router.use(consolesRouter);
 router.use(authRouter);
 router.use(trackingRouter);
 router.use(alertsRouter);
+router.use(priceHistoryRouter);
 // Development-only tools (not mounted in production)
 if (process.env.NODE_ENV !== "production") {
   router.use(devToolsRouter);
