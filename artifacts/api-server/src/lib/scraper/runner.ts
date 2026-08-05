@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { db, publishersTable, releasesTable, scrapeLogsTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "../logger";
 import { getAllScrapers, getScraperBySlug } from "./registry";
@@ -14,20 +14,51 @@ const runningScrapers = new Set<string>();
 async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): Promise<number> {
   if (scraped.length === 0) return 0;
 
+  // --- Batch prefetch 1: all existing releases for this publisher in one query ---
+  const existingRows = await db
+    .select({ id: releasesTable.id, externalId: releasesTable.externalId, status: releasesTable.status, soldOutAt: releasesTable.soldOutAt })
+    .from(releasesTable)
+    .where(eq(releasesTable.publisherId, publisherId));
+
+  const existingByExternalId = new Map(existingRows.map(r => [r.externalId, r]));
+
+  // --- Batch prefetch 2: latest release_list price snapshot for all known release IDs ---
+  // Replaces the per-release SELECT inside the loop with a single indexed scan
+  // followed by an in-memory Map lookup.
+  //
+  // Dedup: publisher list prices rarely change (a $49.99 edition stays at
+  // $49.99 for months). Inserting on every 2-hour scrape run generates
+  // ~500 redundant rows per run — ~540k unnecessary rows over 90 days.
+  // We skip the insert when the most recent release_list snapshot already
+  // has the same price (within floating-point tolerance).
+  const lastSnapshotByItemId = new Map<string, number>(); // itemId -> priceUsd
+
+  if (existingRows.length > 0) {
+    const itemIds = existingRows.map(r => String(r.id));
+    // Fetch all recent release_list snapshots for these IDs in one query,
+    // newest first; keep only the first (latest) row encountered per itemId.
+    const snapshots = await db
+      .select({ itemId: priceSnapshotsTable.itemId, priceUsd: priceSnapshotsTable.priceUsd })
+      .from(priceSnapshotsTable)
+      .where(
+        and(
+          eq(priceSnapshotsTable.itemType, "release_list"),
+          inArray(priceSnapshotsTable.itemId, itemIds),
+        )
+      )
+      .orderBy(desc(priceSnapshotsTable.snappedAt));
+
+    for (const row of snapshots) {
+      if (!lastSnapshotByItemId.has(row.itemId)) {
+        lastSnapshotByItemId.set(row.itemId, row.priceUsd);
+      }
+    }
+  }
+
   let upserted = 0;
 
   for (const item of scraped) {
-    // Fetch existing to detect sold-out transition
-    const [existing] = await db
-      .select({ id: releasesTable.id, status: releasesTable.status, soldOutAt: releasesTable.soldOutAt })
-      .from(releasesTable)
-      .where(
-        and(
-          eq(releasesTable.publisherId, publisherId),
-          eq(releasesTable.externalId, item.externalId)
-        )
-      )
-      .limit(1);
+    const existing = existingByExternalId.get(item.externalId);
 
     const soldOutAt =
       existing && existing.status !== "sold_out" && item.status === "sold_out"
@@ -52,31 +83,13 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         .where(eq(releasesTable.id, existing.id));
 
       // Snapshot the publisher list price when it is present.
-      // Only snapshot for existing releases where we have a DB id.
-      //
-      // Dedup: publisher list prices rarely change (a $49.99 edition stays at
-      // $49.99 for months). Inserting on every 2-hour scrape run generates
-      // ~500 redundant rows per run — ~540k unnecessary rows over 90 days.
-      // We skip the insert when the most recent release_list snapshot for this
-      // release already has the same price (within floating-point tolerance).
       if (item.price) {
         const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
         if (!isNaN(parsed) && parsed > 0) {
-          const [lastSnapshot] = await db
-            .select({ priceUsd: priceSnapshotsTable.priceUsd })
-            .from(priceSnapshotsTable)
-            .where(
-              and(
-                eq(priceSnapshotsTable.itemType, "release_list"),
-                eq(priceSnapshotsTable.itemId, String(existing.id)),
-              )
-            )
-            .orderBy(desc(priceSnapshotsTable.snappedAt))
-            .limit(1);
-
+          const lastPrice = lastSnapshotByItemId.get(String(existing.id));
           const priceUnchanged =
-            lastSnapshot?.priceUsd != null &&
-            Math.abs(lastSnapshot.priceUsd - parsed) < 0.001;
+            lastPrice != null &&
+            Math.abs(lastPrice - parsed) < 0.001;
 
           if (!priceUnchanged) {
             await db.insert(priceSnapshotsTable).values({
