@@ -19,6 +19,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { checkAlerts } from "../lib/alertChecker";
 import { getConsoleListingsEntry } from "../lib/consoleListingsCache";
 import { logger } from "../lib/logger";
+import { backfillUnknownPlatforms } from "../lib/backfillUnknownPlatforms";
 
 const router = Router();
 
@@ -569,6 +570,30 @@ router.post("/dev/test-30day-low-alert", async (req, res) => {
     }
     logger.error({ err }, "devTools: test-30day-low-alert error");
     res.status(500).json({ error: String(err), steps });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/dev/backfill-unknown-platforms
+//
+// One-time backfill: scans all releases with platforms = {Unknown} and either
+// extracts the platform from the title or clears the Unknown sentinel to [].
+//
+// Safe to call multiple times — already-fixed rows are simply not found.
+// Returns a JSON summary of every row touched.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/dev/backfill-unknown-platforms", async (_req, res) => {
+  try {
+    const result = await backfillUnknownPlatforms();
+    res.json({
+      ok: true,
+      total:   result.total,
+      updated: result.updated,
+      cleared: result.cleared,
+    });
+  } catch (err) {
+    logger.error({ err }, "devTools: backfill-unknown-platforms error");
+    res.status(500).json({ error: String(err) });
   }
 });
 

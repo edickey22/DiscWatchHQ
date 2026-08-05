@@ -12,6 +12,7 @@ router.get("/platforms", async (_req, res): Promise<void> => {
       FROM (
         SELECT unnest(platforms) as platform FROM releases
       ) sub
+      WHERE platform <> 'Unknown'
       GROUP BY platform
       ORDER BY release_count DESC, platform ASC
     `

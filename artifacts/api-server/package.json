@@ -8,7 +8,9 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:se": "tsx --tsconfig tsconfig.json src/lib/scraper/publishers/__tests__/squareEnix.smoke.ts"
+    "test:se": "tsx --tsconfig tsconfig.json src/lib/scraper/publishers/__tests__/squareEnix.smoke.ts",
+    "test:platforms": "tsx --tsconfig tsconfig.json src/lib/__tests__/platformExtractor.test.ts",
+    "backfill:platforms": "tsx --tsconfig tsconfig.json scripts/backfill-unknown-platforms.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
