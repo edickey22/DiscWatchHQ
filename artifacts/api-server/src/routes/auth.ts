@@ -212,27 +212,57 @@ router.get("/auth/me", requireAuth, (req, res) => {
     id:          req.user!.id,
     email:       req.user!.email,
     displayName: req.user!.displayName ?? null,
+    avatarId:    req.user!.avatarId    ?? null,
     createdAt:   req.user!.createdAt,
   });
 });
 
 // ── PATCH /api/auth/profile ───────────────────────────────────────────────────
 
+// Valid preset avatar IDs — must stay in sync with the client-side avatars.ts list.
+const VALID_AVATAR_IDS = new Set([
+  "gamepad", "disc", "trophy", "star", "zap",
+  "shield", "cpu", "crosshair", "gem", "rocket",
+]);
+
 router.patch("/auth/profile", requireAuth, async (req, res) => {
-  const { displayName } = req.body as { displayName?: string };
-  // Sanitise: trim whitespace, cap at 60 chars, treat blank as null (clear)
-  const trimmed = typeof displayName === "string"
+  const { displayName, avatarId } = req.body as { displayName?: string; avatarId?: string | null };
+
+  // Sanitise displayName: trim, cap at 60 chars, treat blank as null (clear)
+  const trimmedName = typeof displayName === "string"
     ? displayName.trim().slice(0, 60) || null
-    : null;
+    : undefined; // undefined = not provided, don't touch
+
+  // Sanitise avatarId: must be a known preset ID or explicit null (clear)
+  let cleanAvatar: string | null | undefined = undefined; // undefined = not provided
+  if (avatarId === null) {
+    cleanAvatar = null;
+  } else if (typeof avatarId === "string") {
+    cleanAvatar = VALID_AVATAR_IDS.has(avatarId) ? avatarId : undefined;
+    if (cleanAvatar === undefined) {
+      res.status(400).json({ error: "Invalid avatar ID." });
+      return;
+    }
+  }
+
+  // Build the update payload — only include fields that were actually sent
+  const patch: { displayName?: string | null; avatarId?: string | null } = {};
+  if (trimmedName  !== undefined) patch.displayName = trimmedName;
+  if (cleanAvatar  !== undefined) patch.avatarId    = cleanAvatar;
+
+  if (Object.keys(patch).length === 0) {
+    res.status(400).json({ error: "No valid fields to update." });
+    return;
+  }
 
   try {
     const [updated] = await db
       .update(usersTable)
-      .set({ displayName: trimmed })
+      .set(patch)
       .where(eq(usersTable.id, req.user!.id))
-      .returning({ displayName: usersTable.displayName });
+      .returning({ displayName: usersTable.displayName, avatarId: usersTable.avatarId });
 
-    res.json({ ok: true, displayName: updated.displayName });
+    res.json({ ok: true, displayName: updated.displayName, avatarId: updated.avatarId });
   } catch (err) {
     logger.error({ err }, "Error updating profile");
     res.status(500).json({ error: "Failed to update profile. Please try again." });

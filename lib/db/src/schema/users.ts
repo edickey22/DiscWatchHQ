@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   id:          serial("id").primaryKey(),
   email:       text("email").notNull().unique(),
   displayName: text("display_name"),           // optional, user-settable; max 60 chars
+  avatarId:    text("avatar_id"),              // optional; one of the preset avatar IDs
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

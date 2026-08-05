@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { Menu, Heart, User, LogOut, ChevronDown } from "lucide-react"
 import { ControllerIcon } from "@/components/ControllerIcon"
+import { AvatarDisplay } from "@/components/AvatarDisplay"
 import { useGetReleaseStats } from "@workspace/api-client-react"
 import { useAuth } from "@/context/AuthContext"
 import {
@@ -64,9 +65,7 @@ function UserMenu() {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
-          <User size={11} className="text-primary" />
-        </div>
+        <AvatarDisplay size="xs" avatarId={user.avatarId} displayName={user.displayName ?? user.email.split("@")[0]} />
         <span className="max-w-[100px] truncate text-xs">{user.displayName ?? user.email.split("@")[0]}</span>
         <ChevronDown size={12} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -169,11 +168,17 @@ export function Header() {
         {/* ── 2. MAIN NAV ───────────────────────────────────────────────── */}
         <nav className="hidden sm:flex items-center gap-1 shrink-0">
           {navLink("/games",    "Browse Games")}
-          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" />
+          <span aria-hidden className="shrink-0 animate-nav-breathe flex items-center">
+            <ControllerIcon size={13} />
+          </span>
           {navLink("/boutique", "Boutique")}
-          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" style={{ animationDelay: "1.17s" }} />
+          <span aria-hidden className="shrink-0 animate-nav-breathe flex items-center" style={{ animationDelay: "1.17s" }}>
+            <ControllerIcon size={13} />
+          </span>
           {navLink("/consoles", "Consoles")}
-          <ControllerIcon size={13} aria-hidden className="shrink-0 animate-nav-breathe" style={{ animationDelay: "2.33s" }} />
+          <span aria-hidden className="shrink-0 animate-nav-breathe flex items-center" style={{ animationDelay: "2.33s" }}>
+            <ControllerIcon size={13} />
+          </span>
           {navLink("/about",    "About")}
         </nav>
 

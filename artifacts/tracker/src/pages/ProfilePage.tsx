@@ -7,10 +7,12 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { User, Heart, Bell, Trash2, LogOut, AlertTriangle, Pencil, Check, X } from "lucide-react";
+import { Heart, Bell, Trash2, LogOut, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
+import { AvatarDisplay } from "@/components/AvatarDisplay";
+import { PRESET_AVATARS } from "@/lib/avatars";
 
 export default function ProfilePage() {
   const { user, loading: authLoading, logout, openLogin, refresh } = useAuth();
@@ -19,6 +21,32 @@ export default function ProfilePage() {
 
   const [deleteState, setDeleteState] = useState<"idle" | "confirm" | "deleting">("idle");
   const [deleteError, setDeleteError] = useState("");
+
+  // ── Avatar ────────────────────────────────────────────────────────────────
+  const [avatarSaving, setAvatarSaving] = useState(false);
+
+  async function saveAvatar(id: string | null) {
+    setAvatarSaving(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ avatarId: id }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        toast.error(data.error ?? "Failed to save avatar.");
+        return;
+      }
+      await refresh();
+      toast("Avatar updated");
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
 
   // ── Display name editing ──────────────────────────────────────────────────
   const [editingName,  setEditingName]  = useState(false);
@@ -130,12 +158,50 @@ export default function ProfilePage() {
 
         {/* Page header */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-            <User size={22} className="text-primary" />
-          </div>
+          <AvatarDisplay size="lg" avatarId={user.avatarId} displayName={user.displayName} />
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Profile</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
+          </div>
+        </div>
+
+        {/* Avatar picker */}
+        <div className="rounded-xl border border-border bg-card p-5 mb-6">
+          <h2 className="text-sm font-semibold text-foreground mb-1">Avatar</h2>
+          <p className="text-xs text-muted-foreground mb-4">Choose an icon to represent your account</p>
+          <div className="grid grid-cols-5 gap-3">
+            {PRESET_AVATARS.map((avatar) => {
+              const isSelected = user.avatarId === avatar.id;
+              return (
+                <button
+                  key={avatar.id}
+                  onClick={() => void saveAvatar(avatar.id)}
+                  disabled={avatarSaving}
+                  title={avatar.label}
+                  aria-label={`Select ${avatar.label} avatar`}
+                  aria-pressed={isSelected}
+                  className={`relative flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all disabled:opacity-60 ${
+                    isSelected
+                      ? "ring-2 ring-primary bg-primary/10"
+                      : "hover:bg-secondary/40 hover:ring-1 hover:ring-border"
+                  }`}
+                >
+                  <AvatarDisplay
+                    size="xl"
+                    avatarId={avatar.id}
+                    className={isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}
+                  />
+                  <span className="text-[10px] text-muted-foreground leading-tight text-center">
+                    {avatar.label}
+                  </span>
+                  {isSelected && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check size={9} className="text-background" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -14,6 +14,7 @@ export interface AuthUser {
   id:          number;
   email:       string;
   displayName: string | null;
+  avatarId:    string | null;
   createdAt:   string;
 }
 
