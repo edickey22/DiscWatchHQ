@@ -25,6 +25,7 @@ const PUBLISHERS_TRACKED = [
   "Limited Run Games",
   "NIS America",
   "Red Art Games",
+  "Square Enix",
   "Strictly Limited Games",
   "Super Rare Games",
   "Xbox Game Studios Shop",
@@ -33,7 +34,7 @@ const PUBLISHERS_TRACKED = [
 const HERO_STATS = [
   { value: "900K+", label: "Physical games" },
   { value: "4",     label: "Retailers compared" },
-  { value: "11",    label: "Boutique publishers" },
+  { value: "12",    label: "Boutique publishers" },
   { value: "26+",   label: "Consoles tracked" },
 ]
 

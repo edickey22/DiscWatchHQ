@@ -20,3 +20,4 @@
 - [Letterboxed image containers](letterboxed-image-hero.md) — a fixed-aspect box around object-contain images shows the box's own background color in the gaps; size the box to the image (max-height, w-auto) instead
 - [User accounts & auth](user-accounts-auth.md) — all phases SMTP-confirmed; magic-link + console price-drop + release status-change alerts all delivered via live test; game alerts no-op until pricing API key added
 - [Test email address](test-email-address.md) — use support@discwatchhq.com for all dev tool test sends; erik@discwatchhq.com does not exist
+- [Square Enix NA store scraper](se-scraper.md) — BC Stencil HTML, /video-games paginated; no platform in many titles → check URL slug too, fallback "Unknown"; HTML entity decode required; publisher id=15

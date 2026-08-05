@@ -10,6 +10,7 @@ import { eastasiasoftScraper } from "./publishers/eastasiasoft";
 import { redArtGamesScraper } from "./publishers/redArtGames";
 import { nisAmericaScraper } from "./publishers/nisAmerica";
 import { koeiTecmoScraper } from "./publishers/koeiTecmo";
+import { squareEnixScraper } from "./publishers/squareEnix";
 
 /**
  * Registry of all active publisher scrapers.
@@ -32,6 +33,7 @@ import { koeiTecmoScraper } from "./publishers/koeiTecmo";
  *   NIS America               store.nisamerica.com          Shopify JSON  ✓ HIGH
  *   Koei Tecmo                store.nisamerica.com (koei-tecmo collection)
  *                                                           Shopify JSON  ✓ HIGH
+ *   Square Enix               na.store.square-enix-games.com  BC HTML    ⚠ MEDIUM
  *
  * ── Seeded / disabled (no scraper yet) ──────────────────────────────────────
  *
@@ -40,7 +42,6 @@ import { koeiTecmoScraper } from "./publishers/koeiTecmo";
  *   Special Reserve Games     Defunct (2024); domain → Devolver Digital
  *   Nintendo Official Store   Custom platform; no public product feed
  *   PlayStation Direct        Custom platform; no public product feed
- *   Square Enix               NA+EU stores WAF-blocked (empty response to all server requests)
  *   Bandai Namco              Angular SPA + AWS WAF Captcha; no public product API
  */
 const scrapers: PublisherScraper[] = [
@@ -55,6 +56,7 @@ const scrapers: PublisherScraper[] = [
   redArtGamesScraper,        // redartgames.com              — HTML parsing of /33-games listing pages
   nisAmericaScraper,         // store.nisamerica.com         — Shopify JSON /collections/games-limited-edition
   koeiTecmoScraper,          // store.nisamerica.com         — Shopify JSON /collections/koei-tecmo
+  squareEnixScraper,         // na.store.square-enix-games.com — BC HTML /video-games (paginated)
 ];
 
 export function getScraperBySlug(slug: string): PublisherScraper | undefined {
