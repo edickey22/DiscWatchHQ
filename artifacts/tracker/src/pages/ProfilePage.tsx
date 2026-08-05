@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { AvatarDisplay } from "@/components/AvatarDisplay";
-import { PRESET_AVATARS } from "@/lib/avatars";
+import { PRESET_AVATARS, INITIALS_AVATAR } from "@/lib/avatars";
 
 export default function ProfilePage() {
   const { user, loading: authLoading, logout, openLogin, refresh } = useAuth();
@@ -158,7 +158,7 @@ export default function ProfilePage() {
 
         {/* Page header */}
         <div className="flex items-center gap-3 mb-8">
-          <AvatarDisplay size="lg" avatarId={user.avatarId} displayName={user.displayName} />
+          <AvatarDisplay size="lg" avatarId={user.avatarId} displayName={user.displayName} email={user.email} />
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Profile</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -170,6 +170,44 @@ export default function ProfilePage() {
           <h2 className="text-sm font-semibold text-foreground mb-1">Avatar</h2>
           <p className="text-xs text-muted-foreground mb-4">Choose an icon to represent your account</p>
           <div className="grid grid-cols-5 gap-3">
+
+            {/* ── Initials avatar (first slot — user's own initials) ───────── */}
+            {(() => {
+              const isSelected = user.avatarId === INITIALS_AVATAR.id;
+              return (
+                <button
+                  key={INITIALS_AVATAR.id}
+                  onClick={() => void saveAvatar(INITIALS_AVATAR.id)}
+                  disabled={avatarSaving}
+                  title={INITIALS_AVATAR.label}
+                  aria-label="Select Initials avatar"
+                  aria-pressed={isSelected}
+                  className={`relative flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all disabled:opacity-60 ${
+                    isSelected
+                      ? "ring-2 ring-primary bg-primary/10"
+                      : "hover:bg-secondary/40 hover:ring-1 hover:ring-border"
+                  }`}
+                >
+                  <AvatarDisplay
+                    size="xl"
+                    avatarId={INITIALS_AVATAR.id}
+                    displayName={user.displayName}
+                    email={user.email}
+                    className={isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}
+                  />
+                  <span className="text-[10px] text-muted-foreground leading-tight text-center">
+                    Initials
+                  </span>
+                  {isSelected && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check size={9} className="text-background" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {/* ── Icon-based presets ──────────────────────────────────────── */}
             {PRESET_AVATARS.map((avatar) => {
               const isSelected = user.avatarId === avatar.id;
               return (

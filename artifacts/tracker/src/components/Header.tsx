@@ -65,7 +65,7 @@ function UserMenu() {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <AvatarDisplay size="xs" avatarId={user.avatarId} displayName={user.displayName ?? user.email.split("@")[0]} />
+        <AvatarDisplay size="xs" avatarId={user.avatarId} displayName={user.displayName} email={user.email} />
         <span className="max-w-[100px] truncate text-xs">{user.displayName ?? user.email.split("@")[0]}</span>
         <ChevronDown size={12} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

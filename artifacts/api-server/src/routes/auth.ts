@@ -220,9 +220,11 @@ router.get("/auth/me", requireAuth, (req, res) => {
 // ── PATCH /api/auth/profile ───────────────────────────────────────────────────
 
 // Valid preset avatar IDs — must stay in sync with the client-side avatars.ts list.
+// "initials" is a special value meaning "render the user's own initials live".
 const VALID_AVATAR_IDS = new Set([
   "gamepad", "disc", "trophy", "star", "zap",
   "shield", "cpu", "crosshair", "gem", "rocket",
+  "initials",
 ]);
 
 router.patch("/auth/profile", requireAuth, async (req, res) => {

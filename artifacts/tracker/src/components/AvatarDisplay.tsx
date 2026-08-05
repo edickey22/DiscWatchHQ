@@ -1,6 +1,7 @@
 /**
- * AvatarDisplay — renders a user's preset avatar, falling back to initials
- * or the generic User icon if no avatar is selected.
+ * AvatarDisplay — renders a user's preset avatar, the "initials" avatar,
+ * or falls back to initials-from-email / generic User icon when nothing
+ * has been selected yet.
  *
  * Sizes:
  *   xs  = 20 px  (header trigger button)
@@ -11,11 +12,14 @@
  */
 
 import { User } from "lucide-react";
-import { findAvatar } from "@/lib/avatars";
+import { findAvatar, INITIALS_AVATAR } from "@/lib/avatars";
 
 interface AvatarDisplayProps {
   avatarId?:    string | null
   displayName?: string | null
+  /** Used when avatarId="initials" and no displayName is set — falls back to email username initials. */
+  email?:       string | null
+  /** xs=20px (header) · sm=28px · md=40px · lg=48px · xl=56px */
   size?:        "xs" | "sm" | "md" | "lg" | "xl"
   className?:   string
 }
@@ -35,16 +39,41 @@ function getInitials(name: string | null | undefined): string {
   return ((parts[0][0] ?? "") + (parts[parts.length - 1][0] ?? "")).toUpperCase();
 }
 
+function getEmailInitials(email: string | null | undefined): string {
+  if (!email) return "";
+  const username = email.split("@")[0];
+  const parts = username.split(/[._-]/);
+  if (parts.length >= 2) return ((parts[0][0] ?? "") + (parts[1][0] ?? "")).toUpperCase();
+  return (username[0] ?? "").toUpperCase();
+}
+
 export function AvatarDisplay({
   avatarId,
   displayName,
+  email,
   size = "md",
   className = "",
 }: AvatarDisplayProps) {
   const { cls, iconPx, textCls } = SIZE_MAP[size];
-  const preset   = findAvatar(avatarId);
-  const initials = getInitials(displayName);
 
+  // ── Explicitly-chosen "initials" avatar ───────────────────────────────────
+  if (avatarId === "initials") {
+    const initials =
+      getInitials(displayName) ||
+      getEmailInitials(email)  ||
+      "?";
+    return (
+      <div
+        className={`${cls} rounded-full flex items-center justify-center font-bold text-white shrink-0 leading-none ${textCls} ${className}`}
+        style={{ backgroundColor: INITIALS_AVATAR.bg }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  // ── Icon-based preset avatar ──────────────────────────────────────────────
+  const preset = findAvatar(avatarId);
   if (preset) {
     const { Icon, bg, label } = preset;
     return (
@@ -58,6 +87,8 @@ export function AvatarDisplay({
     );
   }
 
+  // ── Fallbacks (no avatar chosen yet) ─────────────────────────────────────
+  const initials = getInitials(displayName) || getEmailInitials(email);
   if (initials) {
     return (
       <div

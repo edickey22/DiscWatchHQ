@@ -37,3 +37,15 @@ export function findAvatar(id: string | null | undefined): PresetAvatar | undefi
   if (!id) return undefined;
   return PRESET_AVATARS.find((a) => a.id === id);
 }
+
+/**
+ * Special "initials" avatar — shows the user's own initials in a colored
+ * circle. Stored as avatarId="initials"; the rendered initials are always
+ * derived live from the current displayName (or email), so they update
+ * automatically when the user changes their name.
+ */
+export const INITIALS_AVATAR = {
+  id:    "initials",
+  label: "Initials",
+  bg:    "#1e3a5f",   // deep navy — distinct from all preset bg colors
+} as const;
