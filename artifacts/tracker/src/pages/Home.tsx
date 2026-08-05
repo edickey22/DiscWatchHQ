@@ -27,13 +27,15 @@ import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 import { trackSearchEvent } from "@/lib/analytics"
 
-type SortOption = "updated" | "title" | "publisher" | "newest"
+type SortOption = "updated" | "title" | "publisher" | "newest" | "release_date_asc" | "release_date_desc"
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "newest",    label: "Newly Listed"      },
-  { value: "publisher", label: "Publisher A–Z"     },
-  { value: "updated",   label: "Recently Updated"  },
-  { value: "title",     label: "Title A–Z"         },
+  { value: "updated",          label: "Recently Updated"         },
+  { value: "release_date_asc", label: "Release Date — Soonest"   },
+  { value: "release_date_desc",label: "Release Date — Furthest"  },
+  { value: "newest",           label: "Newly Listed"             },
+  { value: "publisher",        label: "Publisher A–Z"            },
+  { value: "title",            label: "Title A–Z"                },
 ]
 
 export default function Home() {

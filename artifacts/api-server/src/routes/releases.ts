@@ -21,7 +21,7 @@ import {
 const router: IRouter = Router();
 
 type ReleaseStatus = "available" | "sold_out" | "coming_soon";
-type SortOption = "updated" | "title" | "publisher" | "newest";
+type SortOption = "updated" | "title" | "publisher" | "newest" | "release_date_asc" | "release_date_desc";
 
 /**
  * Build a type-safe condition list and run the releases query.
@@ -65,12 +65,16 @@ async function queryReleases(opts: {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  // Resolve sort order
+  // Resolve sort order.
+  // release_date_asc/desc: items with no confirmed date (TBA) sort NULLS LAST
+  // so they are always pushed to the end of the list regardless of direction.
   const orderExpr = (() => {
     switch (sort) {
-      case "title":     return asc(releasesTable.title);
-      case "publisher": return asc(publishersTable.name);
-      case "newest":    return desc(releasesTable.firstSeenAt);
+      case "title":              return asc(releasesTable.title);
+      case "publisher":          return asc(publishersTable.name);
+      case "newest":             return desc(releasesTable.firstSeenAt);
+      case "release_date_asc":   return sql`${releasesTable.releaseDate} ASC NULLS LAST`;
+      case "release_date_desc":  return sql`${releasesTable.releaseDate} DESC NULLS LAST`;
       case "updated":
       default:
         return status === "sold_out"

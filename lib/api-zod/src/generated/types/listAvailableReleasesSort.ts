@@ -14,4 +14,6 @@ export const ListAvailableReleasesSort = {
   title: 'title',
   publisher: 'publisher',
   newest: 'newest',
+  release_date_asc: 'release_date_asc',
+  release_date_desc: 'release_date_desc',
 } as const;

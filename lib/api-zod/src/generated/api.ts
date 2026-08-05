@@ -79,7 +79,7 @@ export const ListAvailableReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listAvailableReleasesQuerySortDefault)
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest', 'release_date_asc', 'release_date_desc']).default(listAvailableReleasesQuerySortDefault)
 })
 
 export const ListAvailableReleasesResponse = zod.object({
@@ -131,7 +131,7 @@ export const ListSoldOutReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listSoldOutReleasesQuerySortDefault),
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest', 'release_date_asc', 'release_date_desc']).default(listSoldOutReleasesQuerySortDefault),
   "limit": zod.coerce.number().default(listSoldOutReleasesQueryLimitDefault)
 })
 
@@ -183,7 +183,7 @@ export const ListComingSoonReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listComingSoonReleasesQuerySortDefault)
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest', 'release_date_asc', 'release_date_desc']).default(listComingSoonReleasesQuerySortDefault)
 })
 
 export const ListComingSoonReleasesResponse = zod.object({

@@ -171,9 +171,18 @@ export function Header() {
           </nav>
         </div>
 
-        {/* ── CENTER: Live stats (flex-1 so it truly centers between left and right) */}
-        <div className="flex-1 flex justify-center">
-          <div className="hidden xl:flex items-center gap-5 text-sm font-mono tracking-tight">
+        {/* ── SPACER: fills space between nav and the right group, guaranteeing
+             the nav can never visually crowd the stats block regardless of
+             how long the nav labels grow ─────────────────────────────────── */}
+        <div className="flex-1" />
+
+        {/* ── RIGHT: stats + user menu + mobile hamburger, all right-anchored
+             as one unit. flex-1 spacer above ensures the nav never reaches
+             this group. ───────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 shrink-0 pr-1">
+
+          {/* Live stats — hidden below xl (1280px) */}
+          <div className="hidden xl:flex items-center gap-4 text-sm font-mono tracking-tight">
             {stats && (
               <div className="flex items-center gap-4" title="Limited-run boutique releases this site tracks across publisher storefronts">
                 <span className="text-[9px] font-sans font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
@@ -210,10 +219,9 @@ export function Header() {
               </>
             )}
           </div>
-        </div>
 
-        {/* ── RIGHT: User menu + mobile hamburger (pinned right, pr for breathing room) */}
-        <div className="flex items-center gap-3 shrink-0 pr-1">
+          {/* Divider between stats and user menu — only visible when stats show */}
+          <div className="hidden xl:block w-px h-6 bg-border/60" />
 
           {/* User menu (desktop) */}
           <div className="hidden sm:block">
