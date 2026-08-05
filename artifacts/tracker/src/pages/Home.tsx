@@ -163,7 +163,7 @@ export default function Home() {
             Boutique game publishers release physical editions in limited quantities — often a
             few thousand units — that sell out in hours or days and rarely restock. Once they're
             gone, you're paying secondary-market prices. The Boutique Tracker monitors{" "}
-            {publishers?.length ?? "every"} publishers every two hours and organizes their
+            {publishers?.length ?? 15} publishers every two hours and organizes their
             releases into three buckets:{" "}
             <span className="text-foreground/70 font-medium">Available Now</span> (open for
             order today),{" "}
