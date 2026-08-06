@@ -119,6 +119,13 @@ export async function sendMagicLinkEmail(email: string, link: string, displayNam
     html: `
 <!DOCTYPE html>
 <html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="supported-color-schemes" content="dark light">
+  <meta name="x-apple-disable-message-reformatting">
+</head>
 <body style="font-family:sans-serif;background:#0a0c0a;color:#f0f0f0;padding:40px 20px;max-width:480px;margin:0 auto">
   <div style="margin-bottom:24px">
     <span style="font-size:20px;font-weight:bold;color:#ffffff">Disc</span><span style="font-size:20px;font-weight:bold;color:#21b557">Watch</span>
@@ -190,6 +197,13 @@ export async function sendAlertEmail(opts: {
     html: `
 <!DOCTYPE html>
 <html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="supported-color-schemes" content="dark light">
+  <meta name="x-apple-disable-message-reformatting">
+</head>
 <body style="font-family:sans-serif;background:#0a0c0a;color:#f0f0f0;padding:40px 20px;max-width:480px;margin:0 auto">
   <div style="margin-bottom:24px">
     <span style="font-size:20px;font-weight:bold;color:#ffffff">Disc</span><span style="font-size:20px;font-weight:bold;color:#21b557">Watch</span>
