@@ -1,5 +1,5 @@
-import { eq, and } from "drizzle-orm";
-import { db, publishersTable, releasesTable, scrapeLogsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { db, publishersTable, releasesTable, scrapeLogsTable, priceSnapshotsTable } from "@workspace/db";
 import { logger } from "../logger";
 import { getAllScrapers, getScraperBySlug } from "./registry";
 import type { ScrapedRelease } from "./types";
@@ -14,20 +14,53 @@ const runningScrapers = new Set<string>();
 async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): Promise<number> {
   if (scraped.length === 0) return 0;
 
+  // --- Batch prefetch 1: all existing releases for this publisher in one query ---
+  const existingRows = await db
+    .select({ id: releasesTable.id, externalId: releasesTable.externalId, status: releasesTable.status, soldOutAt: releasesTable.soldOutAt })
+    .from(releasesTable)
+    .where(eq(releasesTable.publisherId, publisherId));
+
+  const existingByExternalId = new Map(existingRows.map(r => [r.externalId, r]));
+
+  // --- Batch prefetch 2: latest release_list price snapshot for all known release IDs ---
+  // Replaces the per-release SELECT inside the loop with a single indexed scan
+  // followed by an in-memory Map lookup.
+  //
+  // Dedup: publisher list prices rarely change (a $49.99 edition stays at
+  // $49.99 for months). Inserting on every 2-hour scrape run generates
+  // ~500 redundant rows per run — ~540k unnecessary rows over 90 days.
+  // We skip the insert when the most recent release_list snapshot already
+  // has the same price (within floating-point tolerance).
+  const lastSnapshotByItemId = new Map<string, number>(); // itemId -> priceUsd
+
+  if (existingRows.length > 0) {
+    const itemIds = existingRows.map(r => String(r.id));
+    // Lateral join: one index seek per release ID, returns exactly N rows total
+    // regardless of snapshot history depth (O(N releases), not O(N × history)).
+    // The (item_type, item_id, snapped_at DESC) index satisfies each sub-query's
+    // ORDER BY snapped_at DESC LIMIT 1 with a single index entry read per ID.
+    const result = await db.execute(sql`
+      SELECT ids.item_id, ps.price_usd
+      FROM unnest(ARRAY[${sql.join(itemIds.map(id => sql`${id}`), sql`, `)}]::text[]) AS ids(item_id)
+      CROSS JOIN LATERAL (
+        SELECT price_usd
+        FROM price_snapshots
+        WHERE item_type = 'release_list'
+          AND item_id = ids.item_id
+        ORDER BY snapped_at DESC
+        LIMIT 1
+      ) AS ps
+    `);
+
+    for (const row of result.rows) {
+      lastSnapshotByItemId.set(row.item_id as string, row.price_usd as number);
+    }
+  }
+
   let upserted = 0;
 
   for (const item of scraped) {
-    // Fetch existing to detect sold-out transition
-    const [existing] = await db
-      .select({ id: releasesTable.id, status: releasesTable.status, soldOutAt: releasesTable.soldOutAt })
-      .from(releasesTable)
-      .where(
-        and(
-          eq(releasesTable.publisherId, publisherId),
-          eq(releasesTable.externalId, item.externalId)
-        )
-      )
-      .limit(1);
+    const existing = existingByExternalId.get(item.externalId);
 
     const soldOutAt =
       existing && existing.status !== "sold_out" && item.status === "sold_out"
@@ -40,7 +73,7 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         .set({
           title: item.title,
           platforms: item.platforms,
-          status: item.status,
+          status: sql<"available" | "sold_out" | "coming_soon" | "announced">`${item.status}`,
           coverImageUrl: item.coverImageUrl,
           price: item.price,
           editionType: item.editionType,
@@ -50,13 +83,36 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
           amazonUrl: item.amazonUrl ?? null,
         })
         .where(eq(releasesTable.id, existing.id));
+
+      // Snapshot the publisher list price when it is present.
+      if (item.price) {
+        const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed) && parsed > 0) {
+          const lastPrice = lastSnapshotByItemId.get(String(existing.id));
+          const priceUnchanged =
+            lastPrice != null &&
+            Math.abs(lastPrice - parsed) < 0.001;
+
+          if (!priceUnchanged) {
+            await db.insert(priceSnapshotsTable).values({
+              itemType:  "release_list",
+              itemId:    String(existing.id),
+              source:    "publisher",
+              priceUsd:  parsed,
+              snappedAt: new Date(),
+            }).catch(err =>
+              logger.warn({ err, releaseId: existing.id }, "List price snapshot write failed — non-fatal"),
+            );
+          }
+        }
+      }
     } else {
-      await db.insert(releasesTable).values({
+      const [inserted] = await db.insert(releasesTable).values({
         publisherId,
         externalId: item.externalId,
         title: item.title,
         platforms: item.platforms,
-        status: item.status,
+        status: sql<"available" | "sold_out" | "coming_soon" | "announced">`${item.status}`,
         coverImageUrl: item.coverImageUrl,
         productUrl: item.productUrl,
         price: item.price,
@@ -66,7 +122,23 @@ async function upsertReleases(publisherId: number, scraped: ScrapedRelease[]): P
         soldOutAt,
         amazonUrl: item.amazonUrl ?? null,
         firstSeenAt: new Date(),
-      });
+      }).returning({ id: releasesTable.id });
+
+      // Snapshot the initial publisher list price for the new release.
+      if (inserted && item.price) {
+        const parsed = parseFloat(item.price.replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed) && parsed > 0) {
+          await db.insert(priceSnapshotsTable).values({
+            itemType:  "release_list",
+            itemId:    String(inserted.id),
+            source:    "publisher",
+            priceUsd:  parsed,
+            snappedAt: new Date(),
+          }).catch(err =>
+            logger.warn({ err, releaseId: inserted.id }, "Initial list price snapshot write failed — non-fatal"),
+          );
+        }
+      }
     }
     upserted++;
   }

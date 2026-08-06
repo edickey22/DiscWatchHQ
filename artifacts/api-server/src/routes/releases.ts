@@ -20,8 +20,8 @@ import {
 
 const router: IRouter = Router();
 
-type ReleaseStatus = "available" | "sold_out" | "coming_soon";
-type SortOption = "updated" | "title" | "publisher" | "newest";
+type ReleaseStatus = "available" | "sold_out" | "coming_soon" | "announced";
+type SortOption = "updated" | "title" | "publisher" | "newest" | "release_date_asc" | "release_date_desc";
 
 /**
  * Build a type-safe condition list and run the releases query.
@@ -43,7 +43,7 @@ async function queryReleases(opts: {
 
   const conditions = [];
 
-  if (status) conditions.push(eq(releasesTable.status, status));
+  if (status) conditions.push(sql`${releasesTable.status} = ${status}`);
 
   // Search: match title OR publisher name
   if (search) {
@@ -65,12 +65,16 @@ async function queryReleases(opts: {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  // Resolve sort order
+  // Resolve sort order.
+  // release_date_asc/desc: items with no confirmed date (TBA) sort NULLS LAST
+  // so they are always pushed to the end of the list regardless of direction.
   const orderExpr = (() => {
     switch (sort) {
-      case "title":     return asc(releasesTable.title);
-      case "publisher": return asc(publishersTable.name);
-      case "newest":    return desc(releasesTable.firstSeenAt);
+      case "title":              return asc(releasesTable.title);
+      case "publisher":          return asc(publishersTable.name);
+      case "newest":             return desc(releasesTable.firstSeenAt);
+      case "release_date_asc":   return sql`${releasesTable.releaseDate} ASC NULLS LAST`;
+      case "release_date_desc":  return sql`${releasesTable.releaseDate} DESC NULLS LAST`;
       case "updated":
       default:
         return status === "sold_out"
@@ -188,8 +192,8 @@ router.get("/releases/available", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, search, sort } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort });
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "available", platform, publisher, search, sort, limit, offset });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
@@ -210,19 +214,31 @@ router.get("/releases/coming-soon", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { platform, publisher, search, sort } = parsed.data;
-  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort });
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "coming_soon", platform, publisher, search, sort, limit, offset });
+  res.json({ releases: releases.map(formatRelease), total });
+});
+
+router.get("/releases/announced", async (req, res): Promise<void> => {
+  const parsed = ListComingSoonReleasesQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { platform, publisher, search, sort, limit, offset } = parsed.data;
+  const { releases, total } = await queryReleases({ status: "announced", platform, publisher, search, sort, limit, offset });
   res.json({ releases: releases.map(formatRelease), total });
 });
 
 router.get("/releases/stats", async (_req, res): Promise<void> => {
-  const [available, soldOut, comingSoon] = await Promise.all([
+  const [available, soldOut, comingSoon, announced] = await Promise.all([
     db.select({ count: sql<number>`count(*)::int` }).from(releasesTable).where(eq(releasesTable.status, "available")),
     db.select({ count: sql<number>`count(*)::int` }).from(releasesTable).where(eq(releasesTable.status, "sold_out")),
     db.select({ count: sql<number>`count(*)::int` }).from(releasesTable).where(eq(releasesTable.status, "coming_soon")),
+    db.select({ count: sql<number>`count(*)::int` }).from(releasesTable).where(sql`${releasesTable.status} = 'announced'`),
   ]);
 
-  const total = (available[0].count ?? 0) + (soldOut[0].count ?? 0) + (comingSoon[0].count ?? 0);
+  const total = (available[0].count ?? 0) + (soldOut[0].count ?? 0) + (comingSoon[0].count ?? 0) + (announced[0].count ?? 0);
 
   const [lastPub] = await db
     .select({ lastScrapedAt: publishersTable.lastScrapedAt })
@@ -234,6 +250,7 @@ router.get("/releases/stats", async (_req, res): Promise<void> => {
     available: available[0].count ?? 0,
     soldOut: soldOut[0].count ?? 0,
     comingSoon: comingSoon[0].count ?? 0,
+    announced: announced[0].count ?? 0,
     totalTracked: total,
     lastUpdated: lastPub?.lastScrapedAt?.toISOString() ?? null,
   });

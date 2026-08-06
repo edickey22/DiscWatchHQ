@@ -28,8 +28,9 @@
  */
 
 import { Router } from "express";
-import { getConsoleSummaries, getConsoleDetail } from "../lib/consoleListingsCache";
-import { ebayConsolesConfigured } from "../lib/ebayConsolesClient";
+import { getConsoleSummaries, getConsoleDetail, setConsoleListings } from "../lib/consoleListingsCache";
+import { ebayConsolesConfigured, getEbayConsoleListings } from "../lib/ebayConsolesClient";
+import { CONSOLE_MODELS } from "../lib/consoleModels";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -81,6 +82,43 @@ router.get("/consoles/:id", (req, res): void => {
   } catch (err) {
     logger.error({ err, id: req.params.id }, "Console detail request failed");
     res.status(500).json({ configured: ebayConsolesConfigured, console: null });
+  }
+});
+
+/**
+ * POST /api/consoles/:id/refresh
+ *
+ * Admin endpoint: immediately fetches fresh eBay listings for one console
+ * and updates the in-memory + persisted cache. Useful for recovering a
+ * console that got stuck at 0 listings without waiting for the 24-hour
+ * scheduler cycle.
+ *
+ * Subject to the same eBay call budget as the scheduler — returns 429 if
+ * the daily console budget is exhausted.
+ *
+ * Response: { listingCount: number, updatedAt: number }
+ */
+router.post("/consoles/:id/refresh", async (req, res): Promise<void> => {
+  const model = CONSOLE_MODELS.find(m => m.id === req.params.id);
+  if (!model) {
+    res.status(404).json({ error: "Unknown console id" });
+    return;
+  }
+
+  logger.info({ id: model.id }, "Manual console listings refresh triggered");
+
+  try {
+    const listings = await getEbayConsoleListings(model);
+    if (listings === null) {
+      res.status(503).json({ error: "eBay fetch failed or budget exhausted — try again later" });
+      return;
+    }
+    setConsoleListings(model.id, listings);
+    logger.info({ id: model.id, count: listings.length }, "Manual console refresh complete");
+    res.json({ listingCount: listings.length, updatedAt: Date.now() });
+  } catch (err) {
+    logger.error({ err, id: model.id }, "Manual console refresh error");
+    res.status(500).json({ error: "Unexpected error during refresh" });
   }
 });
 

@@ -12,7 +12,6 @@
  * Writes: artifacts/tracker/dist/public/sitemap.xml
  */
 
-import { createRequire } from "module";
 import { writeFileSync, mkdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -73,55 +72,16 @@ async function main() {
   entries.push(urlEntry({ loc: `${baseUrl}/`,        changefreq: "hourly", priority: "1.0" }));
   entries.push(urlEntry({ loc: `${baseUrl}/games`,   changefreq: "daily",  priority: "0.9" }));
   entries.push(urlEntry({ loc: `${baseUrl}/boutique`,changefreq: "hourly", priority: "0.9" }));
+  entries.push(urlEntry({ loc: `${baseUrl}/about`,   changefreq: "monthly", priority: "0.8" }));
+  entries.push(urlEntry({ loc: `${baseUrl}/consoles`,changefreq: "daily",  priority: "0.8" }));
 
-  // Dynamic release pages — query DB if DATABASE_URL is available
-  const dbUrl = process.env.DATABASE_URL;
-  if (dbUrl) {
-    try {
-      // pg is a dependency of @workspace/db — resolve it from there so pnpm
-      // hoisting doesn't matter and the path is always correct.
-      const dbPkgDir = resolve(__dirname, "../../../lib/db");
-      const require = createRequire(resolve(dbPkgDir, "package.json"));
-      const { Client } = require("pg");
-      const client = new Client({ connectionString: dbUrl });
-      await client.connect();
-
-      let rows;
-      try {
-        ({ rows } = await client.query(
-          `SELECT id, status, updated_at FROM releases ORDER BY updated_at DESC`
-        ));
-      } finally {
-        await client.end();
-      }
-
-      for (const r of rows) {
-        const priority =
-          r.status === "available"   ? "0.9" :
-          r.status === "coming_soon" ? "0.8" : "0.5";
-        const changefreq =
-          r.status === "sold_out" ? "monthly" : "daily";
-        const lastmod =
-          r.updated_at instanceof Date
-            ? r.updated_at.toISOString().slice(0, 10)
-            : String(r.updated_at).slice(0, 10);
-
-        entries.push(urlEntry({
-          loc: `${baseUrl}/releases/${r.id}`,
-          lastmod,
-          changefreq,
-          priority,
-        }));
-      }
-
-      console.log(`[sitemap] added ${rows.length} release pages`);
-    } catch (err) {
-      // Non-fatal: static pages still get indexed; releases discovered via crawl
-      console.warn(`[sitemap] DB query failed (release pages skipped): ${err.message}`);
-    }
-  } else {
-    console.warn("[sitemap] DATABASE_URL not set — skipping release pages");
-  }
+  // NOTE: /releases/:id pages are intentionally excluded from the sitemap.
+  // Each release page carries <meta name="robots" content="noindex, follow"> so
+  // Googlebot removes them from its quality pool. Including them here would send
+  // a contradictory signal (sitemap = "index", page = "don't") that Google's
+  // quality algorithms treat as a reason to ignore the noindex directive.
+  // Release pages remain fully accessible to real visitors; they are simply not
+  // submitted for indexing.
 
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

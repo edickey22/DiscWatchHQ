@@ -47,14 +47,14 @@ export function ConsoleListingCard({ listing }: { listing: ConsoleListing }) {
         target="_blank"
         rel="noopener noreferrer sponsored"
         aria-label={`View "${listing.title}" on eBay`}
-        className="relative block aspect-[5/4] w-full overflow-hidden rounded-md bg-muted shadow-sm"
+        className="relative block aspect-[5/4] w-full overflow-hidden rounded-md bg-transparent shadow-sm"
       >
         {listing.imageUrl ? (
           <img
             src={listing.imageUrl}
             alt={listing.title}
             loading="lazy"
-            className="h-full w-full object-cover scale-110 transition-transform duration-500 group-hover:scale-100"
+            className="h-full w-full object-contain"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-secondary text-muted-foreground text-xs font-mono">

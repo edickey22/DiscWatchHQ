@@ -20,7 +20,7 @@
  *   • Tiles are `aria-hidden` — purely decorative; no alt text needed.
  */
 
-import { useRef, useEffect, useState, type ReactNode } from "react"
+import { type ReactNode, useMemo } from "react"
 import { Link } from "wouter"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronRight, Zap, Clock, ShoppingBag, Library, Bell, Search, ExternalLink } from "lucide-react"
@@ -29,7 +29,7 @@ import { ControllerIcon } from "@/components/ControllerIcon"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
-import { useGetReleaseStats } from "@workspace/api-client-react"
+import { useGetReleaseStats, useListPublishers } from "@workspace/api-client-react"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 
@@ -60,7 +60,11 @@ async function fetchConsolesCount(): Promise<number> {
   return Array.isArray(data.consoles) ? data.consoles.length : 0
 }
 
-const PUBLISHERS = [
+// Fallback publisher names used while useListPublishers loads (or if the API
+// is unavailable). Must match artifacts/api-server/src/lib/scraper/registry.ts.
+// ⚠ When adding/removing a publisher in registry.ts, update this list too —
+//   it's the only spot that doesn't auto-derive from the live endpoint.
+const PUBLISHER_FALLBACKS = [
   "Limited Run Games",
   "Strictly Limited Games",
   "iam8bit",
@@ -70,6 +74,9 @@ const PUBLISHERS = [
   "Blizzard Gear Store",
   "eastasiasoft",
   "Red Art Games",
+  "NIS America",
+  "Koei Tecmo",
+  "Square Enix",
 ]
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -152,49 +159,18 @@ const STEP_IMAGES = [
   { src: "/images/step-collector.jpg", alt: "Premium black collector's edition box"     },
 ]
 
-const STEPS: { num: string; icon: ReactNode; title: string; body: string }[] = [
-  {
-    num:   "01",
-    icon:  <Search className="text-primary" size={18} />,
-    title: "Search any title",
-    body:  "Search 899,000+ games across every platform and generation — NES to PS5, retro to new releases. Filter by platform, sort by Metacritic score or release date. Results are cached locally for instant repeat searches.",
-  },
-  {
-    num:   "02",
-    icon:  <ShoppingBag className="text-primary" size={18} />,
-    title: "Buy at four retailers",
-    body:  "Every game card links directly to GameStop, Amazon, eBay, and Best Buy. One search, four storefronts — find the best price or availability without tabbing between sites.",
-  },
-  {
-    num:   "03",
-    icon:  <Clock className="text-primary" size={18} />,
-    title: "Boutique drop tracker",
-    body:  "Limited-run physical releases from boutique publishers like Limited Run Games and Strictly Limited are monitored every 2 hours — Available\u00a0Now, Coming\u00a0Soon, and Sold\u00a0Out with preorder countdowns.",
-  },
-]
+// STEPS defined inside LandingPage (below) so step 03's body can reference
+// the live publisherCount from useListPublishers.
 
 // ── Step row — zigzag alternating layout with scroll-reveal + photo ──────────
 
 function StepRow({
   num, icon, title, body, index,
 }: { num: string; icon: ReactNode; title: string; body: string; index: number }) {
-  const rowRef                = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = rowRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === "undefined") { setVisible(true); return }
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      // rootMargin keeps the animation from firing until the user has
-      // genuinely scrolled the section into view — avoids instant-trigger
-      // on tall viewports where the section is technically "visible" on load.
-      { threshold: 0.15, rootMargin: "-100px" },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+  // Content is always visible at initial render — no scroll-triggered opacity.
+  // This ensures Googlebot (which does not scroll) can read the text.
+  // The num prop is kept in the signature for future use.
+  void num
 
   // true  → image on the LEFT,  text on the right
   // false → text on the LEFT,   image on the right
@@ -202,16 +178,11 @@ function StepRow({
 
   const content = (
     <div className="flex-1 py-10 md:py-14 md:pr-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-primary/60">
-          Step {num}
-        </span>
+      <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+        {icon}
       </div>
-      <h3 className="font-display font-bold text-2xl text-foreground">{title}</h3>
-      <p className="text-muted-foreground text-sm leading-relaxed max-w-md">{body}</p>
+      <h3 className="font-display font-bold text-3xl sm:text-4xl text-foreground">{title}</h3>
+      <p className="text-muted-foreground text-lg leading-relaxed max-w-md">{body}</p>
     </div>
   )
 
@@ -225,34 +196,14 @@ function StepRow({
           loading="lazy"
           decoding="async"
         />
-        {/* Subtle dark vignette so the step number overlay is legible */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-        {/* Faint step-number watermark in the image corner */}
-        <span
-          className="absolute bottom-3 right-4 font-mono font-black leading-none select-none pointer-events-none"
-          style={{ fontSize: "clamp(3rem,7vw,5.5rem)", color: "rgba(255,255,255,0.10)" }}
-          aria-hidden="true"
-        >
-          {num}
-        </span>
+        {/* Subtle dark vignette along the bottom edge */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
       </div>
     </div>
   )
 
   return (
-    <div
-      ref={rowRef}
-      // All transition properties set inline so Tailwind class ordering
-      // can never accidentally reset transition-duration to its 150ms default.
-      style={{
-        opacity:                visible ? 1 : 0,
-        transform:              visible ? "translateY(0)" : "translateY(2rem)",
-        transitionProperty:     "opacity, transform",
-        transitionDuration:     "700ms",
-        transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-        transitionDelay:        `${index * 120}ms`,
-      }}
-    >
+    <div>
       {/* Simple flex-row; swap JSX child order to achieve the left/right alternation.
           No flex-row-reverse (which would invert both DOM order AND visual order,
           accidentally putting both halves on the same side). */}
@@ -278,6 +229,41 @@ export default function LandingPage() {
     staleTime: 5 * 60_000,
   })
 
+  // Live publisher list — auto-updates when publishers are added/removed.
+  // Falls back to PUBLISHER_FALLBACKS during initial load.
+  const { data: publishersData } = useListPublishers({})
+  const publisherList  = useMemo(() => {
+    const live = (publishersData ?? []).filter(p => p.enabled).map(p => p.name)
+    return live.length > 0 ? live : PUBLISHER_FALLBACKS
+  }, [publishersData])
+  const publisherCount = publisherList.length
+
+  // STEPS defined here (not at module level) so step 03 can reference publisherCount.
+  const steps = useMemo<{ num: string; icon: ReactNode; title: string; body: string }[]>(
+    () => [
+      {
+        num:   "01",
+        icon:  <Search className="text-primary" size={18} />,
+        title: "Search any title",
+        body:  "Search 899,000+ games across every platform and generation — NES to PS5, retro to new releases. Filter by platform, sort by Metacritic score or release date. Results are cached locally for instant repeat searches.",
+      },
+      {
+        num:   "02",
+        icon:  <ShoppingBag className="text-primary" size={18} />,
+        title: "Buy at four retailers",
+        body:  "Every game card links directly to GameStop, Amazon, eBay, and Best Buy. One search, four storefronts — find the best price or availability without tabbing between sites.",
+      },
+      {
+        num:   "03",
+        icon:  <Clock className="text-primary" size={18} />,
+        title: "Boutique drop tracker",
+        // Publisher count is live — no hardcoded number here.
+        body:  `Limited-run physical releases from ${publisherCount} boutique publishers are monitored every 2 hours — Available\u00a0Now, Coming\u00a0Soon, and Sold\u00a0Out with preorder countdowns.`,
+      },
+    ],
+    [publisherCount],
+  )
+
   // Use the live catalog count when available (e.g. "899K+"), fall back to
   // the same static figure used in index.html so the two never disagree.
   const catalogLabel =
@@ -286,7 +272,7 @@ export default function LandingPage() {
       : "900,000+"
 
   useDocumentHead({
-    title:       "DiscWatchHQ — Find Any Physical Game, Buy Anywhere",
+    title:       "DiscWatchHQ — Every Game. Every Drop. Best Price.",
     description: `Search ${catalogLabel} physical games across every platform. Compare prices on GameStop, Amazon, eBay, and Best Buy. Track limited-run boutique releases in real time.`,
     canonical:   buildCanonicalUrl("/"),
     jsonLd: {
@@ -309,20 +295,8 @@ export default function LandingPage() {
       },
     },
   })
-  // Scroll-reveal for the staggered pathway cards
-  const cardsRef                = useRef<HTMLDivElement>(null)
-  const [cardsVisible, setCardsVisible] = useState(false)
-  useEffect(() => {
-    const el = cardsRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === "undefined") { setCardsVisible(true); return }
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setCardsVisible(true); obs.disconnect() } },
-      { threshold: 0.1, rootMargin: "-100px" },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+  // No scroll-reveal for pathway cards — content is always visible so
+  // Googlebot (which does not scroll) can read it without JS interaction.
 
   const { data: covers = [] } = useQuery({
     queryKey:  ["landing-covers-v2"],
@@ -368,10 +342,13 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Left vignette — keeps hero text fully legible */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/10 pointer-events-none" />
-            {/* Top vignette */}
-            <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80 pointer-events-none" />
+            {/* Left vignette — lightened so artwork shows through behind text
+                 while still providing enough contrast for WCAG-safe reading.
+                 from-background/75 keeps left legible; via-background/40 lets
+                 midpoint art breathe; right fades to near-transparent. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background/75 via-background/40 to-background/5 pointer-events-none" />
+            {/* Top/bottom vignette — softened top to match lighter left */}
+            <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-background/75 pointer-events-none" />
           </div>
         )}
 
@@ -392,9 +369,9 @@ export default function LandingPage() {
 
             {/* Headline */}
             <h1 className="font-display text-[clamp(3.5rem,10vw,6.5rem)] font-black tracking-tight leading-[0.9] text-foreground mb-7">
-              FIND ANY<br />
-              GAME.<br />
-              <span className="text-primary">BUY ANYWHERE.</span>
+              EVERY GAME.<br />
+              EVERY DROP.<br />
+              <span className="text-primary">BEST PRICE.</span>
             </h1>
 
             {/* Sub-headline */}
@@ -523,17 +500,17 @@ export default function LandingPage() {
           HOW IT WORKS — zigzag alternating rows with scroll-reveal
       ════════════════════════════════════════════════════════════════════ */}
       <section className="border-t border-border/30 bg-secondary/20">
-        <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-3">
-            Three steps · no account needed
+        <div className="container mx-auto max-w-6xl px-4 pt-20 pb-4 text-center">
+          <p className="text-sm font-mono uppercase tracking-widest text-primary/60 mb-4">
+            No account needed
           </p>
-          <h2 className="font-display text-3xl font-bold text-foreground">
+          <h2 className="font-display text-5xl sm:text-6xl font-bold text-foreground">
             How it works
           </h2>
         </div>
         <div className="container mx-auto max-w-6xl px-4 pb-10">
           <div className="divide-y divide-border/20">
-            {STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <StepRow key={step.num} {...step} index={i} />
             ))}
           </div>
@@ -547,6 +524,65 @@ export default function LandingPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
+          WHY IT EXISTS — editorial "problem being solved" section
+      ════════════════════════════════════════════════════════════════════ */}
+      <section className="py-16 bg-background border-b border-border/20">
+        <div className="container mx-auto max-w-5xl px-4">
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60 mb-5">
+              Why DiscWatchHQ exists
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
+              Physical games are harder to buy than they should be.
+            </h2>
+            <div className="space-y-5 text-muted-foreground text-base leading-relaxed">
+              <p>
+                Physical video game collecting has a fragmentation problem. A game you want might
+                be available at GameStop but out of stock on Amazon, cheaper on eBay but only in
+                poor condition, or not on any major retailer at all because it was a{" "}
+                <span className="text-foreground/80 font-medium">boutique-only release</span> from
+                a publisher most people have never heard of. Checking each storefront separately —
+                in different browser tabs, with different search interfaces — is tedious. DiscWatchHQ
+                puts them all in one place.
+              </p>
+              <p>
+                The boutique publisher market has grown significantly over the past decade. Companies
+                like <span className="text-foreground/80 font-medium">Limited Run Games</span>,{" "}
+                <span className="text-foreground/80 font-medium">Strictly Limited Games</span>, and{" "}
+                <span className="text-foreground/80 font-medium">Super Rare Games</span> produce
+                physical editions of games that otherwise exist only as digital downloads — often in
+                print runs of just a few thousand units. These releases frequently sell out within
+                hours of going live, and the preorder windows are short. Miss the window and you're
+                paying two or three times the original price on the secondary market. The Boutique
+                {/* Publisher count is live — derived from useListPublishers, not hardcoded.
+                    Example names above are the three founding boutique publishers and are unlikely
+                    to change; spot-check them if the publisher roster changes significantly. */}
+                Tracker exists specifically to solve this: we currently monitor{" "}
+                <span className="text-foreground/80 font-medium">{publisherCount} publisher storefronts</span>,
+                checked every two hours so you don't have to.
+              </p>
+              <p>
+                The hardware side has its own challenges. Retro console prices are driven largely
+                by what's actually selling on eBay right now — not by any MSRP or list price. The
+                Consoles section pulls live eBay listings for both current-gen and retro hardware so
+                you can see the real market price, with condition and seller ratings visible upfront.
+                No fake "retail" anchors, no guessing — just what hardware is actually selling for
+                today.
+              </p>
+              <p>
+                DiscWatchHQ is free to use. It's supported by affiliate commissions when you click
+                through to a retailer and make a purchase — at no extra cost to you. Game data comes
+                from <span className="text-foreground/80 font-medium">RAWG</span> and{" "}
+                <span className="text-foreground/80 font-medium">TheGamesDB</span>, two of the
+                largest community-maintained game databases, covering over 900,000 titles across
+                every platform and era.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
           PATHWAY CARDS — per-section accent colours, staggered reveal
       ════════════════════════════════════════════════════════════════════ */}
       <section className="pb-16 bg-background">
@@ -555,19 +591,10 @@ export default function LandingPage() {
             Where to start
           </p>
           {/* Single column on mobile, straight to 3 columns at lg */}
-          <div ref={cardsRef} className="grid lg:grid-cols-3 gap-5">
+          <div className="grid lg:grid-cols-3 gap-5">
 
             {/* ── Browse Games — primary green accent, photo bg ── */}
-            <div
-              style={{
-                opacity:                cardsVisible ? 1 : 0,
-                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionProperty:     "opacity, transform",
-                transitionDuration:     "700ms",
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-                transitionDelay:        "0ms",
-              }}
-            >
+            <div>
               <Link
                 href="/games"
                 className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 border-t-primary overflow-hidden hover:border-border/50 hover:border-t-primary transition-colors duration-200 p-8"
@@ -603,16 +630,7 @@ export default function LandingPage() {
             </div>
 
             {/* ── Boutique Tracker — amber accent, photo bg ── */}
-            <div
-              style={{
-                opacity:                cardsVisible ? 1 : 0,
-                transform:              cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionProperty:     "opacity, transform",
-                transitionDuration:     "700ms",
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-                transitionDelay:        "120ms",
-              }}
-            >
+            <div>
               <Link
                 href="/boutique"
                 className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"
@@ -640,7 +658,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="font-display font-black text-2xl text-foreground mb-2">Boutique Tracker</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                    Real-time scarcity tracking for limited-run physical releases from 9
+                    Real-time scarcity tracking for limited-run physical releases from {publisherCount}
                     boutique publishers. Preorder windows, countdowns, and secondary-market
                     links for sold-out titles.
                   </p>
@@ -651,38 +669,41 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* ── Consoles — sky-blue accent ── */}
-            <div
-              className="transition-[opacity,transform] duration-700 ease-out"
-              style={{
-                opacity:         cardsVisible ? 1 : 0,
-                transform:       cardsVisible ? "translateY(0)" : "translateY(2rem)",
-                transitionDelay: "240ms",
-              }}
-            >
+            {/* ── Consoles — sky-blue accent, photo bg ── */}
+            <div>
               <Link
                 href="/consoles"
-                className="group flex flex-col h-full rounded-2xl border border-border/30 border-t-2 bg-secondary/10 hover:bg-secondary/20 hover:border-border/50 transition-colors duration-200 p-8"
+                className="group relative flex flex-col h-full rounded-2xl border border-border/30 border-t-2 overflow-hidden hover:border-border/50 transition-colors duration-200 p-8"
                 style={{ borderTopColor: "#38bdf8" }}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "rgba(56,189,248,0.12)" }}>
-                    <ControllerIcon size={22} strokeWidth={1.75} color="#38bdf8" />
+                {/* Photo background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url('/images/card-consoles.jpg')" }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-background/92 via-background/80 to-background/55" />
+                {/* Content */}
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "rgba(56,189,248,0.12)" }}>
+                      <ControllerIcon size={22} strokeWidth={1.75} color="#38bdf8" />
+                    </div>
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition-all mt-1"
+                      style={{ color: "rgba(56,189,248,0.4)" }}
+                      size={20}
+                    />
                   </div>
-                  <ChevronRight
-                    className="group-hover:translate-x-0.5 transition-all mt-1"
-                    style={{ color: "rgba(56,189,248,0.4)" }}
-                    size={20}
-                  />
-                </div>
-                <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
-                  Live eBay listings for hardware across every era — current-gen flagships
-                  down to 16-bit retro — with condition always clearly labeled.
-                </p>
-                <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(56,189,248,0.7)" }}>
-                  {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
+                  <h3 className="font-display font-black text-2xl text-foreground mb-2">Consoles</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+                    Live eBay listings for hardware across every era — current-gen flagships
+                    down to 16-bit retro — with condition always clearly labeled.
+                  </p>
+                  <div className="text-xs font-mono uppercase tracking-wider" style={{ color: "rgba(56,189,248,0.7)" }}>
+                    {consolesCount && consolesCount > 0 ? consolesCount : 26} console models tracked →
+                  </div>
                 </div>
               </Link>
             </div>
@@ -700,7 +721,7 @@ export default function LandingPage() {
             Boutique publishers we monitor
           </p>
           <div className="flex flex-wrap gap-2.5">
-            {PUBLISHERS.map(pub => (
+            {publisherList.map(pub => (
               <span
                 key={pub}
                 className="text-xs font-mono text-muted-foreground/90 border border-border/25 px-3 py-1.5 rounded-full"
@@ -741,10 +762,10 @@ export default function LandingPage() {
             <div className="space-y-4">
               <p>
                 The <strong className="text-foreground/80">boutique tracker</strong> monitors
-                limited-run physical releases from publishers like Limited Run Games, Strictly
-                Limited Games, iam8bit, Super Rare Games, and Fangamer — updated every two
-                hours. See what's available now, what's coming soon, and find sold-out titles
-                on the secondary market via eBay.
+                limited-run physical releases from {publisherCount} boutique publishers —
+                including Limited Run Games, Strictly Limited Games, iam8bit, and Super Rare
+                Games — updated every two hours. See what's available now, what's coming soon,
+                and find sold-out titles on the secondary market via eBay.
               </p>
               <p>
                 Need hardware? Browse live eBay listings for 26+ console models across every

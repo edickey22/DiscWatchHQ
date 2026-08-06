@@ -101,9 +101,10 @@ router.get("/sitemap.xml", async (req, res): Promise<void> => {
 
     // Individual console pages
     for (const console of CONSOLE_MODELS) {
+      if (!console.id) continue   // guard against any entry without a slug
       urlEntries.push(`
   <url>
-    <loc>${escapeXml(baseUrl)}/consoles/${escapeXml(console.slug)}</loc>
+    <loc>${escapeXml(baseUrl)}/consoles/${escapeXml(console.id)}</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>`)

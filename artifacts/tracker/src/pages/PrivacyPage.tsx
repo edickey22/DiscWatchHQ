@@ -5,12 +5,12 @@ import { Footer } from "@/components/Footer"
 import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 
-const LAST_UPDATED = "July 10, 2026"
+const LAST_UPDATED = "July 23, 2026"
 
 export default function PrivacyPage() {
   useDocumentHead({
     title:       "Privacy Policy — DiscWatchHQ",
-    description: "How DiscWatchHQ collects and uses data: Google Analytics, Google AdSense, affiliate links to GameStop, Amazon, eBay, and Best Buy, and cookie usage.",
+    description: "How DiscWatchHQ collects and uses data: account email via magic-link login, tracked items, Google AdSense, affiliate links to GameStop, Amazon, eBay, and Best Buy.",
     canonical:   buildCanonicalUrl("/privacy"),
     jsonLd:      null,
   })
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
               DiscWatchHQ ("<strong>we</strong>," "<strong>us</strong>," or "<strong>our</strong>")
               operates discwatchhq.com (the "<strong>Site</strong>"). This Privacy Policy explains
               what information we collect, how we use it, and the choices you have. We've written
-              it in plain language — if anything is unclear, feel free to reach out.
+              it in plain language — if anything is unclear, please reach out.
             </p>
             <p>
               By using the Site you agree to the practices described here. If you do not agree,
@@ -44,17 +44,27 @@ export default function PrivacyPage() {
           </Section>
 
           <Section title="Information We Collect">
-            <p>We do not require you to create an account or log in. We collect:</p>
+            <p>We collect the following types of information:</p>
             <ul>
               <li>
-                <strong>Usage data</strong> — pages visited, time on page, referring URL, browser
-                type, operating system, and general geographic region (country/city level). This
-                data is collected automatically by Google Analytics when you visit the Site.
+                <strong>Account email address</strong> — if you create an account, you provide
+                your email address. We use it exclusively to send you a one-time login link
+                (passwordless authentication). We do not store a password, and we do not use
+                your email for marketing unless you have separately opted in to alerts.
               </li>
               <li>
-                <strong>Cookies and similar technologies</strong> — small files stored in your
-                browser by us or our third-party partners (Google Analytics, Google AdSense) to
-                recognize returning visitors and serve relevant ads. See the{" "}
+                <strong>Watchlist and tracked items</strong> — games, releases, and consoles
+                you add to your watchlist are stored in our database and associated with your
+                account so they persist across sessions and devices.
+              </li>
+              <li>
+                <strong>Usage data</strong> — pages visited, time on page, referring URL, browser
+                type, operating system, and general geographic region (country/city level),
+                collected automatically by Google Analytics when you visit the Site.
+              </li>
+              <li>
+                <strong>Session cookies</strong> — when you log in, a session cookie is set in
+                your browser to keep you authenticated. See the{" "}
                 <a href="#cookies">Cookies</a> section below.
               </li>
               <li>
@@ -64,8 +74,33 @@ export default function PrivacyPage() {
               </li>
             </ul>
             <p>
-              We do <strong>not</strong> collect your name, email address, payment information,
-              or any other personally identifying information as part of normal site operation.
+              If you do not create an account, you can use the Site's search and browsing
+              features without providing any personally identifying information.
+            </p>
+          </Section>
+
+          <Section title="How We Use Your Information">
+            <p>We use the information we collect to:</p>
+            <ul>
+              <li>Authenticate you and maintain your logged-in session.</li>
+              <li>
+                Store and display your watchlist and alert preferences across sessions
+                and devices.
+              </li>
+              <li>
+                Send transactional emails — one-time login links and, if you opt in,
+                alerts when tracked items change status (e.g., a sold-out release comes
+                back into stock).
+              </li>
+              <li>
+                Understand how visitors use the Site (via Google Analytics) so we can
+                improve it.
+              </li>
+              <li>Display relevant advertising via Google AdSense.</li>
+            </ul>
+            <p>
+              We do <strong>not</strong> sell your personal information to third parties,
+              and we do not share your email address with advertisers or retailers.
             </p>
           </Section>
 
@@ -92,7 +127,7 @@ export default function PrivacyPage() {
 
           <Section title="Advertising (Google AdSense)" id="advertising">
             <p>
-              We plan to display advertisements on the Site served by{" "}
+              We display advertisements on the Site served by{" "}
               <strong>Google AdSense</strong>. Google and its partners use cookies to serve ads
               based on your prior visits to this Site and other sites on the web. This is
               sometimes called <em>interest-based</em> or <em>personalized</em> advertising.
@@ -114,7 +149,7 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <ExtLink href="https://policies.google.com/technologies/ads">
-                  Google's advertising privacy information
+                  Google's advertising technologies and privacy information
                 </ExtLink>
               </li>
             </ul>
@@ -147,11 +182,38 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
+          <Section title="Third-Party APIs">
+            <p>
+              The Site fetches publicly available game catalog data from the following services.
+              We do not share your personal information with these services; API calls are
+              made server-side using your search query, not your identity:
+            </p>
+            <ul>
+              <li>
+                <strong>RAWG Video Games Database</strong> — game search, metadata, and cover
+                art. See <ExtLink href="https://rawg.io/privacy">RAWG's privacy policy</ExtLink>.
+              </li>
+              <li>
+                <strong>TheGamesDB</strong> — supplemental game metadata and box art. See{" "}
+                <ExtLink href="https://thegamesdb.net">TheGamesDB</ExtLink>.
+              </li>
+              <li>
+                <strong>eBay Browse API</strong> — live console and secondary-market listings.
+                See <ExtLink href="https://www.ebay.com/help/policies/member-behaviour-policies/ebay-privacy-policy?id=4260">eBay's privacy policy</ExtLink>.
+              </li>
+            </ul>
+          </Section>
+
           <Section title="Cookies" id="cookies">
             <p>
               Cookies are small text files stored in your browser. The Site uses cookies for:
             </p>
             <ul>
+              <li>
+                <strong>Authentication</strong> — a session cookie is set when you log in to
+                keep you authenticated across page loads. This cookie is essential for account
+                features to work and expires when you log out or after a fixed idle period.
+              </li>
               <li>
                 <strong>Analytics</strong> — Google Analytics sets cookies (e.g.,{" "}
                 <code>_ga</code>, <code>_ga_*</code>) to distinguish visitors and sessions.
@@ -165,9 +227,52 @@ export default function PrivacyPage() {
             </ul>
             <p>
               You can control or delete cookies through your browser settings. Note that
-              disabling cookies may affect how some parts of the Site function. Most browsers
-              also let you block third-party cookies specifically, which limits ad tracking
-              without affecting core site functionality.
+              disabling cookies may affect how some parts of the Site function, including
+              login. Most browsers also let you block third-party cookies specifically, which
+              limits ad tracking without affecting core site functionality.
+            </p>
+          </Section>
+
+          <Section title="Your Choices">
+            <p>You have the following controls over your data:</p>
+            <ul>
+              <li>
+                <strong>View and delete watchlist items</strong> — you can view all tracked
+                items on your Tracking page and remove individual items at any time.
+              </li>
+              <li>
+                <strong>Unsubscribe from alerts</strong> — if you have opted in to status-change
+                email alerts, you can unsubscribe from your Profile page or by clicking the
+                unsubscribe link in any alert email.
+              </li>
+              <li>
+                <strong>Delete your account</strong> — you can permanently delete your account
+                from your Profile page. This removes your email address and all tracked items
+                from our systems. Deletion is immediate and irreversible.
+              </li>
+              <li>
+                <strong>Opt out of analytics</strong> — install the{" "}
+                <ExtLink href="https://tools.google.com/dlpage/gaoptout">
+                  Google Analytics Opt-out Browser Add-on
+                </ExtLink>{" "}
+                to prevent Google Analytics from collecting data about your visits.
+              </li>
+              <li>
+                <strong>Opt out of personalized ads</strong> — visit{" "}
+                <ExtLink href="https://adssettings.google.com">
+                  Google Ads Settings
+                </ExtLink>{" "}
+                to control interest-based advertising.
+              </li>
+            </ul>
+          </Section>
+
+          <Section title="No Sale of Personal Information">
+            <p>
+              We do not sell, rent, or trade your personal information to any third party for
+              their marketing purposes. The only data shared with third parties is as described
+              above (analytics, advertising, and affiliate click-throughs), and none of that
+              sharing includes your account email or watchlist data.
             </p>
           </Section>
 
@@ -190,10 +295,14 @@ export default function PrivacyPage() {
 
           <Section title="Data Retention &amp; Security">
             <p>
-              We do not maintain our own database of user personal information. Analytics data
-              is retained by Google according to your Google Analytics data retention settings
-              (default: 14 months for event-level data). We take reasonable precautions to
-              protect the Site, but no internet transmission is 100% secure.
+              Account information (email address and tracked items) is retained until you delete
+              your account. Analytics data is retained by Google according to your Google
+              Analytics data retention settings (default: 14 months for event-level data).
+            </p>
+            <p>
+              We take reasonable precautions to protect the Site and user data, but no internet
+              transmission is 100% secure. We encourage you to use a unique email address and to
+              log out on shared devices.
             </p>
           </Section>
 
@@ -211,16 +320,26 @@ export default function PrivacyPage() {
             </p>
             <p>
               <a
-                href="mailto:support@discwatchhq.com"
+                href="mailto:info@discwatchhq.com"
                 className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors font-medium"
               >
-                support@discwatchhq.com
+                info@discwatchhq.com
               </a>
             </p>
           </Section>
 
+          {/* ── Legal note ── */}
+          <div className="mt-10 p-4 rounded-lg border border-border/40 bg-card/50">
+            <p className="text-xs text-muted-foreground/80 leading-relaxed">
+              <strong className="text-muted-foreground">Note:</strong> This Privacy Policy was
+              prepared in good faith to describe how DiscWatchHQ actually operates. It is not a
+              substitute for formal legal review. If you have specific legal compliance needs
+              (GDPR, CCPA, COPPA, or otherwise), consult a qualified attorney.
+            </p>
+          </div>
+
           {/* ── Related ── */}
-          <div className="mt-12 pt-8 border-t border-border flex flex-wrap gap-4 text-sm">
+          <div className="mt-8 pt-8 border-t border-border flex flex-wrap gap-4 text-sm">
             <Link
               href="/terms"
               className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors font-medium"

@@ -1,4 +1,4 @@
-export type ReleaseStatus = "available" | "sold_out" | "coming_soon";
+export type ReleaseStatus = "available" | "sold_out" | "coming_soon" | "announced";
 
 export interface ScrapedRelease {
   /** Publisher-specific unique ID (e.g. slug or product ID from their URL) */

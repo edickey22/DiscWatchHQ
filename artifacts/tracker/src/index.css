@@ -158,8 +158,19 @@
   animation: marquee-scroll linear infinite;
 }
 
+/* Nav divider icon — gentle opacity "breathing" between links */
+@keyframes nav-breathe {
+  0%, 100% { opacity: 1;    }
+  50%       { opacity: 0.25; }
+}
+
+.animate-nav-breathe {
+  animation: nav-breathe 3.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee-scroll {
+  .animate-marquee-scroll,
+  .animate-nav-breathe {
     animation: none;
   }
 }

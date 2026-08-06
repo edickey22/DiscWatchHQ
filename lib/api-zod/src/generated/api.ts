@@ -23,7 +23,7 @@ export const listReleasesQueryLimitDefault = 50;
 export const listReleasesQueryOffsetDefault = 0;
 
 export const ListReleasesQueryParams = zod.object({
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']).optional(),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']).optional(),
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
@@ -39,7 +39,7 @@ export const ListReleasesResponse = zod.object({
   "publisherName": zod.string(),
   "publisherSlug": zod.string().optional(),
   "platforms": zod.array(zod.string()).optional(),
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
   "coverImageUrl": zod.string().nullish(),
   "productUrl": zod.string(),
   "price": zod.string().nullish(),
@@ -79,7 +79,9 @@ export const ListAvailableReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listAvailableReleasesQuerySortDefault)
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listAvailableReleasesQuerySortDefault),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListAvailableReleasesResponse = zod.object({
@@ -90,7 +92,7 @@ export const ListAvailableReleasesResponse = zod.object({
   "publisherName": zod.string(),
   "publisherSlug": zod.string().optional(),
   "platforms": zod.array(zod.string()).optional(),
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
   "coverImageUrl": zod.string().nullish(),
   "productUrl": zod.string(),
   "price": zod.string().nullish(),
@@ -143,7 +145,58 @@ export const ListSoldOutReleasesResponse = zod.object({
   "publisherName": zod.string(),
   "publisherSlug": zod.string().optional(),
   "platforms": zod.array(zod.string()).optional(),
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
+  "coverImageUrl": zod.string().nullish(),
+  "productUrl": zod.string(),
+  "price": zod.string().nullish(),
+  "editionType": zod.string().nullish(),
+  "preorderCloseDate": zod.string().nullish(),
+  "releaseDate": zod.string().nullish(),
+  "soldOutAt": zod.string().nullish(),
+  "amazonUrl": zod.string().nullish(),
+  "retailerSearchUrls": zod.object({
+  "ebay": zod.string(),
+  "amazon": zod.string(),
+  "gamestop": zod.string(),
+  "bestbuy": zod.string()
+}).describe('Affiliate-tagged search URLs for each retailer. All four are always present — plain links when affiliate IDs are not configured.'),
+  "guideSearchUrls": zod.object({
+  "ebay": zod.string().describe('eBay search for \"{title} strategy guide\" — best for used and out-of-print guides.'),
+  "amazon": zod.string().describe('Amazon search for \"{title} official strategy guide\" — covers new releases.')
+}).optional().describe('Affiliate-tagged search URLs for physical strategy guides. eBay is primary (used\/out-of-print market); Amazon covers new releases from major publishers (Prima, Future Press, etc.).'),
+  "retailerPrices": zod.object({
+  "ebay": zod.number().nullish().describe('Lowest current Buy-It-Now price on eBay (USD), or null if unavailable.'),
+  "amazon": zod.number().nullish().describe('Reserved for Amazon Product Advertising API integration — always null until credentials are configured.')
+}).optional().describe('Live lowest prices from retailers where real-time data is available. Only populated when Browse API credentials are configured; absent or null means no live price data for that retailer — buttons show plain search links with no price claim.'),
+  "firstSeenAt": zod.string().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Listed by publisher but not yet open for preorder (announced status)
+ */
+export const listAnnouncedReleasesQuerySortDefault = `updated`;
+
+export const ListAnnouncedReleasesQueryParams = zod.object({
+  "platform": zod.coerce.string().optional(),
+  "publisher": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional(),
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listAnnouncedReleasesQuerySortDefault)
+})
+
+export const ListAnnouncedReleasesResponse = zod.object({
+  "releases": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "publisherId": zod.number(),
+  "publisherName": zod.string(),
+  "publisherSlug": zod.string().optional(),
+  "platforms": zod.array(zod.string()).optional(),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
   "coverImageUrl": zod.string().nullish(),
   "productUrl": zod.string(),
   "price": zod.string().nullish(),
@@ -183,7 +236,9 @@ export const ListComingSoonReleasesQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "publisher": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listComingSoonReleasesQuerySortDefault)
+  "sort": zod.enum(['updated', 'title', 'publisher', 'newest']).default(listComingSoonReleasesQuerySortDefault),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListComingSoonReleasesResponse = zod.object({
@@ -194,7 +249,7 @@ export const ListComingSoonReleasesResponse = zod.object({
   "publisherName": zod.string(),
   "publisherSlug": zod.string().optional(),
   "platforms": zod.array(zod.string()).optional(),
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
   "coverImageUrl": zod.string().nullish(),
   "productUrl": zod.string(),
   "price": zod.string().nullish(),
@@ -232,6 +287,7 @@ export const GetReleaseStatsResponse = zod.object({
   "available": zod.number(),
   "soldOut": zod.number(),
   "comingSoon": zod.number(),
+  "announced": zod.number(),
   "totalTracked": zod.number(),
   "lastUpdated": zod.string().nullable()
 })
@@ -251,7 +307,7 @@ export const GetReleaseResponse = zod.object({
   "publisherName": zod.string(),
   "publisherSlug": zod.string().optional(),
   "platforms": zod.array(zod.string()).optional(),
-  "status": zod.enum(['available', 'sold_out', 'coming_soon']),
+  "status": zod.enum(['available', 'sold_out', 'coming_soon', 'announced']),
   "coverImageUrl": zod.string().nullish(),
   "productUrl": zod.string(),
   "price": zod.string().nullish(),

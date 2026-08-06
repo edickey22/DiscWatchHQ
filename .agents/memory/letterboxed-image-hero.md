@@ -1,19 +1,17 @@
 ---
 name: Letterboxed image containers show background in the gaps
-description: A fixed-aspect box around an object-contain image reveals the box's own background color wherever the image doesn't fill it.
+description: How to handle fixed-aspect card containers with images that have different aspect ratios, without visible background gaps or zoom/crop.
 ---
 
-A hero image was wrapped in a fixed-aspect-ratio box (e.g. `aspect-[5/4]`) with `object-contain`
-so the photo wouldn't get cropped. Whenever the photo's real aspect ratio didn't match the box,
-the leftover space showed the box's own background color/class as a visible bar or shading next
-to the image — even after setting that background to "transparent," because the box still sat on
-top of (or adjacent to) a differently-shaded parent section.
+**The pattern for card grids (e.g. ConsoleCard, ConsoleListingCard):**
+Use `object-contain` + `bg-transparent` on the fixed-aspect container. Any small gaps where the image doesn't fill the box will be transparent, blending into the card's own background (`bg-card/40`) — visually invisible.
 
-**Why:** "transparent background" only removes an explicit fill; it does not remove the *gap*
-itself, and the gap will always show whatever is visually behind/around it (parent section bg,
-page bg, etc.), which often reads as an unwanted shade or bar around the image.
+**Why:** `object-cover` + `scale-110` was used to fill the box edge-to-edge and hide letterbox gaps, but this zooms/crops the image — users notice and dislike it. `object-contain` + `bg-transparent` is the right fix: the image shows fully, gaps are transparent, and nothing looks like an odd colored box.
 
-**How to apply:** when a caller wants "no cropping" AND "no visible box," don't force the image
-into a fixed-aspect container at all — let the image size itself (e.g. `max-h-* w-auto
-object-contain`, no fixed box background/dimensions) so the rendered box exactly matches the
-image's own bounds and there is no leftover space to shade.
+**What NOT to do:**
+- `object-cover scale-110 group-hover:scale-100` — zooms/crops and users will complain
+- `bg-muted` on a container with `object-contain` — reveals a distinctly-colored bar around the image wherever it doesn't fill the box
+
+**How to apply:** In any card with a fixed `aspect-[N/M]` image container:
+1. `<div className="... bg-transparent">` (not `bg-muted` or any colored bg)
+2. `<img className="h-full w-full object-contain">` (no scale, no cover)

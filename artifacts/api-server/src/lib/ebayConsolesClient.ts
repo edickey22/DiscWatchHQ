@@ -99,6 +99,10 @@ const NON_CONSOLE_TERMS = [
   "tablet only", "screen only", "digital only", "no console",
   "console not included", "console excluded", "without console",
 
+  // Pest / infestation — listings disclosing bug or rodent contamination
+  "cockroach", "roach", "infestation", "infested", "bed bug", "bedbug",
+  "flea", "lice", "rodent", "mice", "mouse droppings", "rat", "pest",
+
   // Non-hardware collectibles that share keywords
   "keychain", "plush", "funko", "replica", "figure", "mini figure",
 ];
@@ -203,20 +207,27 @@ export interface ConsoleListing {
  * scheduled background refresh (consoleListingsScheduler.ts), never from a
  * visitor-facing request handler. See that file for the call budget.
  */
+/**
+ * Returns:
+ *   ConsoleListing[]  — success; may be empty if eBay returned no qualifying results
+ *   null              — transient failure (timeout, network error, token failure,
+ *                       budget exhausted) — caller should preserve existing cached
+ *                       data rather than overwriting it with an empty array
+ */
 export async function getEbayConsoleListings(
   model: ConsoleModel,
   cacheLimit = 200,
-): Promise<ConsoleListing[]> {
-  if (!ebayConsolesConfigured) return [];
+): Promise<ConsoleListing[] | null> {
+  if (!ebayConsolesConfigured) return null;
 
   if (!(await checkAndReserveEbayCall("console"))) {
     logger.debug({ consoleId: model.id }, "[eBay Consoles] Daily call budget exhausted — skipping refresh");
-    return [];
+    return null;
   }
 
   try {
     const token = await getAccessToken();
-    if (!token) return [];
+    if (!token) return null;
 
     // IMPORTANT: no `sort=price`. Sorting cheapest-first surfaces accessories,
     // parts, and unrelated low-price junk almost exclusively — real consoles
@@ -226,12 +237,16 @@ export async function getEbayConsoleListings(
     // `sort` param is given) reliably surfaces the actual console model
     // being searched for; we sort by price ourselves *after* filtering.
     //
-    // rawLimit=200 is the Browse API's maximum page size — pulling the full
-    // page costs exactly the same 1 API call as pulling 60 did, so raising
-    // it is free. It just gives the filtering step below a much bigger pool
-    // of real candidates to keep, instead of throwing away extra genuine
-    // matches purely because we stopped asking eBay for them.
-    const rawLimit = 200;
+    // rawLimit=100: we originally used 200 (the Browse API maximum), but
+    // high-volume retro queries (e.g. "Nintendo 64 console") consistently
+    // timed out in the Cloud Run environment at both 12 s and 25 s, while
+    // identical queries from the dev workspace succeeded in <1 s — pointing
+    // to soft throttling by eBay for large-payload responses from Cloud Run
+    // IPs. Halving to 100 cuts the response body from ~330 KB to ~170 KB
+    // and keeps round-trip times well under 25 s in all observed cases,
+    // while still supplying far more than enough raw candidates for the
+    // post-fetch filter chain (which typically keeps 50–150 items).
+    const rawLimit = 100;
     const q = encodeURIComponent(model.query);
     const apiUrl =
       `https://api.ebay.com/buy/browse/v1/item_summary/search` +
@@ -257,7 +272,7 @@ export async function getEbayConsoleListings(
             "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
             "Content-Type":            "application/json",
           },
-          signal: AbortSignal.timeout(12_000),
+          signal: AbortSignal.timeout(25_000),
         });
         lastErr = null;
         break;
@@ -270,8 +285,8 @@ export async function getEbayConsoleListings(
       }
     }
     if (!res) {
-      logger.warn({ consoleId: model.id, err: lastErr }, "[eBay Consoles] Fetch failed after retry — returning empty for this cycle");
-      return [];
+      logger.warn({ consoleId: model.id, err: lastErr }, "[eBay Consoles] Fetch failed after retry — preserving existing cache for this cycle");
+      return null;
     }
 
     if (res.status === 429) {
@@ -280,8 +295,8 @@ export async function getEbayConsoleListings(
     }
 
     if (!res.ok) {
-      console.warn("[eBay Consoles] Search failed", res.status, model.query);
-      return [];
+      logger.warn({ consoleId: model.id, status: res.status }, "[eBay Consoles] Search returned non-OK status — preserving existing cache");
+      return null;
     }
 
     const data = (await res.json()) as {
@@ -350,7 +365,7 @@ export async function getEbayConsoleListings(
     }));
   } catch (err) {
     if (err instanceof EbayRateLimitError) throw err; // let the scheduler's loop see it and back off
-    console.warn("[eBay Consoles] Lookup error:", err);
-    return [];
+    logger.warn({ consoleId: model.id, err }, "[eBay Consoles] Lookup error — preserving existing cache");
+    return null;
   }
 }

@@ -6,6 +6,7 @@ import { daysUntil } from "@/lib/utils"
 import { Clock, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ControllerIcon } from "@/components/ControllerIcon"
+import { TrackButton } from "@/components/TrackButton"
 
 interface GameCardProps {
   release: Release
@@ -23,6 +24,7 @@ export function GameCard({ release, priority = false }: GameCardProps) {
   const isAvailable = release.status === ReleaseStatus.available
   const isSoldOut = release.status === ReleaseStatus.sold_out
   const isComingSoon = release.status === ReleaseStatus.coming_soon
+  const isAnnounced = release.status === ReleaseStatus.announced
   const [imgFailed, setImgFailed] = useState(false)
 
   const daysLeft = isAvailable ? daysUntil(release.preorderCloseDate) : null
@@ -33,6 +35,20 @@ export function GameCard({ release, priority = false }: GameCardProps) {
       "group relative flex flex-col space-y-3 rounded-lg p-3 border border-border/60 transition-all hover:bg-card/50 hover:border-primary",
       isSoldOut && "opacity-75"
     )}>
+      {/* Track button — top-right corner, above the image */}
+      <div className="absolute top-2 right-2 z-10">
+        <TrackButton
+          itemType="release"
+          itemId={String(release.id)}
+          itemData={{
+            title:     release.title,
+            image:     release.coverImageUrl ?? undefined,
+            publisher: release.publisherName ?? undefined,
+            status:    release.status,
+          }}
+        />
+      </div>
+
       {/* Cover Image — navigates to detail page */}
       <Link href={`/releases/${release.id}`} className="block">
         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-muted shadow-sm">
@@ -41,7 +57,7 @@ export function GameCard({ release, priority = false }: GameCardProps) {
               src={release.coverImageUrl}
               alt={`${release.title} cover`}
               className={cn(
-                "h-full w-full object-cover transition-transform duration-500 group-hover:scale-105",
+                "h-full w-full object-contain",
                 isSoldOut && "grayscale-[50%]"
               )}
               loading={priority ? "eager" : "lazy"}
@@ -69,6 +85,13 @@ export function GameCard({ release, priority = false }: GameCardProps) {
               </Badge>
             </div>
           )}
+          {isAnnounced && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="bg-black/70 text-white/80 backdrop-blur-md border-transparent text-[10px] tracking-wide">
+                Announced
+              </Badge>
+            </div>
+          )}
           {isAvailable && isClosingSoon && (
             <div className="absolute top-2 right-2">
               <Badge variant="destructive" className="animate-pulse shadow-md">
@@ -82,18 +105,25 @@ export function GameCard({ release, priority = false }: GameCardProps) {
 
       {/* Details */}
       <div className="flex flex-col flex-1 space-y-1">
-        <div className="flex flex-wrap gap-1.5 mb-1">
-          {release.platforms?.slice(0, 3).map(p => (
-            <span key={p} className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
-              {p}
-            </span>
-          ))}
-          {(release.platforms?.length ?? 0) > 3 && (
-            <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
-              +{(release.platforms?.length ?? 0) - 3}
-            </span>
-          )}
-        </div>
+        {/* Platform badges — "Unknown" is hidden; merch/no-platform items show nothing */}
+        {(() => {
+          const ps = release.platforms?.filter(p => p !== "Unknown") ?? []
+          if (!ps.length) return null
+          return (
+            <div className="flex flex-wrap gap-1.5 mb-1">
+              {ps.slice(0, 3).map(p => (
+                <span key={p} className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
+                  {p}
+                </span>
+              ))}
+              {ps.length > 3 && (
+                <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-muted-foreground border border-border/50 px-1.5 py-0.5 rounded-sm bg-background/50">
+                  +{ps.length - 3}
+                </span>
+              )}
+            </div>
+          )
+        })()}
 
         <Link href={`/releases/${release.id}`} className="block">
           <h3 className="font-display font-bold leading-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">

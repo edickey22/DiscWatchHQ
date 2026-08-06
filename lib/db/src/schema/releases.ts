@@ -9,7 +9,7 @@ export const releasesTable = pgTable("releases", {
   externalId: text("external_id"), // publisher-specific ID to detect duplicates
   title: text("title").notNull(),
   platforms: text("platforms").array().notNull().default([]),
-  status: text("status", { enum: ["available", "sold_out", "coming_soon"] }).notNull().default("coming_soon"),
+  status: text("status", { enum: ["available", "sold_out", "coming_soon", "announced"] }).notNull().default("coming_soon"),
   coverImageUrl: text("cover_image_url"),
   productUrl: text("product_url").notNull(),
   price: text("price"),

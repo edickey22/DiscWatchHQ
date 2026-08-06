@@ -321,7 +321,7 @@ function buildVariedHeroImages(pools: CatalogGame[][], max = 16): string[] {
 }
 
 // ── Responsive column count ──────────────────────────────────────────────────
-// Mirrors the `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` breakpoints used by
+// Mirrors the `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` breakpoints used by
 // the pre-populated sections below, so each section can always show exactly
 // three full rows (columns × 3) for whatever the current column count is —
 // never a ragged/partial last row.
@@ -506,6 +506,18 @@ export default function GamesSearch() {
           <p className="text-muted-foreground mt-1 font-mono text-base">
             Popular titles, new releases, and 900,000+ physical games across every platform and era.
           </p>
+          <p className="text-muted-foreground/80 mt-3 text-sm leading-relaxed max-w-2xl">
+            Search the full physical game catalog — from classic NES and Atari titles to the
+            latest PS5, Xbox Series X, and Nintendo Switch releases. Every result links directly
+            to <span className="text-foreground/70 font-medium">GameStop</span>,{" "}
+            <span className="text-foreground/70 font-medium">Amazon</span>,{" "}
+            <span className="text-foreground/70 font-medium">eBay</span>, and{" "}
+            <span className="text-foreground/70 font-medium">Best Buy</span> so you can compare
+            availability and price in one place. Filter by platform or genre, sort by Metacritic
+            score or release date, and jump straight to a buy page — no separate tabs needed.
+            Game data is sourced from RAWG and TheGamesDB, two of the largest community-maintained
+            game databases, covering over 900,000 titles across more than 50 platforms.
+          </p>
         </div>
       </section>
 
@@ -632,12 +644,12 @@ export default function GamesSearch() {
               />
 
               {isPopularLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : popularCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {popularCards.map((game, i) => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} priority={i < 4} />
                     ))}
@@ -670,12 +682,12 @@ export default function GamesSearch() {
               />
 
               {isNewLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : newReleasesCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {newReleasesCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}
@@ -708,12 +720,12 @@ export default function GamesSearch() {
               />
 
               {isUpcomingLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.from({ length: sectionCardLimit }).map((_, i) => <GameCardSkeleton key={i} />)}
                 </div>
               ) : upcomingCards.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {upcomingCards.map(game => (
                       <CatalogGameCard key={game.id} game={game} onClick={setSelectedGame} />
                     ))}

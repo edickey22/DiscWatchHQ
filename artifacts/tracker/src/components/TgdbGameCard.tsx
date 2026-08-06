@@ -11,6 +11,7 @@
  */
 import { useState } from "react"
 import { RetailerLinks } from "@/components/RetailerLinks"
+import { TrackButton } from "@/components/TrackButton"
 
 export interface CatalogGame {
   id:            string     // "rawg:123" | "tgdb:456"
@@ -52,7 +53,7 @@ function MetacriticBadge({ score }: { score: number }) {
   return (
     <span
       title={`Metacritic: ${score}`}
-      className={`absolute top-2 right-2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}
+      className={`absolute top-2 left-2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}
     >
       {score}
     </span>
@@ -80,7 +81,7 @@ function EsrbBadge({ rating }: { rating: string }) {
   return (
     <span
       title={`ESRB Rating: ${rating}`}
-      className={`absolute top-2 right-2 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}
+      className={`absolute top-2 left-2 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${colour}`}
     >
       {label}
     </span>
@@ -198,7 +199,7 @@ export function CatalogGameCard({
           <img
             src={game.coverImageUrl}
             alt={game.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain"
             loading={priority ? "eager" : "lazy"}
             decoding={priority ? "sync" : "async"}
             onError={() => setImgFailed(true)}
@@ -207,13 +208,22 @@ export function CatalogGameCard({
           <CoverPlaceholder />
         )}
 
-        {/* Score/rating badge — Metacritic takes priority over ESRB */}
+        {/* Score/rating badge — top-left; Metacritic takes priority over ESRB */}
         {game.metacritic !== null
           ? <MetacriticBadge score={game.metacritic} />
           : game.esrbRating !== null && game.esrbRating !== "Not Rated"
             ? <EsrbBadge rating={game.esrbRating} />
             : null
         }
+
+        {/* Track (heart) button — top-right; stops card click propagation */}
+        <div className="absolute top-1.5 right-1.5 z-10" onClick={e => e.stopPropagation()}>
+          <TrackButton
+            itemType="game"
+            itemId={game.id}
+            itemData={{ title: game.title, image: game.coverImageUrl ?? undefined }}
+          />
+        </div>
       </div>
 
       {/* Body */}

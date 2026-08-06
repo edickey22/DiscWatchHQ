@@ -13,4 +13,5 @@ export const ListReleasesStatus = {
   available: 'available',
   sold_out: 'sold_out',
   coming_soon: 'coming_soon',
+  announced: 'announced',
 } as const;

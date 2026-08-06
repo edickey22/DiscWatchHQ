@@ -13,6 +13,7 @@ import { useDocumentHead } from "@/hooks/useDocumentHead"
 import { buildCanonicalUrl } from "@/lib/seo"
 import { GENERATION_LABELS, GENERATION_BADGE_STYLES, type ConsoleGeneration } from "@/lib/consoleGenerations"
 import { ArrowLeft, Search, ChevronDown, ArrowUpDown } from "lucide-react"
+import { PriceTrend } from "@/components/PriceTrend"
 
 /** How many listings render initially, and how many more each "Show more" click reveals. */
 const LISTINGS_PAGE_SIZE = 24
@@ -171,6 +172,13 @@ export default function ConsoleDetail() {
                           ? `${consoleData.listings.length} current listing${consoleData.listings.length === 1 ? "" : "s"} — real hardware only, filtered for junk`
                           : "No live listings right now"}
                       </p>
+                      {consoleData && (
+                        <PriceTrend
+                          url={`/api/price-history/console/${consoleData.id}`}
+                          queryKey={["price-history", "console", consoleData.id]}
+                          className="mt-2"
+                        />
+                      )}
                       {consoleData?.searchUrl && (
                         <a
                           href={consoleData.searchUrl}

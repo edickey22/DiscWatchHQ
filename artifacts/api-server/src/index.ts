@@ -4,6 +4,8 @@ import { startScheduler } from "./lib/scheduler";
 import { startEbayPriceScheduler } from "./lib/ebayPriceScheduler";
 import { startConsoleListingsScheduler } from "./lib/consoleListingsScheduler";
 import { startCatalogBackfill } from "./lib/catalogBackfill";
+import { startAlertChecker } from "./lib/alertChecker";
+import { startPriceSnapshotCleanup } from "./lib/priceSnapshotCleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -44,4 +46,14 @@ app.listen(port, (err) => {
   // Catalog backfill — seeds catalog_games from RAWG if count < 1,000.
   // Fires 8 s after startup, fully in background, respects RAWG rate limits.
   startCatalogBackfill();
+
+  // Alert checker — notifies users when tracked items change status/price.
+  // Runs 2 min after startup, then every 4 hours. Requires SMTP credentials
+  // for real delivery; logs to console in stub mode (see lib/email.ts).
+  startAlertChecker();
+
+  // Price snapshot cleanup — purges rows older than 90 days. Runs 5 min after
+  // startup and then every 24 hours. Keeps the table bounded as snapshots
+  // accumulate from the three scheduler write points.
+  startPriceSnapshotCleanup();
 });
