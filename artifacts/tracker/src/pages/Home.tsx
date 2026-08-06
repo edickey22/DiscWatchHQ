@@ -55,6 +55,29 @@ export default function Home() {
   const [status, setStatus]       = useState<StatusFilter>("_all")
   const [sort, setSort]           = useState<SortOption>("updated")
 
+  // Hide the filter bar while scrolling down (it stacks to several rows on
+  // mobile and eats half the viewport), reveal it again on scroll up or once
+  // back near the top. Small threshold avoids flicker from sub-pixel scroll
+  // jitter; only engages past the hero so it doesn't collapse mid-hero.
+  const [filtersHidden, setFiltersHidden] = useState(false)
+  const lastScrollY = useRef(0)
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY
+      const delta = y - lastScrollY.current
+      if (y < 220) {
+        setFiltersHidden(false)
+      } else if (delta > 8) {
+        setFiltersHidden(true)
+      } else if (delta < -8) {
+        setFiltersHidden(false)
+      }
+      lastScrollY.current = y
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
   useDocumentHead({
     title:       "Boutique Tracker — Limited-Run Physical Game Releases | DiscWatchHQ",
     description: "Track limited-run physical game releases from Limited Run Games, Strictly Limited, iam8bit, Super Rare Games, and more. Available now, coming soon, and recently sold out.",
@@ -201,8 +224,14 @@ export default function Home() {
 
       <main className="flex-1">
 
-        {/* Filter + Sort bar */}
-        <section className="bg-card border-b sticky top-16 z-30 shadow-sm">
+        {/* Filter + Sort bar — collapses on scroll-down, reopens on scroll-up */}
+        <section
+          className={`bg-card sticky top-16 z-30 shadow-sm overflow-hidden transition-[max-height,opacity,border-color] duration-300 ease-in-out ${
+            filtersHidden
+              ? "max-h-0 opacity-0 border-b border-transparent"
+              : "max-h-[500px] opacity-100 border-b border-border"
+          }`}
+        >
           <div className="container mx-auto max-w-[1600px] px-4 pt-6 pb-4">
 
             {/* ── Row 1: Search box ── */}
